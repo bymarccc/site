@@ -2253,8 +2253,9 @@
       // this card's text is long ("30% of profits go to the homeless") and the
       // money bag sits low on mobile — centre it in the stage instead of
       // anchoring it to the object, so it never runs low/off to one side.
+      const c = cardEl().getBoundingClientRect();
       x = (sr.width - w) / 2;
-      y = sr.height * 0.38 - 48;
+      y = c.bottom - sr.top - 50 - 26;   // inside the alien card, under the face, on the sky (card is ~50px tall)
     } else {
       x = r.left - sr.left + r.width / 2 - w / 2; y = r.top - sr.top + r.height + 8;
       x = Math.max(12, Math.min(sr.width - w - 12, x)); if (y + 96 > sr.height) y = r.top - sr.top - 96 - 8;
@@ -3403,22 +3404,22 @@ body.pdp .ai-launch{--ai-offset:92px}
 /* ---- audio mode: black Apple-Music-style card (same widget, no video) ---- */
 .vp[data-mode="audio"] { width: clamp(150px, 56vw, 300px) !important; }
 .vp[data-mode="audio"] .vp__screen, .vp[data-mode="audio"] .vp__end { display: none; }
-.vp__audio { display: none; position: relative; padding: 10px 12px 8px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.vp__audio { display: none; position: relative; padding: 10px 12px 10px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .vp[data-mode="audio"] .vp__audio { display: block; }
 .vp__atitle { font-size: 11.5px; font-weight: 400; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 30px; }
 .vp__atitle b { font-weight: 700; }
 .vp__aartist { display: none !important; font-size: 10.5px; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 .vp__ax { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(255,255,255,.1); color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; touch-action: manipulation; }
 .vp__ax svg { width: 12px; height: 12px; }
-.vp__scrub { position: relative; height: 5px; margin-top: 10px; border-radius: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
+.vp__scrub { position: relative; height: 4px; margin: 10px auto 0; width: 82%; border-radius: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
 .vp__scrub::before { content: ""; position: absolute; inset: -12px 0; }
 .vp__scrub i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: #fff; }
 .vp__scrub.is-seeking { height: 9px; margin-top: 12.5px; }
-.vp__atimes { display: flex; justify-content: space-between; margin-top: 5px; font-size: 9.5px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
-.vp__actr { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 2px; }
-.vp__abtn { border: 0; background: none; color: #fff; padding: 0; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
-.vp__abtn svg { width: 20px; height: 20px; }
-.vp__abtn--play svg { width: 24px; height: 24px; }
+.vp__atimes { display: flex; justify-content: space-between; width: 82%; margin: 4px auto 0; font-size: 9px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
+.vp__actr { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
+.vp__abtn { border: 0; background: none; color: #fff; padding: 0; width: 26px; height: 26px; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
+.vp__abtn svg { width: 14px; height: 14px; }
+.vp__abtn--play svg { width: 17px; height: 17px; }
 .vp__big {
   position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px;
   display: grid; place-items: center;
