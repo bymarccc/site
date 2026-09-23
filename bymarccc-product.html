@@ -91,9 +91,9 @@
 .pdp-hw__input::-webkit-outer-spin-button, .pdp-hw__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .pdp-hw__input:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
 .pdp-hw__input.is-invalid { border-color: var(--err); box-shadow: 0 0 0 1px var(--err) inset; }
-.pdp-hw__err { position: absolute; left: 0; top: 100%; margin-top: 3px; font-size: 10px; color: var(--err); line-height: 1.1; white-space: nowrap; }
+.pdp-hw__err { display: none !important; }   /* per-field "This field is required." removed — the message under Add to Bag already says it */
 .pdp-hw__err[hidden] { display: none; }
-.pdp-hw.has-err { padding-bottom: 16px; }
+.pdp-hw.has-err { padding-bottom: 4px; }   /* no error text below the fields any more, so the pill stays 36px and lines up with the hanger / heart */
 .pdp-hw__done { flex: 0 0 auto; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 3px; background: #111; color: #fff; display: grid; place-items: center; }
 .pdp-hw__done svg { width: 14px; height: 14px; }
 /* wishlist — bottom right, same style as the hanger */
