@@ -1093,7 +1093,7 @@
   .sales__wrap { position: relative; padding: 0 clamp(16px, 4vw, 48px); }
   .sales__track {
     display: flex; gap: clamp(12px, 1.8vw, 22px); overflow-x: auto; scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x; cursor: grab;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none; touch-action: pan-x pan-y; cursor: grab;   /* both axes native: the browser decides, no more page jumping */
     padding: 2px 2px 6px;
   }
   .sales__track::-webkit-scrollbar { display: none; }
@@ -1105,7 +1105,7 @@
   @media (min-width: 640px)  { .sales__card { width: clamp(210px, 30vw, 260px); } }
   @media (min-width: 900px)  { .sales__card { width: clamp(230px, 22vw, 270px); } }
   @media (min-width: 1280px) { .sales__card { width: clamp(240px, 18vw, 290px); } }
-  .sales__imgwrap { display: block; position: relative; aspect-ratio: 3 / 4; background: #f2f2f0; overflow: hidden; border-radius: 16px; touch-action: pan-y; }
+  .sales__imgwrap { display: block; position: relative; aspect-ratio: 3 / 4; background: #f2f2f0; overflow: hidden; border-radius: 16px; touch-action: pan-x pan-y; }
   .sales__imgwrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .35s cubic-bezier(.22,1,.36,1); -webkit-user-drag: none; user-select: none; }
   .sales__imgwrap img.is-on { opacity: 1; }
   .sales__bars { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 4px; z-index: 2; }
@@ -1139,6 +1139,27 @@
   .sales__progress:hover .sales__progress__thumb, .sales__progress.is-seeking .sales__progress__thumb { background: #2b2b2b; }
   @media (min-width: 900px) { .sales__progress { height: 6px; } }
   @media (prefers-reduced-motion: reduce) { .sales__track { scroll-behavior: auto; } }
+  /* ---- compact "sale bar" (men SALES): one card at a time, a bit narrower than the phone, name + price + tiny ADD in one row ---- */
+  .salebar__note { margin: 0 0 14px; padding: 0 clamp(16px, 4vw, 48px); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #111; }
+  .salebar .sales__track { gap: 12px; padding: 2px clamp(16px, 4vw, 48px) 6px; scroll-padding: 0 clamp(16px, 4vw, 48px); }
+  .salebar .sales__card { width: min(78vw, 300px); scroll-snap-align: center; background: #fff; border: 1px solid #e9e9e6; border-radius: 18px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.05); }
+  @media (min-width: 900px) { .salebar .sales__card { width: 300px; } }
+  .salebar .sales__imgwrap { border-radius: 12px; }
+  .salebar .sales__imgwrap img { opacity: 1; }
+  .salebar__row { display: flex; align-items: center; gap: 10px; padding: 12px 6px 6px; }
+  .salebar__txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .salebar__name { font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .salebar__price { font-size: 12px; letter-spacing: .03em; color: #6f6f6f; }
+  .salebar__price b { color: #c8102e; font-weight: 600; }
+  .salebar__add { flex: 0 0 auto; height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: #111; color: #fff; font: inherit; font-size: 10px; font-weight: 600; letter-spacing: .14em; cursor: pointer; transition: background-color .2s, transform .12s; white-space: nowrap; }
+  .salebar__add:active { transform: scale(.97); }
+  .salebar__add.is-ok { background: var(--brand-blue, #5B95C3); }
+  .salebar__foot { display: flex; align-items: center; gap: 14px; margin: 16px clamp(16px, 4vw, 48px) 0; }
+  .salebar__foot .sales__progress { flex: 1 1 auto; margin: 0; height: 4px; }
+  .salebar__arrows { display: flex; gap: 6px; }
+  .salebar__arrows button { width: 30px; height: 30px; border: 1px solid #e4e4e1; border-radius: 50%; background: #fff; color: #111; display: grid; place-items: center; cursor: pointer; padding: 0; }
+  .salebar__arrows svg { width: 14px; height: 14px; }
+  .salebar .sales__nav { display: none; }
 </style>
 <script>
 /* =====================================================================
@@ -1233,6 +1254,15 @@
       unavailable: [], colours: JACKET_COLOURS, chart: sizeChart(['M', 'L', 'XL']),
       gallery: [{ src: 'assets/img/gallery/zebra-jacket-1-9c283037.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/zebra-jacket-2-66883ac9.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-3-589c6d3f.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-4-fd07b2d6.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-5-25a6f5fe.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-6-71166c1f.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-7-99399e55.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-8-09030ec0.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/zebra-jacket-9-64a893b4.webp', w: 1024, h: 1536 }],
     },
+    'sale-blue-striped-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-blue-striped-jeans', title: 'Blue Striped Jeans', price: 400, currency: 'RON', cut: 'Skinny', collections: ['sales'],
+      details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Blue Striped Jeans — one pair, size 40.', shipping: SHIPPING,
+      unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-blue-striped-jeans-33c616fa.webp', w: 1024, h: 1536 }] },
+    'sale-black-striped-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-black-striped-jeans', title: 'Black Striped Jeans', price: 400, currency: 'RON', cut: 'Skinny', collections: ['sales'],
+      details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Black Striped Jeans — one pair, size 40.', shipping: SHIPPING,
+      unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-black-striped-jeans-7e5d1fe2.webp', w: 1024, h: 1536 }] },
+    'sale-cross-patch-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-cross-patch-jeans', title: 'Cross Patch Jeans', price: 400, currency: 'RON', cut: 'Skinny', collections: ['sales'],
+      details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Cross Patch Jeans — one pair, size 40.', shipping: SHIPPING,
+      unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-cross-patch-jeans-d4086d1c.webp', w: 1024, h: 1536 }] },
     /* Accessories — imported from the public Shopify catalogue (bymarccc.com). Images are served from the Shopify CDN. */
     'colored-cross-bag': { id: 'shopify:colored-cross-bag', shopifyVariant: 55750249906524, title: 'Colored Cross Bag', price: 700, currency: 'RON', cut: 'Duffle', collections: ['accessories', 'sales'], genders: ['men', 'women'],
       details: ['Luxury duffle bag with colorful crosses', '29 × 16 × 49 cm', 'Signature bymarccc travel tag', 'Black chain detailing', 'Each piece is custom created.'],
@@ -1468,21 +1498,51 @@
     return card;
   }
 
-  function mountSalesSlider(grid, items) {
+  /* Compact card for the sale bar: photo, then name + price + a tiny ADD button on one row. Size is fixed (shown once above the bar). */
+  function saleBarCard(key, p) {
+    const img = (p.gallery || [])[0] || {};
+    const size = (p.chart && p.chart.sizes || []).map(x => x.size)[0] || '';
+    const onSale = typeof p.salePrice === 'number', chargePrice = onSale ? p.salePrice : p.price;
+    const card = document.createElement('article'); card.className = 'sales__card';
+    card.innerHTML = `<span class="sales__imgwrap"><img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on"></span>
+      <div class="salebar__row">
+        <div class="salebar__txt"><span class="salebar__name">${p.title}</span>${typeof p.price === 'number' ? `<span class="salebar__price">${onSale ? `<s>${fmt(p.price, p.currency)}</s> <b>${fmt(p.salePrice, p.currency)}</b>` : `<b>${fmt(p.price, p.currency)}</b>`}</span>` : ''}</div>
+        <button class="salebar__add" type="button" aria-label="Add ${p.title} to cart">ADD TO CART</button>
+      </div>`;
+    const add = card.querySelector('.salebar__add');
+    add.addEventListener('click', async () => {
+      const store = window.BYMARCCC && window.BYMARCCC.bag; if (!store) return;
+      await store.add({ id: `${p.id}:default:${size}`, name: p.title, variant: size ? 'Size ' + size : '', image: img.src, price: chargePrice, currency: p.currency, quantity: 1 });
+      add.classList.add('is-ok'); add.textContent = 'ADDED'; setTimeout(() => { add.classList.remove('is-ok'); add.textContent = 'ADD TO CART'; }, 1800);
+    });
+    return card;
+  }
+
+  function mountSalesSlider(grid, items, opts = {}) {
     grid.classList.add('shop__grid--sales');
+    if (opts.compact) { grid.classList.add('salebar'); if (opts.note) { const n = document.createElement('p'); n.className = 'salebar__note'; n.textContent = opts.note; grid.appendChild(n); } }
     const wrap = document.createElement('div'); wrap.className = 'sales__wrap';
     const prevBtn = document.createElement('button'); prevBtn.type = 'button'; prevBtn.className = 'sales__nav sales__nav--prev'; prevBtn.setAttribute('aria-label', 'Previous');
     prevBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
     const nextBtn = document.createElement('button'); nextBtn.type = 'button'; nextBtn.className = 'sales__nav sales__nav--next'; nextBtn.setAttribute('aria-label', 'Next');
     nextBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
     const track = document.createElement('div'); track.className = 'sales__track';
-    items.forEach(([key, p]) => track.appendChild(salesCard(key, p)));
+    items.forEach(([key, p]) => track.appendChild(opts.compact ? saleBarCard(key, p) : salesCard(key, p)));
     wrap.append(prevBtn, track, nextBtn);
     const progress = document.createElement('div'); progress.className = 'sales__progress';
     progress.setAttribute('role', 'scrollbar'); progress.setAttribute('aria-controls', ''); progress.setAttribute('aria-orientation', 'horizontal'); progress.tabIndex = 0;
     const thumb = document.createElement('div'); thumb.className = 'sales__progress__thumb';
     progress.appendChild(thumb);
-    grid.append(wrap, progress);
+    if (opts.compact) {
+      // reference layout: progress line + small arrows on one row under the cards
+      const foot = document.createElement('div'); foot.className = 'salebar__foot';
+      const arrows = document.createElement('div'); arrows.className = 'salebar__arrows';
+      const p2 = prevBtn.cloneNode(true), n2 = nextBtn.cloneNode(true); p2.className = ''; n2.className = '';
+      p2.addEventListener('click', () => track.scrollBy({ left: -track.clientWidth * 0.85, behavior: 'smooth' }));
+      n2.addEventListener('click', () => track.scrollBy({ left: track.clientWidth * 0.85, behavior: 'smooth' }));
+      arrows.append(p2, n2); foot.append(progress, arrows);
+      grid.append(wrap, foot);
+    } else grid.append(wrap, progress);
 
     // desktop mouse-drag scrolling (native touch scroll already covers mobile swipe)
     let dragging = false, startX = 0, startScroll = 0, moved = false;
@@ -1565,7 +1625,11 @@
       grid.classList.remove('shop__grid--sales');
       let items = Object.entries(CATALOG).filter(([, p]) => genderOf(p).includes(gender) && (p.collections || []).includes(active));
       if (!items.length) { grid.innerHTML = '<p class="shop__empty">COMING SOON</p>'; return; }
-      if (active === 'sales') { mountSalesSlider(grid, items); return; }
+      if (active === 'sales') {
+        const rail = items.filter(([, p]) => p.saleRail);   // a dedicated sale bar (men): only the sale-rail pieces, all one size
+        if (rail.length) { mountSalesSlider(grid, rail, { compact: true, note: 'Size: 40' }); return; }
+        mountSalesSlider(grid, items); return;
+      }
       const feat = gender === 'women' && WOMEN_FEATURED[active];
       if (feat) items = [...feat.map(k => items.find(([x]) => x === k)).filter(Boolean), ...items.filter(([k]) => !feat.includes(k))];
       const show = gender === 'women' && !all && items.length > LIMIT ? items.slice(0, LIMIT) : items;
