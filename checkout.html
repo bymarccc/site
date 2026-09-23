@@ -345,9 +345,8 @@
   function itemHtml(it, editable){
     var q = it.quantity || 1;
     return '<li class="co-item">' +
-      '<div class="co-item__thumb">' + (it.image ? '<img src="' + esc(it.image) + '" alt="">' : '<img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">') + '<span>' + q + '</span></div>' +
+      '<div class="co-item__thumb">' + (it.image ? '<img src="' + esc(it.image) + '" alt="">' : '<img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">') + (q > 1 ? '<span>' + q + '</span>' : '') + '</div>' +
       '<div class="co-item__info"><span class="co-item__name">' + esc(it.name) + '</span>' + (it.variant ? '<span class="co-item__var">' + esc(it.variant) + '</span>' : '') +
-        (editable ? '<div class="co-qty" aria-label="' + t('qty') + '"><button type="button" data-dec="' + esc(it.id) + '" aria-label="−">−</button><output>' + q + '</output><button type="button" data-inc="' + esc(it.id) + '" aria-label="+">+</button></div>' : '') +
       '</div>' +
       '<div><div class="co-item__price">' + fmt((it.price || 0) * q, it.currency) + '</div>' + (editable ? '<button type="button" class="co-item__rm" data-rm="' + esc(it.id) + '">' + t('remove') + '</button>' : '') + '</div>' +
     '</li>';
