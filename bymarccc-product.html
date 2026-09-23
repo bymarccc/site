@@ -95,14 +95,15 @@
 .pdp-hw__err[hidden] { display: none; }
 .pdp-hw.has-err { padding-bottom: 4px; }   /* no error text below the fields any more, so the pill stays 36px and lines up with the hanger / heart */
 .pdp-hw__done { flex: 0 0 auto; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 3px; background: #111; color: #fff; display: grid; place-items: center; }
-.pdp-hw__done svg { width: 14px; height: 14px; }
+.pdp-hw__done svg { width: 14px; height: 14px; stroke: #fff; }   /* explicit: `.pdp button { color: inherit }` was making the tick dark-on-black */
 /* wishlist — bottom right, same style as the hanger */
 .pdp-wish {
   position: absolute; right: 16px; bottom: 12px; z-index: 3;
   width: 36px; height: 36px; border: 0; border-radius: 4px;
   background: rgba(255,255,255,.9); display: grid; place-items: center;
 }
-.pdp-wish svg { width: 18px; height: 18px; display: block; transition: transform .25s var(--ease); }
+.pdp-wish { padding: 0; line-height: 0; }
+.pdp-wish svg { width: 18px; height: 18px; display: block; margin: 0 auto; transition: transform .25s var(--ease); }
 .pdp-wish[aria-pressed="true"] svg path { fill: #111; }
 .pdp-wish:active svg { transform: scale(.88); }
 .pdp-hanger {
@@ -110,7 +111,8 @@
   width: 36px; height: 36px; border: 0; border-radius: 4px;
   background: rgba(255,255,255,.9); display: grid; place-items: center;
 }
-.pdp-hanger svg { width: 20px; height: 20px; }
+.pdp-hanger { padding: 0; line-height: 0; }
+.pdp-hanger svg { width: 20px; height: 20px; display: block; margin: 0 auto; transform: translateY(1px); }   /* the drawing sits ~2 units high in its 32-unit box */
 
 /* ---------- Product info ---------- */
 .pdp-info { padding: 22px 16px 0; max-width: 640px; margin: 0 auto; }
