@@ -620,6 +620,7 @@
   ];
   const SKINNY_COLOURS = ['green', 'blue', 'white', 'purple', 'grey', 'red', 'pink', 'orange', 'brown'].map(id => JEANS_COLOURS.find(c => c.id === id));
   const BLACK_ONLY = [{ id: 'black', name: 'Black', hex: '#111111' }];
+  const JACKET_COLOURS = ['blue', 'pink', 'red', 'white', 'brown', 'purple', 'orange', 'grey', 'green'].map(id => JEANS_COLOURS.find(c => c.id === id));   // Zebra Patch Jacket, photo order
   /* Jeans size chart (EU 32–44). Body ranges from a standard EU chart; garment = body + ease. */
   const JEANS_CHART = (category) => ({
     category, label: s => `EU ${s}`,
@@ -640,14 +641,14 @@
   const SHIPPING = 'Romania: 1–2 working days.\nEU: DHL Express.\nUK & Rest of the World: UPS Express — 7–9 days.\n\nReturns accepted within 14 days of delivery, unworn and with tags.';
   const REVIEWS = { rating: 4.8, count: 200, label: '200+ Reviews', anchor: null };   // count set by Mark; no review app yet
   const MODEL = Object.assign({ height: 176, weight: 62, size: '36', modelMedia: [] }, window.BYMARCCC_MODEL || {});
-  const APPAREL_MODEL = { height: 184, weight: 70, size: 'M', modelMedia: [0], text: 'Model is 184 cm and 70 kg weight and wears size M' };
+  const APPAREL_MODEL = { height: 184, weight: 74, size: 'M', modelMedia: [0], text: 'Model measurements: 184 cm & 74 kg. Model is wearing size M' };
 
   /* ---- Catalogue: one entry per product page (?p=<key>) ---- */
   const CATALOG = {
     'skinny': {
       needsBody: true, noSize: true, imageColours: true,   // made-to-measure: no size selector; each gallery image = one colour swatch
       id: 'skinny-zebra-patch-jeans', title: 'Zebra Patch Jeans', price: 450, currency: 'RON', cut: 'Skinny, mid rise',
-      details: ['100% cotton denim, 14 oz', 'Hand-applied zebra patches', 'Paint-splatter finish', 'Skinny fit', 'Raw hem', 'All clothing is custom made.'],
+      details: ['100% cotton denim, 14 oz', 'Hand-applied zebra patches', 'Paint-splatter finish', 'Skinny fit', 'Raw hem', 'Model measurements: 184 cm & 74 kg. Model is wearing size M', 'All clothing is custom made.'],
       description: 'Hand-finished statement denim, made to fit you. Each pair is patched and painted by hand, so no two are identical. Tell us your height and weight at checkout and we adjust the length before shipping.',
       shipping: SHIPPING + ' Made-to-measure length adjustments are final sale.',
       collections: ['bottoms', 'denim'],
@@ -657,7 +658,7 @@
     'relaxed': {
       needsBody: true, noSize: true, imageColours: true,
       id: 'relaxed-zebra-patch-jeans', title: 'Relaxed Zebra Patch Jeans', price: 450, currency: 'RON', cut: 'Relaxed, straight leg',
-      details: ['100% cotton denim, 14 oz', 'Hand-applied zebra patches', 'Paint-splatter finish', 'Relaxed straight fit', 'Raw hem', 'All clothing is custom made.'],
+      details: ['100% cotton denim, 14 oz', 'Hand-applied zebra patches', 'Paint-splatter finish', 'Relaxed straight fit', 'Raw hem', 'Model measurements: 184 cm & 74 kg. Model is wearing size M', 'All clothing is custom made.'],
       description: 'Hand-finished statement denim, made to fit you. Each pair is patched and painted by hand, so no two are identical. Tell us your height and weight at checkout and we adjust the length before shipping.',
       shipping: SHIPPING + ' Made-to-measure length adjustments are final sale.',
       collections: ['bottoms', 'denim'],
@@ -666,21 +667,32 @@
     },
     /* Apparel — no prices supplied yet (price: null → price, split-payment row and bag totals stay hidden). */
     'tee-01': { model: APPAREL_MODEL, id: 'bymarccc-tshirt-01', title: 'BYMARCCC T-Shirt 01', price: null, currency: 'RON', cut: 'Oversized', collections: ['tops'],
-      details: ['Oversized fit, dropped shoulder', 'bymarccc lettering with the alien mark, chest print', 'Black', 'All clothing is custom made.'],
+      details: ['Oversized fit, dropped shoulder', 'bymarccc lettering with the alien mark, chest print', 'Black', 'Model measurements: 184 cm & 74 kg. Model is wearing size M', 'All clothing is custom made.'],
       description: 'The BYMARCCC essential tee. An oversized black cut with the bymarccc signature and the alien mark on the chest — your frequency will create your reality.', shipping: SHIPPING,
       unavailable: [], colours: BLACK_ONLY, chart: APPAREL_CHART, gallery: [{ src: 'assets/img/gallery/tee-01-1-842f67bb.webp', w: 1212, h: 1816 }] },
     'tee-02': { model: APPAREL_MODEL, id: 'bymarccc-tshirt-02', title: 'BYMARCCC T-Shirt 02', price: null, currency: 'RON', cut: 'Oversized', collections: ['tops'],
-      details: ['Oversized fit, dropped shoulder', 'Alien mark, centre chest', 'Black', 'All clothing is custom made.'],
+      details: ['Oversized fit, dropped shoulder', 'Alien mark, centre chest', 'Black', 'Model measurements: 184 cm & 74 kg. Model is wearing size M', 'All clothing is custom made.'],
       description: 'A quiet statement. The oversized BYMARCCC tee in black, marked only by the alien on the chest.', shipping: SHIPPING,
       unavailable: [], colours: BLACK_ONLY, chart: APPAREL_CHART, gallery: [{ src: 'assets/img/gallery/tee-02-1-e18e452b.webp', w: 1212, h: 1816 }] },
     'hoodie-01': { model: APPAREL_MODEL, id: 'bymarccc-hoodie-01', title: 'BYMARCCC Hoodie 01', price: null, currency: 'RON', cut: 'Oversized', collections: ['tops'],
-      details: ['Oversized fit, dropped shoulder', 'Alien mark, centre chest', 'Hood and kangaroo pocket', 'Black', 'All clothing is custom made.'],
+      details: ['Oversized fit, dropped shoulder', 'Alien mark, centre chest', 'Hood and kangaroo pocket', 'Black', 'Model measurements: 184 cm & 74 kg. Model is wearing size M', 'All clothing is custom made.'],
       description: 'The BYMARCCC hoodie. Oversized, black and heavy on presence, with the alien mark set on the chest.', shipping: SHIPPING,
       unavailable: [], colours: BLACK_ONLY, chart: APPAREL_CHART, gallery: [{ src: 'assets/img/gallery/hoodie-01-1-a2036803.webp', w: 1212, h: 1816 }] },
     'hoodie-02': { model: APPAREL_MODEL, id: 'bymarccc-hoodie-02', title: 'BYMARCCC Hoodie 02', price: null, currency: 'RON', cut: 'Oversized', collections: ['tops'],
-      details: ['Oversized fit, dropped shoulder', 'bymarccc lettering with the alien mark, chest print', 'Hood and kangaroo pocket', 'Black', 'All clothing is custom made.'],
+      details: ['Oversized fit, dropped shoulder', 'bymarccc lettering with the alien mark, chest print', 'Hood and kangaroo pocket', 'Black', 'Model measurements: 184 cm & 74 kg. Model is wearing size M', 'All clothing is custom made.'],
       description: 'The BYMARCCC hoodie with the bymarccc signature across the chest. Oversized and black — your frequency will create your reality.', shipping: SHIPPING,
       unavailable: [], colours: BLACK_ONLY, chart: APPAREL_CHART, gallery: [{ src: 'assets/img/gallery/hoodie-02-1-e1b25943.webp', w: 1212, h: 1816 }] },
+    'zebra-jacket': {
+      imageColours: true,   // each gallery image = one colour swatch (same as the jeans)
+      model: { height: 184, weight: 74, size: 'M', modelMedia: [0, 7, 8], text: 'Model measurements: 184 cm & 74 kg. Model is wearing size M' },
+      id: 'bymarccc:zebra-patch-jacket', title: 'Zebra Patch Jacket', price: null, currency: 'RON', cut: 'Oversized denim jacket',
+      collections: ['jackets'],
+      details: ['Oversized fit', 'Washed black denim', 'Hand-applied zebra patches — chest, pocket and hem tab', 'Paint-splatter finish', 'Sizes M, L, XL', 'Model measurements: 184 cm & 74 kg. Model is wearing size M', 'All clothing is custom made.'],
+      description: 'The oversized denim jacket that matches the Zebra Patch Jeans. Washed black denim with hand-applied zebra patches on the chest and pocket, a zebra hem tab and paint splatter throughout. Nine patch colours — pick yours from the photos. Every jacket is patched and painted by hand, so no two are identical.',
+      shipping: SHIPPING,
+      unavailable: [], colours: JACKET_COLOURS, chart: sizeChart(['M', 'L', 'XL']),
+      gallery: [{ src: 'assets/img/gallery/zebra-jacket-1-9c283037.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/zebra-jacket-2-66883ac9.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-3-589c6d3f.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-4-fd07b2d6.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-5-25a6f5fe.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-6-71166c1f.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-7-99399e55.webp', w: 1212, h: 1816 }, { src: 'assets/img/gallery/zebra-jacket-8-09030ec0.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/zebra-jacket-9-64a893b4.webp', w: 1024, h: 1536 }],
+    },
     /* Accessories — imported from the public Shopify catalogue (bymarccc.com). Images are served from the Shopify CDN. */
     'colored-cross-bag': { id: 'shopify:colored-cross-bag', shopifyVariant: 55750249906524, title: 'Colored Cross Bag', price: 700, currency: 'RON', cut: 'Duffle', collections: ['accessories'], genders: ['men', 'women'],
       details: ['Luxury duffle bag with colorful crosses', '29 × 16 × 49 cm', 'Signature bymarccc travel tag', 'Black chain detailing', 'Each piece is custom created.'],
@@ -796,7 +808,7 @@
   const WOMEN_FEATURED = { tops: ['w-art-baby-top-1', 'w-blue-baby-top', 'w-fuchsia-baby-top', 'w-pink-baby-top', 'w-white-baby-top', 'w-white-baby-top-1'] };   // first six; the rest behind VIEW ALL
   const WOMEN_COLLECTIONS = [{ key: 'tops', label: 'TOPS' }, { key: 'bottoms', label: 'BOTTOMS' }, { key: 'accessories', label: 'ACCESSORIES' }];
   const COLLECTIONS = [
-    { key: 'tops', label: 'TOPS' }, { key: 'bottoms', label: 'BOTTOMS' }, { key: 'denim', label: 'DENIM' }, { key: 'jackets', label: 'JACKETS' }, { key: 'accessories', label: 'ACCESSORIES' },
+    { key: 'tops', label: 'TOPS' }, { key: 'denim', label: 'DENIM' }, { key: 'jackets', label: 'JACKETS' }, { key: 'accessories', label: 'ACCESSORIES' },
   ];
   window.BYMARCCC_CATALOG = { CATALOG, COLLECTIONS, WOMEN_COLLECTIONS, WOMEN_FEATURED, MODEL, REVIEWS };
 })();
