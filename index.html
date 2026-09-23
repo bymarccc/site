@@ -2337,7 +2337,7 @@
     el.addEventListener('dragstart', e => e.preventDefault());
     el.addEventListener('click', e => {
       if (dragged) { dragged = false; e.preventDefault(); return; }   // a drag / long press is not a tap
-      if (el.dataset.track) miniToggle(el.dataset.track);   // vinyl plays its own dedicated track, just like the CD
+      if (el.dataset.track) { const sy = window.scrollY; miniToggle(el.dataset.track); requestAnimationFrame(() => window.scrollTo(0, sy)); setTimeout(() => window.scrollTo(0, sy), 150); }   // vinyl / CD play their own track — and never move the page
     });
 
     // keyboard alternative: arrow keys nudge the focused object
@@ -2868,6 +2868,7 @@
 
   window.BYMARCCC = Object.assign(window.BYMARCCC || {}, {
     player: { play: id => playFrom([{ id, title: '', channel: '', thumb: thumbFor(id) }], 0), close: closePlayer, minimize, restore },
+    audioTrack: { play(item, at) { const i = playlist.indexOf(item); if (i < 0) return false; miniPlayList(playlist, i); const seek = () => { if (at) audio.currentTime = at; }; if (audio.readyState >= 1) seek(); else audio.addEventListener('loadedmetadata', seek, { once: true }); return true; }, stop() { audio.pause(); } },
   });
 })();
 
@@ -3362,7 +3363,7 @@ body.pdp .ai-launch{--ai-offset:92px}
 .vp__ov svg { width: 13px; height: 13px; }
 .vp__ov--close { top: 6px; right: 6px; }
 .vp__ov--mute { bottom: 6px; right: 6px; }
-.vp__ov--full { bottom: 6px; right: 40px; }
+.vp__ov--full { bottom: 6px; right: 6px; }
 
 .vp__video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
 /* YouTube-style mini-player controls: shown while paused or for a moment after a tap */
@@ -3382,7 +3383,7 @@ body.pdp .ai-launch{--ai-offset:92px}
 /* end of song: black card with replay / next */
 .vp__end { position: absolute; inset: 0; background: #000; display: none; align-items: center; justify-content: center; gap: 22px; }
 .vp.is-ended .vp__end { display: flex; }
-.vp.is-ended .vp__ctr, .vp.is-ended .vp__shade, .vp.is-ended .vp__prog, .vp.is-ended .vp__ov--mute, .vp.is-ended .vp__ov--full { display: none; }
+.vp.is-ended .vp__ctr, .vp.is-ended .vp__shade, .vp.is-ended .vp__prog, .vp.is-ended .vp__ov--full { display: none; }
 .vp.is-ended .vp__ov--close { opacity: .95; pointer-events: auto; }
 .vp__endbtn { border: 0; padding: 0; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
 .vp__endbtn svg { width: 22px; height: 22px; }
@@ -3392,6 +3393,27 @@ body.pdp .ai-launch{--ai-offset:92px}
 .vp.is-docked { pointer-events: none; }
 .vp-tab.is-dock { width: 26px; height: 64px; top: var(--ty, 58%); border-radius: 0 10px 10px 0; background: rgba(20,20,20,.92); }
 .vp-tab.is-dock svg { width: 16px; height: 16px; }
+.vp-tab.is-right { left: auto; right: 0; border-radius: 10px 0 0 10px; }
+.vp-tab.is-right .vp-tab__c { transform: scaleX(-1); }
+.vp-tab { touch-action: none; }
+/* ---- audio mode: black Apple-Music-style card (same widget, no video) ---- */
+.vp[data-mode="audio"] { width: min(72vw, 300px) !important; }
+.vp[data-mode="audio"] .vp__screen, .vp[data-mode="audio"] .vp__end { display: none; }
+.vp__audio { display: none; position: relative; padding: 14px 16px 12px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.vp[data-mode="audio"] .vp__audio { display: block; }
+.vp__atitle { font-size: 12px; font-weight: 600; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 30px; }
+.vp__aartist { font-size: 10.5px; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.vp__ax { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: rgba(255,255,255,.1); color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; touch-action: manipulation; }
+.vp__ax svg { width: 12px; height: 12px; }
+.vp__scrub { position: relative; height: 6px; margin-top: 14px; border-radius: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
+.vp__scrub::before { content: ""; position: absolute; inset: -12px 0; }
+.vp__scrub i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: #fff; }
+.vp__scrub.is-seeking { height: 9px; margin-top: 12.5px; }
+.vp__atimes { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10.5px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
+.vp__actr { display: flex; align-items: center; justify-content: center; gap: 26px; margin-top: 8px; }
+.vp__abtn { border: 0; background: none; color: #fff; padding: 0; width: 40px; height: 40px; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
+.vp__abtn svg { width: 24px; height: 24px; }
+.vp__abtn--play svg { width: 30px; height: 30px; }
 .vp__big {
   position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px;
   display: grid; place-items: center;
@@ -3470,12 +3492,20 @@ body.pdp .ai-launch{--ai-offset:92px}
     <button class="vp__ov vp__ov--close" id="vpCloseOv" type="button" aria-label="Close video">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
-    <button class="vp__ov vp__ov--mute" id="vpMuteOv" type="button" aria-label="Mute">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path id="vpMuteOvIcon" d="M4 9v6h4l5 5V4L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
-    </button>
     <button class="vp__ov vp__ov--full" id="vpFullOv" type="button" aria-label="Fullscreen">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
     </button>
+  </div>
+  <div class="vp__audio" id="vpAudio">
+    <div class="vp__atitle" id="vpATitle">—</div><div class="vp__aartist" id="vpAArtist"></div>
+    <button class="vp__ax" id="vpAClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="vp__scrub" id="vpScrub" role="slider" aria-label="Seek"><i id="vpScrubFill"></i></div>
+    <div class="vp__atimes"><span id="vpACur">0:00</span><span id="vpARem">-0:00</span></div>
+    <div class="vp__actr">
+      <button class="vp__abtn" id="vpAPrev" type="button" aria-label="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 12l9-6v12zM2 12l9-6v12z"/></svg></button>
+      <button class="vp__abtn vp__abtn--play" id="vpAPlay" type="button" aria-label="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><path id="vpAPlayIcon" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+      <button class="vp__abtn" id="vpANext" type="button" aria-label="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6l9 6-9 6zM13 6l9 6-9 6z"/></svg></button>
+    </div>
   </div>
   <div class="vp__foot" hidden>
     <button class="vp__btn" id="vpPrev" type="button" aria-label="Previous video">
@@ -3613,23 +3643,23 @@ body.pdp .ai-launch{--ai-offset:92px}
   /* --- dock: dragged off the LEFT edge → keeps playing, only a small arrow tab stays --- */
   let docked = false;
   const setTab = mode => { tab.classList.toggle('is-dock', mode === 'dock'); tab.querySelector('.vp-tab__i').toggleAttribute('hidden', mode === 'dock'); tab.querySelector('.vp-tab__c').toggleAttribute('hidden', mode !== 'dock');   /* SVG has no .hidden property */ tab.setAttribute('aria-label', mode === 'dock' ? 'Show video' : 'Show music videos'); };
-  function dock() {
-    docked = true; vp.classList.add('is-docked', 'is-snapping');
+  let dockSide = 'left';
+  function dock(side = 'left') {
+    docked = true; dockSide = side; vp.classList.add('is-docked', 'is-snapping');
     const h = vp.offsetHeight; tab.style.setProperty('--ty', Math.round(y + h / 2) + 'px');
-    x = -vp.offsetWidth - 4; apply();   // fully off-screen; the <video> stays live so the music keeps going
-    setTab('dock'); tab.hidden = false;
+    x = side === 'right' ? document.documentElement.clientWidth + 4 : -vp.offsetWidth - 4; apply();   // fully off-screen; media stays live so the music keeps going
+    setTab('dock'); tab.classList.toggle('is-right', side === 'right'); tab.hidden = false;
     setTimeout(() => vp.classList.remove('is-snapping'), 300);
   }
-  function undock() {
-    docked = false; tab.hidden = true; vp.classList.remove('is-docked'); vp.classList.add('is-snapping');
-    x = 12; clampToViewport(); showCtrls();
+  function undock(animate = true) {
+    docked = false; tab.hidden = true; vp.classList.remove('is-docked'); if (animate) vp.classList.add('is-snapping');
+    x = dockSide === 'right' ? document.documentElement.clientWidth - vp.offsetWidth - 12 : 12; clampToViewport(); showCtrls();
     setTimeout(() => vp.classList.remove('is-snapping'), 300);
   }
   btnClose.addEventListener('click', close);
   $('vpCloseOv').addEventListener('click', close);
-  $('vpMuteOv').addEventListener('click', () => btnMute.click());
   $('vpFullOv').addEventListener('click', () => btnFull.click());
-  tab.addEventListener('click', () => docked ? undock() : open());
+  tab.addEventListener('click', () => { if (!docked) open(); });   // docked: handled by the drag/tap logic above
 
   /* ---------- position: default, clamp, persist, drag ---------- */
   let x = 0, y = 0;
@@ -3658,34 +3688,48 @@ body.pdp .ai-launch{--ai-offset:92px}
   btnReset.addEventListener('click', reset);
 
   let drag = null;
-  handle.addEventListener('pointerdown', e => {
-    if (e.target.closest('.vp__ov, .vp__head, .vp__foot, .vp__ctr, .vp__end')) return;   // overlay buttons stay buttons; the video (and its big play button) is the drag surface
+  const vw = () => document.documentElement.clientWidth;
+  function dragStart(e, surface, fromTab) {
+    if (e.target.closest('.vp__ov, .vp__head, .vp__foot, .vp__ctr, .vp__end, .vp__ax, .vp__abtn, .vp__scrub')) return;   // buttons stay buttons
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: x, oy: y, moved: false };
+    if (fromTab) {   // drag the docked player back in from its tab: it follows the finger
+      undock(false); vp.classList.remove('is-snapping');
+      x = dockSide === 'right' ? vw() - vp.offsetWidth : 0; y = Math.min(bounds().maxY, Math.max(0, e.clientY - vp.offsetHeight / 2)); apply();
+    }
+    drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: x, oy: y, moved: false, tab: !!fromTab, surface };
     vp.classList.add('is-dragging');
-    handle.setPointerCapture?.(e.pointerId);
+    surface.setPointerCapture?.(e.pointerId);
     e.preventDefault();
-  });
-  handle.addEventListener('pointermove', e => {
+  }
+  function dragMove(e) {
     if (!drag || e.pointerId !== drag.id) return;
     const b = bounds();
     if (Math.abs(e.clientX - drag.sx) > 6 || Math.abs(e.clientY - drag.sy) > 6) drag.moved = true;
     if (!drag.moved) return;
-    x = Math.min(b.maxX, Math.max(-vp.offsetWidth, drag.ox + (e.clientX - drag.sx)));   // may go past the left edge → dock
+    x = Math.min(vw(), Math.max(-vp.offsetWidth, drag.ox + (e.clientX - drag.sx)));   // may go past either edge → dock there
     y = Math.min(b.maxY, Math.max(b.minY, drag.oy + (e.clientY - drag.sy)));
     apply();
-  });
+  }
   const endDrag = e => {
     if (!drag || (e && e.pointerId !== drag.id)) return;
-    const wasTap = !drag.moved; drag = null; vp.classList.remove('is-dragging');
-    if (wasTap) { if (e && e.type === 'pointerup') toggleCtrls(); return; }   // a tap (no drag) on the video shows / hides the controls
-    if (x < -vp.offsetWidth * 0.35) { dock(); return; }       // pushed more than a third off the left edge → dock, keep playing
-    if (x < 0) { vp.classList.add('is-snapping'); x = 0; apply(); setTimeout(() => vp.classList.remove('is-snapping'), 300); }
+    const wasTap = !drag.moved, fromTab = drag.tab, surface = drag.surface; drag = null; vp.classList.remove('is-dragging');
+    if (wasTap) { if (fromTab) { vp.classList.add('is-snapping'); x = dockSide === 'right' ? vw() - vp.offsetWidth - 12 : 12; clampToViewport(); setTimeout(() => vp.classList.remove('is-snapping'), 300); } else if (e && e.type === 'pointerup' && surface === handle) toggleCtrls(); return; }
+    const w = vp.offsetWidth;
+    if (x < -w * 0.35) { dock('left'); return; }             // pushed off the left edge → dock left, keep playing
+    if (x > vw() - w * 0.65) { dock('right'); return; }      // pushed off the right edge → dock right
+    const b = bounds();
+    if (x < 0 || x > b.maxX) { vp.classList.add('is-snapping'); x = Math.min(b.maxX, Math.max(0, x)); apply(); setTimeout(() => vp.classList.remove('is-snapping'), 300); }
     store.set(KEY_POS, { x, y });                             // remembered across refreshes
   };
-  handle.addEventListener('pointerup', endDrag);
-  handle.addEventListener('pointercancel', endDrag);
-  handle.addEventListener('lostpointercapture', endDrag);
+  const audioCard = $('vpAudio');
+  for (const el of [handle, audioCard]) {
+    el.addEventListener('pointerdown', e => dragStart(e, el, false));
+    el.addEventListener('pointermove', dragMove);
+    el.addEventListener('pointerup', endDrag); el.addEventListener('pointercancel', endDrag); el.addEventListener('lostpointercapture', endDrag);
+  }
+  tab.addEventListener('pointerdown', e => { if (docked) dragStart(e, tab, true); });
+  tab.addEventListener('pointermove', dragMove);
+  tab.addEventListener('pointerup', endDrag); tab.addEventListener('pointercancel', endDrag); tab.addEventListener('lostpointercapture', endDrag);
   addEventListener('resize', clampToViewport, { passive: true });
   addEventListener('orientationchange', () => setTimeout(clampToViewport, 250), { passive: true });
 
@@ -3698,10 +3742,62 @@ body.pdp .ai-launch{--ai-offset:92px}
   restore();
   // pause the audio playlist when a video starts (one thing at a time)
   video.addEventListener('play', () => document.getElementById('miniAudio')?.pause());
+  /* ---------- audio mode: the same floating card shows the music playing on the CD / vinyl / playlist ---------- */
+  const A = document.getElementById('miniAudio');
+  const aTitle = $('vpATitle'), aArtist = $('vpAArtist'), aCur = $('vpACur'), aRem = $('vpARem'), scrub = $('vpScrub'), scrubFill = $('vpScrubFill'), aPlayIcon = $('vpAPlayIcon'), aPlay = $('vpAPlay');
+  const fmtT = t => { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  let scrubbing = false;
+  const setMode = m => { vp.dataset.mode = m; clampToViewport(); };
+  const aMeta = () => { aTitle.textContent = (document.getElementById('miniTitle')?.textContent || '').trim() || 'BYMARCCC'; aArtist.textContent = (document.getElementById('miniArtist')?.textContent || '').trim(); };
+  const aUI = () => { const on = A && !A.paused && !A.ended; aPlayIcon.setAttribute('d', on ? ICON_PAUSE : ICON_PLAY); aPlay.setAttribute('aria-label', on ? 'Pause' : 'Play'); };
+  const aTime = () => { if (!A || !A.duration) return; const p = A.currentTime / A.duration; if (!scrubbing) scrubFill.style.width = (p * 100) + '%'; aCur.textContent = fmtT(A.currentTime); aRem.textContent = '-' + fmtT(A.duration - A.currentTime); };
+  if (A) {
+    A.addEventListener('play', () => { if (!video.paused) video.pause(); aMeta(); setMode('audio'); if (vp.hidden) { vp.hidden = false; tab.hidden = true; restore(); } aUI(); });
+    A.addEventListener('pause', aUI); A.addEventListener('ended', aUI);
+    A.addEventListener('loadedmetadata', () => { aMeta(); aTime(); }); A.addEventListener('timeupdate', aTime);
+    A.addEventListener('emptied', () => { if (vp.dataset.mode === 'audio') { vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; } });
+    aPlay.addEventListener('click', () => { A.paused ? A.play().catch(() => {}) : A.pause(); });
+    $('vpAPrev').addEventListener('click', () => document.getElementById('miniPrev')?.click());
+    $('vpANext').addEventListener('click', () => document.getElementById('miniNext')?.click());
+    $('vpAClose').addEventListener('click', () => { document.getElementById('miniClose')?.click(); vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; });
+    // Apple-Music-style scrubber: drag anywhere on the bar
+    const seekAt = cx => { const r = scrub.getBoundingClientRect(); const p = Math.min(1, Math.max(0, (cx - r.left) / r.width)); scrubFill.style.width = (p * 100) + '%'; if (A.duration) { aCur.textContent = fmtT(p * A.duration); aRem.textContent = '-' + fmtT(A.duration - p * A.duration); } return p; };
+    scrub.addEventListener('pointerdown', e => { scrubbing = true; scrub.classList.add('is-seeking'); scrub.setPointerCapture?.(e.pointerId); seekAt(e.clientX); e.stopPropagation(); e.preventDefault(); });
+    scrub.addEventListener('pointermove', e => { if (scrubbing) seekAt(e.clientX); });
+    const scrubEnd = e => { if (!scrubbing) return; scrubbing = false; scrub.classList.remove('is-seeking'); const p = seekAt(e.clientX); if (A.duration) A.currentTime = p * A.duration; };
+    scrub.addEventListener('pointerup', scrubEnd); scrub.addEventListener('pointercancel', scrubEnd);
+  }
+  video.addEventListener('play', () => { if (vp.dataset.mode !== 'video') setMode('video'); });
+
+  /* ---------- lock screen / CarPlay for the music video's audio ---------- */
+  if ('mediaSession' in navigator) {
+    const ART = [{ src: new URL('assets/img/lockscreen-alien-512.jpg', location.href).href, sizes: '512x512', type: 'image/jpeg' }, { src: new URL('assets/img/lockscreen-alien.jpg', location.href).href, sizes: '1024x1024', type: 'image/jpeg' }];
+    const vMeta = () => { try { navigator.mediaSession.metadata = new MediaMetadata({ title: title.textContent || 'BYMARCCC', artist: 'BYMARCCC', album: 'BYMARCCC', artwork: ART }); } catch {} };
+    const vHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
+      set('play', () => video.play().catch(() => {})); set('pause', () => video.pause());
+      set('seekbackward', d => { video.currentTime = Math.max(0, video.currentTime - (d.seekOffset || 10)); });
+      set('seekforward', d => { video.currentTime = Math.min(video.duration || 0, video.currentTime + (d.seekOffset || 10)); });
+      set('seekto', d => { if (typeof d.seekTime === 'number') video.currentTime = d.seekTime; });
+      set('nexttrack', () => load(idx + 1, { autoplay: true })); set('previoustrack', () => load(idx - 1, { autoplay: true })); };
+    video.addEventListener('play', () => { vMeta(); vHandlers(); navigator.mediaSession.playbackState = 'playing'; });
+    video.addEventListener('pause', () => { if (vp.dataset.mode === 'video') navigator.mediaSession.playbackState = 'paused'; });
+  }
+
+  let handedOff = null;
+  document.addEventListener('visibilitychange', () => {
+    const cur = list[idx] && (window.BYMARCCC_PLAYLIST || []).find(t => t.video === list[idx].src);
+    if (document.hidden) {
+      if (!video.paused && !video.ended && cur && cur.src && window.BYMARCCC?.audioTrack) { const at = video.currentTime; video.pause(); if (window.BYMARCCC.audioTrack.play(cur, at)) handedOff = cur; }
+    } else if (handedOff && A) {
+      const at = A.currentTime, wasPlaying = !A.paused; handedOff = null; A.pause();
+      setMode('video'); video.currentTime = at; if (wasPlaying) video.play().catch(() => {});
+    }
+  });
+
   window.BYMARCCC_VP = {
-    play(t) { const i = list.findIndex(v => v.src === t.video); if (i < 0) return; open(); restore(); if (idx !== i || !video.getAttribute('src')) load(i); tryPlay(); },
+    play(t) { const i = list.findIndex(v => v.src === t.video); if (i < 0) return; setMode('video'); open(); restore(); if (idx !== i || !video.getAttribute('src')) load(i); tryPlay(); },
     isPlaying() { return !video.paused && !video.ended; },
-    select(t) { const i = list.findIndex(v => v.src === t.video); if (i < 0) return; open(); restore(); if (idx !== i || !video.getAttribute('src')) load(i); },
+    select(t) { const i = list.findIndex(v => v.src === t.video); if (i < 0) return; setMode('video'); open(); restore(); if (idx !== i || !video.getAttribute('src')) load(i); },
     current() { const v = list[idx]; return v && (window.BYMARCCC_PLAYLIST || []).find(t => t.video === v.src) || null; },
     isOpen() { return !vp.hidden; },
     pause() { if (!video.paused) video.pause(); },
