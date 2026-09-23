@@ -1172,7 +1172,7 @@
   .salerail .sales__card { width: calc((100vw - 2 * clamp(16px, 4vw, 48px) - 10px) / 2); scroll-snap-align: start; }
   @media (min-width: 900px) { .salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - 3 * 20px) / 4); } }
   .salerail .sales__card { background: none; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
-  .salerail .shop__img { aspect-ratio: 2 / 3; }
+  .salerail .shop__img { aspect-ratio: 2 / 3; touch-action: pan-x pan-y; }   /* the shop grid's pan-y blocked finger swiping on the rail */
   .salerail__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 10px; font-size: 12.5px; letter-spacing: .04em; line-height: 1.35; }
   .salerail__name { text-transform: uppercase; }
   .salerail__price { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; }
@@ -1294,6 +1294,9 @@
       details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Cross Patch Jeans — one pair, size 40.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-cross-patch-jeans-d4086d1c.webp', w: 1024, h: 1536 }] },
     /* Accessories — imported from the public Shopify catalogue (bymarccc.com). Images are served from the Shopify CDN. */
+    'sale-leopard-patch-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-leopard-patch-jeans', title: 'Leopard Patch Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
+      details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Leopard Patch Jeans — one pair, size 40.', shipping: SHIPPING,
+      unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-leopard-patch-jeans-56fc7b16.webp', w: 1024, h: 1536 }] },
     'colored-cross-bag': { id: 'shopify:colored-cross-bag', shopifyVariant: 55750249906524, title: 'Colored Cross Bag', price: 700, currency: 'RON', cut: 'Duffle', collections: ['accessories', 'sales'], genders: ['men', 'women'],
       details: ['Luxury duffle bag with colorful crosses', '29 × 16 × 49 cm', 'Signature bymarccc travel tag', 'Black chain detailing', 'Each piece is custom created.'],
       description: 'A luxury duffle bag hand-finished with colorful crosses. Finished with a signature bymarccc travel tag and elegant black chain detailing.', shipping: SHIPPING,
