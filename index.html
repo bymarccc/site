@@ -1139,7 +1139,7 @@
   @media (min-width: 900px) { .sales__progress { height: 6px; } }
   @media (prefers-reduced-motion: reduce) { .sales__track { scroll-behavior: auto; } }
   /* ---- compact "sale bar" (men SALES): one card at a time, a bit narrower than the phone, name + price + tiny ADD in one row ---- */
-  .salebar__note { margin: 0 0 14px; padding: 0 clamp(16px, 4vw, 48px); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #111; }
+  .salebar__note { margin: 0 0 14px; padding: 0 clamp(16px, 4vw, 48px); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #111; text-align: center; }
   /* sale grid: same cards/ratio as the shop grid; one photo, so a thin ADD TO BAG sits on the photo instead of the dashes */
   .shop__grid > .salegrid__note { grid-column: 1 / -1; margin: 0; padding: 0; }
   .salegrid__card { display: block; color: inherit; }
@@ -1279,14 +1279,14 @@
       details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Black Striped Jeans — one pair, size 40.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-black-striped-jeans-7e5d1fe2.webp', w: 1024, h: 1536 }] },
     'sale-cross-patch-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-cross-patch-jeans', title: 'Cross Patch Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
-    'sale-palm-tree-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-palm-tree-jeans', title: 'Palm Tree Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
-      details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Palm Tree Jeans — one pair, size 40.', shipping: SHIPPING,
+    'sale-palm-tree-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-palm-tree-jeans', title: 'Palm Trees Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
+      details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Palm Trees Jeans — one pair, size 40.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-palm-tree-jeans-05b5c5f3.webp', w: 1024, h: 1536 }] },
     'sale-silk-patch-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-silk-patch-jeans', title: 'Silk Patch Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
       details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Silk Patch Jeans — one pair, size 40.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-silk-patch-jeans-d1ee18fc.webp', w: 1024, h: 1536 }] },
-    'sale-studded-patch-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-studded-patch-jeans', title: 'Studded Patch Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
-      details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Studded Patch Jeans — one pair, size 40.', shipping: SHIPPING,
+    'sale-studded-patch-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-studded-patch-jeans', title: 'Swarovski Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
+      details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Swarovski Jeans — one pair, size 40.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-studded-patch-jeans-43770133.webp', w: 1024, h: 1536 }] },
     'sale-chain-patch-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-chain-patch-jeans', title: 'Chain Patch Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
       details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Chain Patch Jeans — one pair, size 40.', shipping: SHIPPING,
@@ -1297,6 +1297,9 @@
     'sale-leopard-patch-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-leopard-patch-jeans', title: 'Leopard Patch Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
       details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Leopard Patch Jeans — one pair, size 40.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-leopard-patch-jeans-56fc7b16.webp', w: 1024, h: 1536 }] },
+    'sale-pink-striped-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-pink-striped-jeans', title: 'Pink Striped Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
+      details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Pink Striped Jeans — one pair, size 40.', shipping: SHIPPING,
+      unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-pink-striped-jeans-89f62413.webp', w: 1024, h: 1536 }] },
     'colored-cross-bag': { id: 'shopify:colored-cross-bag', shopifyVariant: 55750249906524, title: 'Colored Cross Bag', price: 700, currency: 'RON', cut: 'Duffle', collections: ['accessories', 'sales'], genders: ['men', 'women'],
       details: ['Luxury duffle bag with colorful crosses', '29 × 16 × 49 cm', 'Signature bymarccc travel tag', 'Black chain detailing', 'Each piece is custom created.'],
       description: 'A luxury duffle bag hand-finished with colorful crosses. Finished with a signature bymarccc travel tag and elegant black chain detailing.', shipping: SHIPPING,
