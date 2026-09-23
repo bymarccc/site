@@ -1769,38 +1769,42 @@
     return v.endsWith('vw') ? window.innerWidth * parseFloat(v) / 100 : parseFloat(v);
   };
 
-  /* Swipe / drag on the jeans: the axis is locked on the first few px of
-     movement (see below) — a mostly-vertical gesture is left alone (no
-     setPointerCapture, no preventDefault) so the page keeps scrolling
-     normally; only a mostly-horizontal gesture is captured and used to
-     change colour. touch-action: pan-y on .zebra__stage backs this up. */
+  /* Swipe / drag on the jeans. Real touchstart/touchmove/touchend — NOT
+     Pointer Events — for the touch path: Safari's Pointer Events layer has
+     a long-standing bug where preventDefault() on `pointermove` does not
+     reliably stop the native scroll/pan gesture from taking over, which is
+     what made this feel completely broken (the finger drag never showed —
+     it just jumped straight to the next colour once the system gesture won
+     the touch). Calling preventDefault() on a real `touchmove` (registered
+     {passive:false}) is what Safari actually honours. Pointer events are
+     kept, guarded to mouse only, for desktop click-drag. touch-action:
+     pan-y on .zebra__stage still lets a mostly-vertical gesture scroll the
+     page normally — we only ever preventDefault() once the axis is
+     confirmed horizontal. */
   const ZEBRA_DRAG = true;
   let dragMoved = false;
-  if (ZEBRA_DRAG) stage.addEventListener('pointerdown', e => {
-    if (e.button !== undefined && e.button !== 0) return;
-    if (e.target.closest('.zebra__arrow')) return;
-    dragMoved = false;
-    drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, t0: performance.now(), axis: null };
-  });
 
-  stage.addEventListener('pointermove', e => {
-    if (!drag || e.pointerId !== drag.id) return;
-    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+  function startDrag(x0, y0) {
+    dragMoved = false;
+    drag = { x0, y0, x: x0, t0: performance.now(), axis: null };
+  }
+  function moveDrag(x, y) {
+    if (!drag) return;
+    const dx = x - drag.x0, dy = y - drag.y0;
     if (!drag.axis) {
-      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return false;
       drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      if (drag.axis === 'x') { stage.classList.add('is-dragging'); stage.setPointerCapture?.(e.pointerId); }
+      if (drag.axis === 'x') stage.classList.add('is-dragging');
     }
-    if (drag.axis !== 'x') return;
-    drag.x = e.clientX;
+    if (drag.axis !== 'x') return false;
+    drag.x = x;
     dragMoved = true;
     // jeans follow the finger immediately, no transition
     layout(dx, true);
-    e.preventDefault();
-  });
-
-  function endDrag(e) {
-    if (!drag || (e && e.pointerId !== drag.id)) return;
+    return true; // caller should preventDefault()
+  }
+  function endDrag() {
+    if (!drag) return;
     const dx = drag.x - drag.x0;
     const dt = Math.max(1, performance.now() - drag.t0);
     const velocity = dx / dt; // px per ms
@@ -1814,9 +1818,39 @@
     else if (dx > threshold || velocity > 0.35) prev();
     else layout(0, false); // snap back
   }
-  stage.addEventListener('pointerup', endDrag);
-  stage.addEventListener('pointercancel', endDrag);
-  stage.addEventListener('lostpointercapture', endDrag);
+
+  if (ZEBRA_DRAG) {
+    // Touch: the primary path on phones.
+    stage.addEventListener('touchstart', e => {
+      if (e.target.closest('.zebra__arrow')) return;
+      const t = e.touches[0];
+      startDrag(t.clientX, t.clientY);
+    }, { passive: true });
+
+    stage.addEventListener('touchmove', e => {
+      if (!drag) return;
+      const t = e.touches[0];
+      if (moveDrag(t.clientX, t.clientY)) e.preventDefault();
+    }, { passive: false });
+
+    stage.addEventListener('touchend', endDrag);
+    stage.addEventListener('touchcancel', endDrag);
+
+    // Mouse: desktop click-drag. Pointer events, guarded to mouse so touch
+    // input isn't handled twice (once via touch*, once via pointer*).
+    stage.addEventListener('pointerdown', e => {
+      if (e.pointerType !== 'mouse') return;
+      if (e.button !== undefined && e.button !== 0) return;
+      if (e.target.closest('.zebra__arrow')) return;
+      startDrag(e.clientX, e.clientY);
+    });
+    stage.addEventListener('pointermove', e => {
+      if (e.pointerType !== 'mouse' || !drag) return;
+      moveDrag(e.clientX, e.clientY);
+    });
+    stage.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') endDrag(); });
+    stage.addEventListener('pointercancel', e => { if (e.pointerType === 'mouse') endDrag(); });
+  }
 
   // Tap (not drag) on a slide opens that jean's product page — same fit for every colour.
   stage.addEventListener('click', e => {
