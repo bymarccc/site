@@ -71,54 +71,22 @@ async function readJson(request) {
 __name(readJson, "readJson");
 
 // lib/catalog.js
-var SHOP = /* @__PURE__ */ __name(() => env("SHOP_PUBLIC_URL", "https://bymarccc.com").replace(/\/$/, ""), "SHOP");
 var cache = { t: 0, items: [] };
-var LOCAL_PRODUCTS = [{
-  id: "zebra-patch-jeans",
-  handle: "zebra-patch-jeans",
-  title: "Zebra Patch Jeans",
-  productType: "jeans",
-  tags: ["jeans", "denim", "wide leg", "statement", "blugi"],
-  url: `${env("BYMARCCC_SITE_URL", "")}/product.html`,
-  price: 450,
-  currency: "RON",
-  description: "Hand-finished statement denim, wide leg, high rise. Hand-applied zebra patches and paint splatter.",
-  images: ["assets/01-grey-jeans.png", "assets/02-red-jeans.png", "assets/03-blue-jeans.png"],
-  options: ["Colour", "Size"],
-  variants: (() => {
-    const colours = ["Grey", "Red", "Blue", "Brown", "Purple", "Pink", "Green", "Orange", "White"];
-    const sizes = ["32", "34", "36", "38", "40", "42", "44"];
-    const unavailable = ["White:32", "White:44", "Pink:44"];
-    return colours.flatMap((c) => sizes.map((s) => ({ id: `zebra-patch-jeans:${c.toLowerCase()}:${s}`, title: `${c} / ${s}`, colour: c, size: s, price: 450, available: !unavailable.includes(`${c}:${s}`) })));
-  })(),
-  sizeChart: "jeans-wide"
-}];
+var CURRENT_ORIGIN = "";
 async function loadCatalog() {
   if (Date.now() - cache.t < 5 * 6e4 && cache.items.length) return cache.items;
-  let remote = [];
+  const base = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "");
+  let items = [];
   try {
-    const r = await fetch(`${SHOP()}/products.json?limit=250`, { headers: { Accept: "application/json" } });
+    const url = `${base}/catalog.json`;
+    const r = ENV.ASSETS && typeof ENV.ASSETS.fetch === "function" ? await ENV.ASSETS.fetch(new Request(url)) : await fetch(url);
     if (r.ok) {
       const j = await r.json();
-      remote = (j.products || []).map((p) => ({
-        id: String(p.id),
-        handle: p.handle,
-        title: p.title,
-        productType: p.product_type || "",
-        tags: p.tags || [],
-        url: `${SHOP()}/products/${p.handle}`,
-        price: Number(p.variants[0]?.price || 0),
-        currency: "RON",
-        description: (p.body_html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 600),
-        images: p.images.map((i) => i.src),
-        options: p.options.map((o) => o.name),
-        variants: p.variants.map((v) => ({ id: String(v.id), title: v.title, size: sizeOf(v, p.options), price: Number(v.price), available: !!v.available })),
-        sizeChart: null
-      }));
+      items = (j.items || []).map((p) => ({ ...p, tags: p.tags || [], variants: p.variants || [], images: (p.images || []).map((s) => /^https?:/.test(s) ? s : `${base}/${s}`), url: /^https?:/.test(p.url) ? p.url : `${base}/${p.url}` }));
     }
   } catch {
   }
-  cache = { t: Date.now(), items: [...LOCAL_PRODUCTS, ...remote] };
+  if (items.length) cache = { t: Date.now(), items };
   return cache.items;
 }
 __name(loadCatalog, "loadCatalog");
@@ -132,7 +100,10 @@ var summarize = /* @__PURE__ */ __name((p) => ({
   handle: p.handle,
   title: p.title,
   url: p.url,
-  price: p.price,
+  price: typeof p.price === "number" ? p.price : null,
+  compareAtPrice: p.compareAtPrice || null,
+  priceNote: typeof p.price === "number" ? null : "not priced yet - tell the customer to ask on the site",
+  gender: p.gender,
   currency: p.currency,
   image: p.images[0] || null,
   type: p.productType,
@@ -171,7 +142,7 @@ function recommendSize({ chart, heightCm, weightKg, waistCm, hipsCm, abdomen = "
 }
 __name(recommendSize, "recommendSize");
 var TOOL_DEFS = [
-  { type: "function", name: "searchProducts", description: "Search the real BYMARCCC catalogue by text, category, size or max price. Returns products with real prices, sizes and stock.", parameters: { type: "object", properties: { query: { type: "string" }, maxPrice: { type: "number" }, size: { type: "string" }, limit: { type: "number" } } } },
+  { type: "function", name: "searchProducts", description: "Search the real BYMARCCC catalogue by text, category, size or max price. Returns products with real prices, sizes and stock. Pass gender (men|women) when the customer said which collection.", parameters: { type: "object", properties: { gender: { type: "string", enum: ["men", "women"] }, query: { type: "string" }, maxPrice: { type: "number" }, size: { type: "string" }, limit: { type: "number" } } } },
   { type: "function", name: "getProductDetails", description: "Full details for one product (by id or handle).", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { type: "function", name: "getProductImages", description: "Image URLs for a product.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { type: "function", name: "getAvailableVariants", description: "Variants with availability for a product.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
@@ -193,16 +164,24 @@ async function runTool(name, args = {}) {
   const find = /* @__PURE__ */ __name((id) => items.find((p) => p.id === String(id) || p.handle === String(id) || p.title.toLowerCase() === String(id).toLowerCase()), "find");
   switch (name) {
     case "searchProducts": {
-      const q = (args.query || "").toLowerCase().split(/\s+/).filter(Boolean);
-      const syn = { blugi: "jeans", rochie: "dress", tricou: "top", sapca: "cap", \u0219apc\u0103: "cap", geaca: "jacket", geac\u0103: "jacket", pantaloni: "shorts" };
-      const terms = q.map((t) => syn[t] || t);
-      let res = items.filter((p) => {
-        const hay = `${p.title} ${p.productType} ${p.tags.join(" ")} ${p.description}`.toLowerCase();
-        return !terms.length || terms.some((t) => hay.includes(t));
-      });
-      if (args.maxPrice) res = res.filter((p) => p.price <= args.maxPrice);
+      const raw = (args.query || "").toLowerCase();
+      const syn = { blugi: "jeans", blug: "jeans", jean: "jeans", rochie: "dress", tricou: "t-shirt", tricouri: "t-shirt", tshirt: "t-shirt", tee: "t-shirt", tees: "t-shirt", hanorac: "hoodie", hanorace: "hoodie", sapca: "cap", \u0219apc\u0103: "cap", geaca: "jacket", geac\u0103: "jacket", jacheta: "jacket", jachet\u0103: "jacket", pantaloni: "bottoms", geanta: "bag", geant\u0103: "bag", top: "top", topuri: "top", bluza: "top", bluz\u0103: "top", barbati: "men", b\u0103rba\u021bi: "men", barbat: "men", mens: "men", man: "men", femei: "women", femeie: "women", womens: "women", woman: "women", reduceri: "sale", reducere: "sale", oferte: "sale" };
+      const terms = raw.split(/[^\p{L}\p{N}-]+/u).filter(Boolean).map((t) => syn[t] || t);
+      let gender = (args.gender || "").toLowerCase();
+      if (!gender) gender = terms.includes("men") ? "men" : terms.includes("women") ? "women" : "";
+      const words = terms.filter((t) => !["men", "women", "for", "de", "pentru", "a", "an", "the", "un", "o", "niste", "ni\u0219te", "vreau", "want", "show", "me", "arata", "arat\u0103", "cauta", "caut\u0103"].includes(t));
+      let res = items.filter((p) => !gender || (p.gender || ["men"]).includes(gender));
+      if (words.length) {
+        res = res.map((p) => {
+          const title = p.title.toLowerCase(), tags = p.tags.join(" ").toLowerCase(), type = (p.productType || "").toLowerCase(), desc = (p.description || "").toLowerCase();
+          let score = 0;
+          for (const t of words) { if (title.includes(t)) score += 4; if (type === t || type.includes(t)) score += 3; if (tags.includes(t)) score += 2; if (desc.includes(t)) score += 1; }
+          return [score, p];
+        }).filter(([s]) => s > 0).sort((a, b) => b[0] - a[0]).map(([, p]) => p);
+      }
+      if (args.maxPrice) res = res.filter((p) => typeof p.price === "number" && p.price <= args.maxPrice);
       if (args.size) res = res.filter((p) => p.variants.some((v) => v.available && v.size && v.size.toLowerCase().includes(String(args.size).toLowerCase())));
-      return { products: res.slice(0, args.limit || 8).map(summarize), total: res.length };
+      return { products: res.slice(0, args.limit || 8).map(summarize), total: res.length, gender: gender || "any" };
     }
     case "getProductDetails": {
       const p = find(args.id);
@@ -264,7 +243,7 @@ async function runTool(name, args = {}) {
   }
 }
 __name(runTool, "runTool");
-var SYSTEM_PROMPT = `You are the BYMARCCC AI stylist for bymarccc.com, a Romanian fashion brand. Reply in the customer's language (Romanian or English), short and warm, luxury-fashion tone.
+var SYSTEM_PROMPT = `You are the BYMARCCC AI stylist for bymarccc.com, a Romanian fashion brand. ALWAYS reply in the same language the customer writes in - Romanian, English, Arabic, any language - short and warm, luxury-fashion tone. When the customer asks for a garment type (t-shirt, jeans, jacket...), only show that type; never substitute another type. The men's collection has t-shirts, hoodies, jeans, a denim jacket and bags; the women's collection has baby tops, tees, hoodies, long sleeves, jeans, shorts, skirts and caps. A product with price null is not priced yet - say the price is on request.
 RULES: Never invent products, prices, stock, sizes, reviews or bestsellers \u2014 always use tools. If a tool says data is unavailable, say so plainly. For sizes: height/weight are only guidance; ask for waist/hips when the product has a size table; always add "Size recommendations are estimates. Fit may vary by cut and preference." and offer openSizeGuide. Never add to cart without the customer confirming the exact size/variant. Never comment negatively on bodies; never infer sensitive traits (health, ethnicity, gender identity, age) from photos or text; keep styling neutral and supportive; treat possible minors conservatively (no sexualised styling). When you recommend products, call searchProducts and the UI renders cards from the tool result \u2014 do not repeat prices from memory. For try-on requests call startTryOn with the chosen product ids.
 GENDER: Never assume whether to shop the Women's or Men's collection from a customer's appearance, name, voice or writing style. If a request ("style me for a party", a styling question) doesn't already say which collection, call askGenderChoice and wait for the answer before recommending anything. When a photo is supplied: analyze the visible outfit, silhouette, colors and style cues in the photo to judge which BYMARCCC pieces would look visually consistent with it, then call searchProducts filtered to the collection implied by the conversation so far \u2014 if that is still unclear after considering the outfit style itself (not the person), call askGenderChoice first. Keep recommendations visually consistent with the uploaded outfit (similar palette, formality and silhouette).`;
 
@@ -328,19 +307,32 @@ __name(assistantTool, "assistantTool");
 async function assistantRealtimeToken(request) {
   const g = guard(request);
   if (g) return g;
+  const tools = TOOL_DEFS.map((t) => ({ type: "function", name: t.name, description: t.description, parameters: t.parameters }));
+  const model = env("OPENAI_REALTIME_MODEL", "gpt-realtime");
+  let lastErr = "";
   try {
+    // GA Realtime API: ephemeral client secret
+    const sec = await openai("realtime/client_secrets", {
+      session: {
+        type: "realtime", model, instructions: SYSTEM_PROMPT, tools, output_modalities: ["audio"],
+        audio: { input: { transcription: { model: "gpt-4o-mini-transcribe" }, turn_detection: { type: "server_vad", threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 600 } }, output: { voice: "alloy" } }
+      }
+    }, { timeoutMs: 15e3 });
+    if (sec.value) return json(200, { client_secret: sec.value, expires_at: sec.expires_at, model });
+  } catch (e) {
+    lastErr = String(e && e.message || e);
+  }
+  try {
+    // legacy endpoint (older keys / projects)
     const session = await openai("realtime/sessions", {
-      model: env("OPENAI_REALTIME_MODEL", "gpt-4o-realtime-preview"),
-      voice: "alloy",
-      instructions: SYSTEM_PROMPT,
-      modalities: ["audio", "text"],
+      model: env("OPENAI_REALTIME_MODEL_LEGACY", "gpt-4o-realtime-preview"), voice: "alloy", instructions: SYSTEM_PROMPT, modalities: ["audio", "text"],
       input_audio_transcription: { model: "gpt-4o-mini-transcribe" },
-      turn_detection: { type: "server_vad", threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 600 },
-      tools: TOOL_DEFS.map((t) => ({ type: "function", name: t.name, description: t.description, parameters: t.parameters }))
+      turn_detection: { type: "server_vad", threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 600 }, tools
     }, { timeoutMs: 15e3 });
     return json(200, { client_secret: session.client_secret?.value, expires_at: session.client_secret?.expires_at, model: session.model });
   } catch (e) {
-    return json(502, { error: "Voice is temporarily unavailable." });
+    lastErr = lastErr || String(e && e.message || e);
+    return json(502, { error: "Voice is unavailable right now: " + lastErr.slice(0, 160) });
   }
 }
 __name(assistantRealtimeToken, "assistantRealtimeToken");
@@ -532,6 +524,7 @@ var ROUTES = {
 async function onRequest(context) {
   const { request, env: env2 } = context;
   const url = new URL(request.url);
+  CURRENT_ORIGIN = url.origin;
   const m = /^\/(?:\.netlify\/functions|api)\/([a-z0-9-]+)\/?$/.exec(url.pathname);
   if (!m) return env2.ASSETS.fetch(request);
   const handler = ROUTES[m[1]];
