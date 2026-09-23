@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Checkout — BYMARCCC</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* =====================================================================
+     BYMARCCC checkout — same black / white / #F5F4F1 language as the site.
+     Logic adapted from the Glowy checkout kit (COD via EmailJS, card via a
+     Stripe Payment Link), rebuilt for the multi-item BYMARCCC bag.
+     ===================================================================== */
+  :root{
+    --ink:#111; --sub:#6b6b68; --line:#e4e4e1; --bg:#F5F4F1; --blue:#5B95C3;
+    --ease:cubic-bezier(0.22,1,0.36,1);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ background:#fff; }
+  body{ margin:0; font-family:"Jost","Helvetica Neue",Helvetica,Arial,sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  a{ color:inherit; }
+  input,select,button{ font-family:inherit; }
+  .u-caps{ text-transform:uppercase; letter-spacing:.18em; }
+
+  /* ---------- top bar ---------- */
+  .co-top{ display:flex; align-items:center; justify-content:space-between; padding:18px clamp(16px,4vw,48px); border-bottom:1px solid var(--line); }
+  .co-logo{ text-decoration:none; font-weight:600; font-size:14px; letter-spacing:.28em; }
+  .co-lang{ display:flex; gap:4px; }
+  .co-lang button{ border:1px solid var(--line); background:#fff; color:var(--sub); font:500 10.5px/1 inherit; letter-spacing:.14em; padding:8px 10px; border-radius:999px; cursor:pointer; }
+  .co-lang button[aria-pressed="true"]{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  /* ---------- grid ---------- */
+  .co-grid{ display:grid; grid-template-columns:1fr; grid-template-areas:"summary" "form"; }
+  @media (min-width:900px){
+    .co-grid{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-areas:"form summary"; align-items:start; min-height:calc(100vh - 62px); }
+  }
+  .co-form{ grid-area:form; padding:28px clamp(16px,4vw,48px) 56px; }
+  @media (min-width:900px){ .co-form{ max-width:600px; margin-left:auto; padding:48px 56px 72px clamp(16px,4vw,48px); } }
+  .co-summary{ grid-area:summary; background:var(--bg); padding:24px clamp(16px,4vw,48px) 32px; }
+  @media (min-width:900px){ .co-summary{ position:sticky; top:0; min-height:calc(100vh - 62px); padding:48px clamp(16px,4vw,48px) 48px 56px; } }
+
+  .co-section{ margin-bottom:34px; }
+  .co-h{ margin:0 0 14px; font-size:12px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; }
+  .co-note{ margin:-6px 0 14px; font-size:13px; color:var(--sub); }
+
+  /* ---------- fields ---------- */
+  .co-field{
+    width:100%; height:48px; padding:0 14px; margin-bottom:10px;
+    border:1px solid var(--line); border-radius:12px; background:#fff; color:var(--ink);
+    font-size:14px; outline:0; transition:border-color .15s var(--ease);
+  }
+  .co-field::placeholder{ color:#9a9a97; }
+  .co-field:focus{ border-color:var(--ink); }
+  select.co-field{ appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111' stroke-width='1.8'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat; background-position:right 14px center; background-size:14px; }
+  .co-row2{ display:grid; grid-template-columns:1fr; gap:0; }
+  @media (min-width:640px){ .co-row2{ grid-template-columns:1fr 1fr; gap:10px; } }
+  .co-check{ display:flex; align-items:center; gap:10px; font-size:13px; color:var(--sub); margin:4px 0 0; }
+  .co-check input{ width:16px; height:16px; accent-color:var(--ink); }
+
+  /* ---------- option rows ---------- */
+  .co-opt{ display:flex; align-items:flex-start; gap:12px; border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:8px; cursor:pointer; background:#fff; transition:border-color .15s var(--ease), background-color .15s var(--ease); }
+  .co-opt.is-selected{ border-color:var(--ink); background:var(--bg); }
+  .co-opt input{ margin-top:2px; width:16px; height:16px; accent-color:var(--ink); flex:0 0 auto; }
+  .co-opt__body{ flex:1; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .co-opt__text b{ display:block; font-weight:500; font-size:14px; }
+  .co-opt__text span{ display:block; font-size:12.5px; color:var(--sub); margin-top:2px; }
+  .co-opt__price{ font-size:14px; font-weight:500; white-space:nowrap; }
+  .co-cards{ display:flex; gap:4px; }
+  .co-badge{ font-size:10px; font-weight:600; letter-spacing:.04em; border-radius:4px; padding:4px 6px; color:#fff; background:#111; }
+  .co-badge.more{ background:none; color:var(--sub); padding-left:2px; }
+
+  /* ---------- submit ---------- */
+  .co-submit{
+    width:100%; height:52px; margin-top:6px; border:0; border-radius:999px; cursor:pointer;
+    background:var(--ink); color:#fff; font:600 12px/1 inherit; letter-spacing:.2em; text-transform:uppercase;
+    transition:transform .2s var(--ease), background-color .2s var(--ease);
+  }
+  .co-submit:hover{ background:#000; transform:translateY(-1px); }
+  .co-submit:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+  .co-status{ min-height:1.3em; margin:12px 0 0; text-align:center; font-size:13px; }
+  .co-status.is-error{ color:#c0392b; }
+  .co-status.is-sending{ color:var(--sub); }
+  .co-status.is-success{ color:var(--blue); font-weight:500; }
+  .co-links{ display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:28px; padding-top:20px; border-top:1px solid var(--line); }
+  .co-links a{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--sub); text-decoration:none; }
+  .co-links a:hover{ color:var(--ink); }
+
+  /* ---------- summary / bag ---------- */
+  .co-items{ list-style:none; margin:0 0 18px; padding:0; }
+  .co-item{ display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .co-item__thumb{ position:relative; flex:0 0 auto; }
+  .co-item__thumb img{ width:64px; height:80px; object-fit:cover; border-radius:10px; background:#fff; display:block; }
+  .co-item__thumb span{ position:absolute; top:-6px; right:-6px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--ink); color:#fff; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; }
+  .co-item__info{ flex:1 1 auto; min-width:0; }
+  .co-item__name{ display:block; font-size:13.5px; font-weight:500; text-transform:uppercase; letter-spacing:.04em; }
+  .co-item__var{ display:block; font-size:12px; color:var(--sub); margin-top:2px; }
+  .co-qty{ display:inline-flex; align-items:center; gap:2px; margin-top:8px; border:1px solid var(--line); border-radius:999px; background:#fff; }
+  .co-qty button{ width:28px; height:28px; border:0; background:transparent; cursor:pointer; font-size:15px; color:var(--ink); border-radius:999px; }
+  .co-qty button:hover{ background:var(--bg); }
+  .co-qty output{ min-width:22px; text-align:center; font-size:13px; }
+  .co-item__price{ font-size:14px; font-weight:500; white-space:nowrap; }
+  .co-item__rm{ display:block; margin-top:4px; border:0; background:none; padding:0; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sub); cursor:pointer; }
+  .co-item__rm:hover{ color:var(--ink); }
+  .co-empty{ padding:24px 0; font-size:14px; color:var(--sub); }
+  .co-empty a{ display:inline-block; margin-top:14px; text-decoration:none; font-size:11px; letter-spacing:.18em; text-transform:uppercase; border-bottom:1px solid var(--ink); padding-bottom:2px; }
+
+  .co-discount{ display:flex; gap:8px; margin:6px 0 18px; }
+  .co-discount input{ flex:1; height:44px; border:1px solid var(--line); border-radius:12px; padding:0 14px; font-size:13px; background:#fff; outline:0; }
+  .co-discount input:focus{ border-color:var(--ink); }
+  .co-discount button{ border:0; border-radius:12px; padding:0 16px; font:600 11px/1 inherit; letter-spacing:.14em; text-transform:uppercase; background:#e6e6e2; color:#9a9a97; cursor:not-allowed; }
+  .co-discount button.is-active{ background:var(--ink); color:#fff; cursor:pointer; }
+  .co-totals{ font-size:13.5px; }
+  .co-totals div{ display:flex; justify-content:space-between; padding:7px 0; color:#4a4a48; }
+  .co-totals .total{ border-top:1px solid var(--line); margin-top:4px; padding-top:14px; font-size:15px; font-weight:600; color:var(--ink); }
+
+  /* ---------- thank you ---------- */
+  .co-ty{ display:none; }
+  .co-ty__grid{ display:grid; grid-template-columns:1fr; }
+  @media (min-width:900px){ .co-ty__grid{ grid-template-columns:1fr 1fr; align-items:start; } }
+  .co-ty__main{ padding:40px clamp(16px,4vw,48px) 56px; }
+  @media (min-width:900px){ .co-ty__main{ max-width:600px; margin-left:auto; padding:64px 56px 72px clamp(16px,4vw,48px); } }
+  .co-ty__aside{ background:var(--bg); padding:24px clamp(16px,4vw,48px) 32px; }
+  @media (min-width:900px){ .co-ty__aside{ position:sticky; top:0; min-height:calc(100vh - 62px); padding:48px clamp(16px,4vw,48px) 48px 56px; } }
+  .co-ty__check{ width:48px; height:48px; border-radius:50%; background:var(--ink); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:22px; }
+  .co-ty__eyebrow{ margin:0 0 8px; font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--sub); }
+  .co-ty__title{ margin:0 0 14px; font-size:clamp(28px,4vw,40px); font-weight:500; letter-spacing:.02em; text-transform:uppercase; }
+  .co-ty__msg{ margin:0 0 12px; font-size:15px; line-height:1.6; color:#4a4a48; max-width:48ch; }
+  .co-ty__num{ margin:0 0 32px; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--sub); }
+  .co-ty__sec{ padding:16px 0; border-top:1px solid var(--line); }
+  .co-ty__sec h3{ margin:0 0 6px; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--sub); font-weight:600; }
+  .co-ty__sec p{ margin:0 0 2px; font-size:14px; line-height:1.55; }
+  .co-ty__row{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .co-ty__continue{ display:inline-flex; align-items:center; justify-content:center; height:48px; padding:0 28px; margin-top:28px; border-radius:999px; background:var(--ink); color:#fff; text-decoration:none; font:600 11px/1 inherit; letter-spacing:.2em; text-transform:uppercase; }
+</style>
+</head>
+<body>
+
+<div class="co-top">
+  <a class="co-logo" href="index.html" aria-label="BYMARCCC home">BYMARCCC</a>
+  <div class="co-lang" role="group" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true">EN</button>
+    <button type="button" data-lang="ro" aria-pressed="false">RO</button>
+  </div>
+</div>
+
+<div class="co-grid" id="coGrid">
+
+  <form class="co-form" id="coForm" novalidate>
+
+    <div class="co-section">
+      <h2 class="co-h" data-i18n="hPayment">Payment</h2>
+      <p class="co-note" data-i18n="secureNote">All transactions are secure and encrypted.</p>
+
+      <label class="co-opt" id="coPayCardOpt">
+        <input type="radio" name="coPayment" id="coPayCard">
+        <div class="co-opt__body">
+          <div class="co-opt__text"><b data-i18n="payCard">Credit card</b></div>
+          <div class="co-cards"><span class="co-badge">VISA</span><span class="co-badge">MC</span><span class="co-badge more">+2</span></div>
+        </div>
+      </label>
+      <label class="co-opt is-selected" id="coPayCodOpt">
+        <input type="radio" name="coPayment" id="coPayCod" checked>
+        <div class="co-opt__body"><div class="co-opt__text"><b data-i18n="payCod">Cash on delivery</b></div></div>
+      </label>
+      <p class="co-note" id="coCardNote" style="display:none; margin-top:8px;" data-i18n="cardRedirectNote">You’ll enter your address and card details on the secure Stripe payment page after this step.</p>
+    </div>
+
+    <div id="coCodExtra">
+      <div class="co-section">
+        <h2 class="co-h" data-i18n="hDelivery">Delivery</h2>
+        <select class="co-field co-cod" id="coCountry" required><option value="Romania" data-i18n="countryRomania">Romania</option></select>
+        <input class="co-field co-cod" type="text" id="coName" placeholder="First & last name" data-i18n-ph="phFullName" autocomplete="name" required>
+        <input class="co-field co-cod" type="text" id="coAddress" placeholder="Address" data-i18n-ph="phAddress" autocomplete="street-address" required>
+        <input class="co-field" type="text" id="coApt" placeholder="Number, apartment (optional)" data-i18n-ph="phApt">
+        <div class="co-row2">
+          <input class="co-field co-cod" type="text" id="coPostal" placeholder="Postal code" data-i18n-ph="phPostal" autocomplete="postal-code" required>
+          <input class="co-field co-cod" type="text" id="coCity" placeholder="City" data-i18n-ph="phCity" autocomplete="address-level2" required>
+        </div>
+        <input class="co-field co-cod" type="tel" id="coPhone" placeholder="Phone" data-i18n-ph="phPhone" inputmode="numeric" autocomplete="tel" required>
+        <input class="co-field co-cod" type="email" id="coEmail" placeholder="Email address" data-i18n-ph="phEmail" autocomplete="email" required>
+        <label class="co-check"><input type="checkbox" id="coSave"><span data-i18n="saveInfo">Save this information for next time</span></label>
+      </div>
+
+      <div class="co-section">
+        <h2 class="co-h" data-i18n="hShipping">Shipping method</h2>
+        <label class="co-opt is-selected">
+          <input type="radio" name="coShipping" checked>
+          <div class="co-opt__body">
+            <div class="co-opt__text"><b>Fan Courier</b><span data-i18n="shipDays">2–3 business days</span></div>
+            <div class="co-opt__price" data-co-shipping>20 RON</div>
+          </div>
+        </label>
+      </div>
+
+      <div class="co-section">
+        <h2 class="co-h" data-i18n="hBilling">Billing address</h2>
+        <label class="co-opt is-selected"><input type="radio" name="coBilling" checked><div class="co-opt__body"><div class="co-opt__text"><b data-i18n="billingSame">Same as shipping address</b></div></div></label>
+        <label class="co-opt"><input type="radio" name="coBilling"><div class="co-opt__body"><div class="co-opt__text"><b data-i18n="billingDiff">Use a different billing address</b></div></div></label>
+      </div>
+    </div>
+
+    <button class="co-submit" type="submit" id="coSubmit" data-i18n="btnCompleteOrder">Complete order</button>
+    <p class="co-status" id="coStatus" role="status" aria-live="polite"></p>
+
+    <div class="co-links">
+      <a href="delivery-returns.html" data-i18n="linkRefund">Delivery & returns</a>
+      <a href="terms-and-conditions.html" data-i18n="linkTerms">Terms & conditions</a>
+      <a href="contact-us.html" data-i18n="linkContact">Contact</a>
+    </div>
+  </form>
+
+  <aside class="co-summary" aria-label="Your bag">
+    <h2 class="co-h" data-i18n="hBag">Your bag</h2>
+    <ul class="co-items" id="coItems"></ul>
+    <div class="co-empty" id="coEmpty" hidden>
+      <span data-i18n="emptyBag">Your bag is empty.</span><br>
+      <a href="index.html" data-i18n="continue">Continue shopping</a>
+    </div>
+    <div class="co-discount">
+      <input type="text" id="coDiscount" placeholder="Discount code" data-i18n-ph="phDiscount">
+      <button type="button" id="coDiscountBtn" data-i18n="btnApply">Apply</button>
+    </div>
+    <div class="co-totals">
+      <div><span data-i18n="subtotal">Subtotal</span><span data-co-subtotal>0 RON</span></div>
+      <div><span data-i18n="shipping">Shipping</span><span data-co-shipping>20 RON</span></div>
+      <div class="total"><span data-i18n="total">Total</span><span data-co-total>0 RON</span></div>
+    </div>
+  </aside>
+</div>
+
+<div class="co-ty" id="coThankYou">
+  <div class="co-ty__grid">
+    <div class="co-ty__main">
+      <div class="co-ty__check">&#10003;</div>
+      <p class="co-ty__eyebrow" data-i18n="tyEyebrow">Order confirmed</p>
+      <h1 class="co-ty__title"><span data-i18n="tyThanks">Thank you</span><span id="coTyName"></span></h1>
+      <p class="co-ty__msg" data-i18n="tyMsg">Your order is in. Every BYMARCCC piece is custom made, so we’ll reach out to confirm the details and the delivery date.</p>
+      <p class="co-ty__num"><span data-i18n="tyConfirmNum">Order</span> <span id="coTyOrderNum">—</span></p>
+      <div class="co-ty__sec"><h3 data-i18n="tyContactInfo">Contact</h3><p id="coTyEmail"></p><p id="coTyPhone"></p></div>
+      <div class="co-ty__sec"><h3 data-i18n="tyShipAddr">Shipping address</h3><p id="coTyAddress"></p></div>
+      <div class="co-ty__row">
+        <div class="co-ty__sec"><h3 data-i18n="hShipping">Shipping method</h3><p>Fan Courier<br><span data-i18n="shipDays">2–3 business days</span></p></div>
+        <div class="co-ty__sec"><h3 data-i18n="tyPayMethod">Payment</h3><p data-i18n="payCod">Cash on delivery</p></div>
+      </div>
+      <a class="co-ty__continue" href="index.html" data-i18n="continue">Continue shopping</a>
+    </div>
+    <aside class="co-ty__aside">
+      <h2 class="co-h" data-i18n="hOrder">Order summary</h2>
+      <ul class="co-items" id="coTyItems"></ul>
+      <div class="co-totals">
+        <div><span data-i18n="subtotal">Subtotal</span><span data-co-subtotal>0 RON</span></div>
+        <div><span data-i18n="shipping">Shipping</span><span data-co-shipping>20 RON</span></div>
+        <div class="total"><span data-i18n="total">Total</span><span data-co-total>0 RON</span></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  /* ==========================================================================
+     CONFIGURARE — schimbă valorile de mai jos înainte de a publica.
+     (Sunt conturile TALE, nu cele Glowy — cheile Glowy nu apar nicăieri aici.)
+     ========================================================================== */
+  var EMAILJS_PUBLIC_KEY  = 'PUNE_AICI_PUBLIC_KEY';    // emailjs.com → Account
+  var EMAILJS_SERVICE_ID  = 'PUNE_AICI_SERVICE_ID';    // EmailJS → Email Services
+  var EMAILJS_TEMPLATE_ID = 'PUNE_AICI_TEMPLATE_ID';   // EmailJS → Email Templates (adresa "To Email" se pune în template)
+  var STRIPE_PAYMENT_LINK = 'PUNE_AICI_LINKUL_TAU_STRIPE'; // Stripe → Payment Links (contul BYMARCCC)
+  var SHIPPING_RON        = 20;                        // Fan Courier
+  var ORDER_PREFIX        = 'BYM';
+
+  /* ---------- i18n (default EN — the site is in English; RO from the toggle) ---------- */
+  var I18N = {
+    en: {
+      hPayment:'Payment', secureNote:'All transactions are secure and encrypted.', payCard:'Credit card', payCod:'Cash on delivery',
+      cardRedirectNote:'You’ll enter your address and card details on the secure Stripe payment page after this step.',
+      hDelivery:'Delivery', countryRomania:'Romania', phFullName:'First & last name', phAddress:'Address', phApt:'Number, apartment (optional)',
+      phPostal:'Postal code', phCity:'City', phPhone:'Phone', phEmail:'Email address', saveInfo:'Save this information for next time',
+      hShipping:'Shipping method', shipDays:'2–3 business days', hBilling:'Billing address', billingSame:'Same as shipping address',
+      billingDiff:'Use a different billing address', billingDiffShort:'Different billing address',
+      btnCompleteOrder:'Complete order', btnContinuePayment:'Continue to secure payment',
+      linkRefund:'Delivery & returns', linkTerms:'Terms & conditions', linkContact:'Contact',
+      hBag:'Your bag', hOrder:'Order summary', emptyBag:'Your bag is empty.', continue:'Continue shopping', qty:'Qty', remove:'Remove',
+      phDiscount:'Discount code', btnApply:'Apply', subtotal:'Subtotal', shipping:'Shipping', total:'Total',
+      tyEyebrow:'Order confirmed', tyThanks:'Thank you', tyMsg:'Your order is in. Every BYMARCCC piece is custom made, so we’ll reach out to confirm the details and the delivery date.',
+      tyConfirmNum:'Order', tyContactInfo:'Contact', tyShipAddr:'Shipping address', tyPayMethod:'Payment',
+      statusSending:'Sending your order…', statusSent:'Order sent ✓', errEmpty:'Your bag is empty.', errFields:'Please fill in all the required fields.',
+      errPhone:'Phone number must have at least 10 digits.', errNoService:'Could not reach the order service. Please try again in a moment or contact us directly.',
+      errSendFailed:'Something went wrong sending your order. Please try again, or contact us directly so we don’t miss it.'
+    },
+    ro: {
+      hPayment:'Plată', secureNote:'Toate tranzacțiile sunt securizate și criptate.', payCard:'Card bancar', payCod:'Plată ramburs (cash la livrare)',
+      cardRedirectNote:'Vei introduce adresa și datele cardului pe pagina securizată Stripe după acest pas.',
+      hDelivery:'Livrare', countryRomania:'România', phFullName:'Nume și prenume', phAddress:'Adresă', phApt:'Număr, apartament (opțional)',
+      phPostal:'Cod poștal', phCity:'Oraș', phPhone:'Telefon', phEmail:'Adresă de email', saveInfo:'Salvează aceste informații pentru data viitoare',
+      hShipping:'Metodă de livrare', shipDays:'2–3 zile lucrătoare', hBilling:'Adresă de facturare', billingSame:'Aceeași ca adresa de livrare',
+      billingDiff:'Folosește o altă adresă de facturare', billingDiffShort:'Adresă de facturare diferită',
+      btnCompleteOrder:'Finalizează comanda', btnContinuePayment:'Continuă spre plata securizată',
+      linkRefund:'Livrare și retur', linkTerms:'Termeni și condiții', linkContact:'Contact',
+      hBag:'Coșul tău', hOrder:'Rezumatul comenzii', emptyBag:'Coșul tău este gol.', continue:'Continuă cumpărăturile', qty:'Cant.', remove:'Șterge',
+      phDiscount:'Cod de reducere', btnApply:'Aplică', subtotal:'Subtotal', shipping:'Livrare', total:'Total',
+      tyEyebrow:'Comandă confirmată', tyThanks:'Mulțumim', tyMsg:'Comanda ta a ajuns la noi. Fiecare piesă BYMARCCC este făcută la comandă, așa că te vom contacta pentru confirmarea detaliilor și a datei de livrare.',
+      tyConfirmNum:'Comanda', tyContactInfo:'Contact', tyShipAddr:'Adresă de livrare', tyPayMethod:'Plată',
+      statusSending:'Se trimite comanda ta…', statusSent:'Comandă trimisă ✓', errEmpty:'Coșul tău este gol.', errFields:'Te rugăm să completezi toate câmpurile obligatorii.',
+      errPhone:'Numărul de telefon trebuie să aibă cel puțin 10 cifre.', errNoService:'Nu am putut contacta serviciul de comenzi. Te rugăm să încerci din nou sau să ne contactezi direct.',
+      errSendFailed:'Ceva nu a funcționat la trimiterea comenzii. Te rugăm să încerci din nou sau să ne contactezi direct ca să nu pierdem comanda.'
+    }
+  };
+  var LANG = (function(){ try { return localStorage.getItem('bym.lang') === 'ro' ? 'ro' : 'en'; } catch(e){ return 'en'; } })();
+  var $ = function(id){ return document.getElementById(id); };
+  var t = function(k){ return (I18N[LANG] || I18N.en)[k] || I18N.en[k] || ''; };
+  function applyLang(){
+    document.documentElement.lang = LANG;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){ var k = el.getAttribute('data-i18n'); if (t(k)) el.textContent = t(k); });
+    document.querySelectorAll('[data-i18n-ph]').forEach(function(el){ var k = el.getAttribute('data-i18n-ph'); if (t(k)) el.setAttribute('placeholder', t(k)); });
+    document.querySelectorAll('.co-lang button').forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.lang === LANG ? 'true' : 'false'); });
+    updatePaymentView(); renderBag();
+  }
+  document.querySelectorAll('.co-lang button').forEach(function(b){ b.addEventListener('click', function(){ LANG = b.dataset.lang; try { localStorage.setItem('bym.lang', LANG); } catch(e){} applyLang(); }); });
+
+  /* ---------- Bag: the same sessionStorage store the site's ADD TO CART writes (`bym.bag`) ---------- */
+  var BAG = {
+    items: [],
+    load(){ try { this.items = JSON.parse(sessionStorage.getItem('bym.bag') || '[]'); } catch(e){ this.items = []; } if (!Array.isArray(this.items)) this.items = []; },
+    save(){ try { sessionStorage.setItem('bym.bag', JSON.stringify(this.items)); } catch(e){} },
+    setQty(id, q){ var it = this.items.find(function(i){ return i.id === id; }); if (!it) return; if (q <= 0) this.items = this.items.filter(function(i){ return i.id !== id; }); else it.quantity = q; this.save(); renderBag(); },
+    count(){ return this.items.reduce(function(a,b){ return a + (b.quantity || 1); }, 0); },
+    subtotal(){ return this.items.reduce(function(a,b){ return a + (typeof b.price === 'number' ? b.price * (b.quantity || 1) : 0); }, 0); },
+    clear(){ this.items = []; this.save(); }
+  };
+  BAG.load();
+  var fmt = function(n, cur){ return (Math.round(n * 100) / 100).toLocaleString(LANG === 'ro' ? 'ro-RO' : 'en-GB') + ' ' + (cur || 'RON'); };
+  var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); };
+  var shippingFor = function(){ return BAG.items.length ? SHIPPING_RON : 0; };
+  var total = function(){ return BAG.subtotal() + shippingFor(); };
+
+  function itemHtml(it, editable){
+    var q = it.quantity || 1;
+    return '<li class="co-item">' +
+      '<div class="co-item__thumb">' + (it.image ? '<img src="' + esc(it.image) + '" alt="">' : '<img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">') + '<span>' + q + '</span></div>' +
+      '<div class="co-item__info"><span class="co-item__name">' + esc(it.name) + '</span>' + (it.variant ? '<span class="co-item__var">' + esc(it.variant) + '</span>' : '') +
+        (editable ? '<div class="co-qty" aria-label="' + t('qty') + '"><button type="button" data-dec="' + esc(it.id) + '" aria-label="−">−</button><output>' + q + '</output><button type="button" data-inc="' + esc(it.id) + '" aria-label="+">+</button></div>' : '') +
+      '</div>' +
+      '<div><div class="co-item__price">' + fmt((it.price || 0) * q, it.currency) + '</div>' + (editable ? '<button type="button" class="co-item__rm" data-rm="' + esc(it.id) + '">' + t('remove') + '</button>' : '') + '</div>' +
+    '</li>';
+  }
+  function renderBag(){
+    var list = $('coItems'); if (list) list.innerHTML = BAG.items.map(function(it){ return itemHtml(it, true); }).join('');
+    $('coEmpty').hidden = BAG.items.length > 0;
+    document.querySelectorAll('[data-co-subtotal]').forEach(function(el){ el.textContent = fmt(BAG.subtotal()); });
+    document.querySelectorAll('[data-co-shipping]').forEach(function(el){ el.textContent = fmt(shippingFor()); });
+    document.querySelectorAll('[data-co-total]').forEach(function(el){ el.textContent = fmt(total()); });
+    $('coSubmit').disabled = BAG.items.length === 0;
+  }
+  $('coItems').addEventListener('click', function(e){
+    var b = e.target.closest('button'); if (!b) return;
+    var it = function(id){ return BAG.items.find(function(i){ return i.id === id; }); };
+    if (b.dataset.inc) BAG.setQty(b.dataset.inc, (it(b.dataset.inc).quantity || 1) + 1);
+    else if (b.dataset.dec) BAG.setQty(b.dataset.dec, (it(b.dataset.dec).quantity || 1) - 1);
+    else if (b.dataset.rm) BAG.setQty(b.dataset.rm, 0);
+  });
+
+  /* ---------- option rows ---------- */
+  document.querySelectorAll('input[type="radio"]').forEach(function(radio){
+    radio.addEventListener('change', function(){
+      document.querySelectorAll('input[name="' + radio.name + '"]').forEach(function(r){ r.closest('.co-opt').classList.toggle('is-selected', r.checked); });
+    });
+  });
+  var payCard = $('coPayCard'), payCod = $('coPayCod'), codExtra = $('coCodExtra'), cardNote = $('coCardNote'), submitBtn = $('coSubmit');
+  var codFields = codExtra.querySelectorAll('.co-cod');
+  function updatePaymentView(){
+    var isCard = payCard.checked;
+    codExtra.style.display = isCard ? 'none' : '';
+    cardNote.style.display = isCard ? '' : 'none';
+    codFields.forEach(function(f){ f.required = !isCard; });
+    submitBtn.textContent = isCard ? t('btnContinuePayment') : t('btnCompleteOrder');
+  }
+  payCard.addEventListener('change', updatePaymentView); payCod.addEventListener('change', updatePaymentView);
+
+  var discount = $('coDiscount'), discountBtn = $('coDiscountBtn');
+  discount.addEventListener('input', function(){ discountBtn.classList.toggle('is-active', discount.value.trim().length > 0); });
+
+  var statusEl = $('coStatus');
+  function setStatus(text, kind){ statusEl.textContent = text || ''; statusEl.className = 'co-status' + (kind ? ' ' + kind : ''); }
+
+  /* ---------- remembered delivery details (only if the visitor ticks "save") ---------- */
+  var FIELDS = ['coName','coAddress','coApt','coPostal','coCity','coPhone','coEmail'];
+  try { var saved = JSON.parse(localStorage.getItem('bym.checkout') || 'null'); if (saved) { FIELDS.forEach(function(id){ if (saved[id]) $(id).value = saved[id]; }); $('coSave').checked = true; } } catch(e){}
+
+  /* ---------- thank you ---------- */
+  function showThankYou(d, items){
+    var first = (d.full_name || '').trim().split(/\s+/)[0] || '';
+    $('coTyName').textContent = first ? ', ' + first : '';
+    $('coTyOrderNum').textContent = d.order_id;
+    $('coTyEmail').textContent = d.email; $('coTyPhone').textContent = d.phone;
+    $('coTyAddress').innerHTML = esc(d.full_name) + '<br>' + esc(d.address + (d.apartment ? ', ' + d.apartment : '')) + '<br>' + esc(d.city + ' ' + d.postal_code) + '<br>' + esc(d.country);
+    $('coTyItems').innerHTML = items.map(function(it){ return itemHtml(it, false); }).join('');
+    $('coGrid').style.display = 'none'; $('coThankYou').style.display = 'block'; window.scrollTo(0, 0);
+  }
+  function orderId(){
+    var d = new Date(), pad = function(n){ return (n < 10 ? '0' : '') + n; };
+    return ORDER_PREFIX + '-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+  }
+
+  /* ---------- submit ---------- */
+  if (window.emailjs && !/^PUNE_AICI/.test(EMAILJS_PUBLIC_KEY)) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  $('coForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    if (!BAG.items.length) { setStatus(t('errEmpty'), 'is-error'); return; }
+    if (payCard.checked) {
+      if (/^PUNE_AICI/.test(STRIPE_PAYMENT_LINK)) { setStatus(t('errNoService'), 'is-error'); return; }
+      window.location.href = STRIPE_PAYMENT_LINK; return;
+    }
+    var phoneDigits = $('coPhone').value.replace(/\D/g, '');
+    if (!$('coForm').checkValidity()) { setStatus(t('errFields'), 'is-error'); $('coForm').reportValidity(); return; }
+    if (phoneDigits.length < 10) { setStatus(t('errPhone'), 'is-error'); $('coPhone').focus(); return; }
+    if (!window.emailjs || /^PUNE_AICI/.test(EMAILJS_PUBLIC_KEY)) { setStatus(t('errNoService'), 'is-error'); return; }
+
+    var items = BAG.items.slice();
+    var lines = items.map(function(it){ return (it.quantity || 1) + ' × ' + it.name + (it.variant ? ' (' + it.variant + ')' : '') + ' — ' + fmt((it.price || 0) * (it.quantity || 1), it.currency); });
+    var params = {
+      order_id: orderId(),
+      product_name: lines.join('\n'),               // every bag line, one per row
+      items_count: String(BAG.count()),
+      quantity: String(BAG.count()),
+      price: fmt(BAG.subtotal()),
+      shipping_cost: fmt(shippingFor()), shipping_method: 'Fan Courier',
+      total: fmt(total()), payment_method: 'Cash on delivery',
+      full_name: $('coName').value.trim(), phone: $('coPhone').value.trim(), email: $('coEmail').value.trim(),
+      address: $('coAddress').value.trim(), apartment: $('coApt').value.trim(), city: $('coCity').value.trim(),
+      postal_code: $('coPostal').value.trim(), country: $('coCountry').value,
+      billing: document.querySelector('input[name="coBilling"]').checked ? t('billingSame') : t('billingDiffShort'),
+      language: LANG
+    };
+    try { if ($('coSave').checked) { var o = {}; FIELDS.forEach(function(id){ o[id] = $(id).value; }); localStorage.setItem('bym.checkout', JSON.stringify(o)); } else localStorage.removeItem('bym.checkout'); } catch(e){}
+
+    submitBtn.disabled = true; setStatus(t('statusSending'), 'is-sending');
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params).then(function(){
+      BAG.clear(); showThankYou(params, items); setStatus('', ''); submitBtn.disabled = false;
+    }, function(err){
+      console.error('EmailJS send failed:', err); setStatus(t('errSendFailed'), 'is-error'); submitBtn.disabled = false;
+    });
+  });
+
+  applyLang();
+})();
+</script>
+</body>
+</html>
