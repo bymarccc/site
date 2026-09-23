@@ -3333,8 +3333,9 @@ body.pdp .ai-launch{--ai-offset:92px}
      ===================================================================== -->
 <style>
 .play__reset { display: none !important; }
+.vp-layer { position: fixed; inset: 0; z-index: 1200; overflow: hidden; pointer-events: none; }   /* clips the player: dragging it past an edge can never widen or scroll the page */
 .vp {
-  position: fixed; left: 0; top: 0; z-index: 1200;
+  position: absolute; left: 0; top: 0; z-index: 2; pointer-events: auto;
   --vx: 0px; --vy: 0px;
   transform: translate3d(var(--vx), var(--vy), 0);
   width: clamp(260px, 22vw, 320px);            /* YouTube-style mini player */
@@ -3394,7 +3395,8 @@ body.pdp .ai-launch{--ai-offset:92px}
 .vp__endbtn svg { width: 22px; height: 22px; }
 .vp__endbtn small { position: absolute; }
 /* docked at the left edge: keeps playing off-screen, only the arrow tab shows */
-.vp.is-snapping { transition: transform .28s var(--ease, ease), opacity .3s var(--ease, ease); }
+.vp.is-snapping { transition: transform .45s cubic-bezier(.22,1,.36,1), opacity .3s var(--ease, ease); }
+html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }
 .vp.is-docked { pointer-events: none; }
 .vp-tab.is-dock { width: 26px; height: 64px; top: var(--ty, 58%); border-radius: 0 10px 10px 0; background: rgba(20,20,20,.92); }
 .vp-tab.is-dock svg { width: 16px; height: 16px; }
@@ -3440,7 +3442,7 @@ body.pdp .ai-launch{--ai-offset:92px}
 
 /* re-open tab on the LEFT edge (the audio player's tab lives on the right edge) */
 .vp-tab {
-  position: fixed; z-index: 1200; left: 0; top: 58%;
+  position: absolute; z-index: 3; pointer-events: auto; left: 0; top: 58%;
   transform: translate3d(0, -50%, 0);
   width: 48px; height: 96px;
   display: grid; place-items: center;
@@ -3468,6 +3470,7 @@ body.pdp .ai-launch{--ai-offset:92px}
 @media (prefers-reduced-motion: reduce) { .vp, .vp__big { transition: none; } }
 </style>
 
+<div class="vp-layer" id="vpLayer" aria-hidden="false">
 <div class="vp" id="vp" hidden role="dialog" aria-label="BYMARCCC music videos">
   <div class="vp__head" hidden>
     <span class="vp__grip" aria-hidden="true"></span>
@@ -3537,6 +3540,7 @@ body.pdp .ai-launch{--ai-offset:92px}
   <svg class="vp-tab__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg>
   <svg class="vp-tab__c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M9 5l7 7-7 7"/></svg>
 </button>
+</div>
 
 <script>
 (() => {
@@ -3655,12 +3659,12 @@ body.pdp .ai-launch{--ai-offset:92px}
     const h = vp.offsetHeight; tab.style.setProperty('--ty', Math.round(y + h / 2) + 'px');
     x = side === 'right' ? document.documentElement.clientWidth + 4 : -vp.offsetWidth - 4; apply();   // fully off-screen; media stays live so the music keeps going
     setTab('dock'); tab.classList.toggle('is-right', side === 'right'); tab.hidden = false;
-    setTimeout(() => vp.classList.remove('is-snapping'), 300);
+    setTimeout(() => vp.classList.remove('is-snapping'), 480);
   }
   function undock(animate = true) {
     docked = false; tab.hidden = true; vp.classList.remove('is-docked'); if (animate) vp.classList.add('is-snapping');
     x = dockSide === 'right' ? document.documentElement.clientWidth - vp.offsetWidth - 12 : 12; clampToViewport(); showCtrls();
-    setTimeout(() => vp.classList.remove('is-snapping'), 300);
+    setTimeout(() => vp.classList.remove('is-snapping'), 480);
   }
   btnClose.addEventListener('click', close);
   $('vpCloseOv').addEventListener('click', close);
@@ -3698,12 +3702,12 @@ body.pdp .ai-launch{--ai-offset:92px}
   function dragStart(e, surface, fromTab) {
     if (e.target.closest('.vp__ov, .vp__head, .vp__foot, .vp__ctr, .vp__end, .vp__ax, .vp__abtn, .vp__scrub')) return;   // buttons stay buttons
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (fromTab) {   // drag the docked player back in from its tab: it follows the finger
-      undock(false); vp.classList.remove('is-snapping');
-      x = dockSide === 'right' ? vw() - vp.offsetWidth : 0; y = Math.min(bounds().maxY, Math.max(0, e.clientY - vp.offsetHeight / 2)); apply();
+    if (fromTab) {   // drag the docked player back in from its tab: it stays where it is (off-screen) and follows the finger 1:1 — no jump
+      docked = false; tab.hidden = true; vp.classList.remove('is-docked', 'is-snapping');
+      y = Math.min(bounds().maxY, Math.max(0, e.clientY - vp.offsetHeight / 2)); apply();
     }
     drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: x, oy: y, moved: false, tab: !!fromTab, surface };
-    vp.classList.add('is-dragging');
+    vp.classList.add('is-dragging'); document.documentElement.classList.add('is-vp-drag');
     surface.setPointerCapture?.(e.pointerId);
     e.preventDefault();
   }
@@ -3718,13 +3722,15 @@ body.pdp .ai-launch{--ai-offset:92px}
   }
   const endDrag = e => {
     if (!drag || (e && e.pointerId !== drag.id)) return;
-    const wasTap = !drag.moved, fromTab = drag.tab, surface = drag.surface; drag = null; vp.classList.remove('is-dragging');
-    if (wasTap) { if (fromTab) { vp.classList.add('is-snapping'); x = dockSide === 'right' ? vw() - vp.offsetWidth - 12 : 12; clampToViewport(); setTimeout(() => vp.classList.remove('is-snapping'), 300); } else if (e && e.type === 'pointerup' && surface === handle) toggleCtrls(); return; }
-    const w = vp.offsetWidth;
-    if (x < -w * 0.35) { dock('left'); return; }             // pushed off the left edge → dock left, keep playing
-    if (x > vw() - w * 0.65) { dock('right'); return; }      // pushed off the right edge → dock right
+    const wasTap = !drag.moved, fromTab = drag.tab, surface = drag.surface; drag = null; vp.classList.remove('is-dragging'); document.documentElement.classList.remove('is-vp-drag');
+    if (wasTap) { if (fromTab) { undock(true); } else if (e && e.type === 'pointerup' && surface === handle) toggleCtrls(); return; }
+    const w = vp.offsetWidth, W = vw();
+    // release: how much of the player is still on screen decides — less than 40% → glide out and dock; otherwise glide back fully inside
+    const visible = Math.min(x + w, W) - Math.max(x, 0);
+    if (x < 0 && visible < w * 0.4) { dock('left'); return; }
+    if (x + w > W && visible < w * 0.4) { dock('right'); return; }
     const b = bounds();
-    if (x < 0 || x > b.maxX) { vp.classList.add('is-snapping'); x = Math.min(b.maxX, Math.max(0, x)); apply(); setTimeout(() => vp.classList.remove('is-snapping'), 300); }
+    if (x < 0 || x > b.maxX) { vp.classList.add('is-snapping'); x = Math.min(b.maxX, Math.max(0, x)); apply(); setTimeout(() => vp.classList.remove('is-snapping'), 480); }
     store.set(KEY_POS, { x, y });                             // remembered across refreshes
   };
   const audioCard = $('vpAudio');
