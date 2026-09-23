@@ -492,8 +492,8 @@
         <div class="pdp-summary__reviews" id="reviewRow"></div>
       </div>
 
-      <div class="pdp-label"><span>COLOUR</span><span id="colourName">Grey</span></div>
-      <div class="pdp-swatches" id="swatches" role="radiogroup" aria-label="Colour"></div>
+      <div class="pdp-label" hidden><span>COLOUR</span><span id="colourName">Grey</span></div>
+      <div class="pdp-swatches" id="swatches" role="radiogroup" aria-label="Colour" hidden></div>
 
       <div class="pdp-label" id="designLabel" hidden><span>DESIGN</span><span id="designName">Select a design</span></div>
       <div class="pdp-sizes pdp-designs" id="designs" role="radiogroup" aria-label="Design" hidden></div>
@@ -527,7 +527,7 @@
           <div class="pdp-acc__panel" id="accDesc"><div><div class="pdp-acc__body" id="descBody"></div></div></div>
         </div>
         <div class="pdp-acc__row">
-          <button class="pdp-acc__btn" type="button" aria-expanded="false" aria-controls="accShip" data-acc>Shipping</button>
+          <button class="pdp-acc__btn" type="button" aria-expanded="false" aria-controls="accShip" data-acc>Delivery &amp; Returns</button>
           <div class="pdp-acc__panel" id="accShip"><div><div class="pdp-acc__body" id="shipBody"></div></div></div>
         </div>
       </div>
@@ -638,7 +638,7 @@
   const APPAREL_CHART = { category: 'apparel', label: s => s, sizes: ['S', 'M', 'L', 'XL'].map(size => ({ size })) };
   const ONE_SIZE = { category: 'one-size', label: s => s, sizes: [{ size: 'One size' }] };
   const sizeChart = list => ({ category: 'apparel', label: s => s, sizes: list.map(size => ({ size })) });
-  const SHIPPING = 'Romania: 1–2 working days.\nEU: DHL Express.\nUK & Rest of the World: UPS Express — 7–9 days.\n\nReturns accepted within 14 days of delivery, unworn and with tags.';
+  const SHIPPING = 'Romania: 3–5 working days.\nEU & UK: DHL Express — 5–7 working days.\nUSA: UPS Express — 7–9 working days.\n\nReturns accepted within 14 days of delivery, unworn and with tags.';
   const REVIEWS = { rating: 4.8, count: 200, label: '200+ Reviews', anchor: null };   // count set by Mark; no review app yet
   const MODEL = Object.assign({ height: 176, weight: 62, size: '36', modelMedia: [] }, window.BYMARCCC_MODEL || {});
   const APPAREL_MODEL = { height: 184, weight: 74, size: 'M', modelMedia: [0], text: 'Model measurements: 184 cm & 74 kg. Model is wearing size M' };
@@ -805,6 +805,13 @@
       details: ['Designs: Delulu, NOT FROM PARIS, Hot Girls Are Delulu, Muse', 'Each piece is custom created.'], description: 'Embroidered cap. One size fits most.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: ONE_SIZE, gallery: [{ src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/0685D8EE-CB4D-4E6A-B3D2-C53E37A0BEDA.jpg?v=1786438201&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/566B89FB-67A2-44AF-8F3A-98CF86D5D3FE.jpg?v=1786438202&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/5E64FFF7-9B22-4D4B-952A-ABF3FAAA39D4.jpg?v=1786438202&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/6EAE3A01-6B76-4A11-A573-EC22024D775D.jpg?v=1786438201&width=1400', w: 1200, h: 1600 }] },
   };
+  /* All jeans/denim product keys, both genders: their model-info area shows the "Fill in your
+     height & weight" prompt instead of the standard model text. `skinny`/`relaxed` already carry
+     their own `needsBody`/`noSize` (made-to-measure, no chart) from their catalogue entries above —
+     untouched here. The rest keep their existing numeric size selector (34/36/38/40/42): only the
+     model-info area switches, `noSize` is never set for them. */
+  const JEANS_KEYS = ['w-walking-art-black-jeans', 'w-walking-art-blue-jeans', 'w-transparent-jean', 'w-lace-jean', 'w-not-from-paris-jeans', 'w-art-jean', 'w-no-waist-jean', 'w-high-heels-jean'];
+  JEANS_KEYS.forEach(k => { if (CATALOG[k]) CATALOG[k].needsBody = true; });
   const WOMEN_FEATURED = { tops: ['w-art-baby-top-1', 'w-blue-baby-top', 'w-fuchsia-baby-top', 'w-pink-baby-top', 'w-white-baby-top', 'w-white-baby-top-1'] };   // first six; the rest behind VIEW ALL
   const WOMEN_COLLECTIONS = [{ key: 'tops', label: 'TOPS' }, { key: 'bottoms', label: 'BOTTOMS' }, { key: 'accessories', label: 'ACCESSORIES' }];
   const COLLECTIONS = [
@@ -941,17 +948,24 @@
     s.appendChild(img); track.appendChild(s);
   });
   const slides = [...track.children];
+  /* Model info / "Fill in your height & weight" — set ONCE here, from the product's gender and
+     whether it's jeans, and never touched again by layout(). It lives outside the carousel's own
+     state so swiping to the next/previous photo, using the arrows, or landing on the first/last
+     image never hides, resets, or changes it. */
+  const mt = $('modelText');
+  if (PRODUCT.needsBody) {
+    mt.hidden = true;
+  } else {
+    mt.hidden = false;
+    mt.textContent = PRODUCT.gender === 'women'
+      ? 'Model is 177 cm and 53 kg, wearing size S-M'
+      : 'Model is 184 cm and 74 kg, wearing size L';
+  }
   function layout(dx = 0, anim = true) {
     track.classList.toggle('no-anim', !anim || reduced.matches);
     track.style.transform = `translate3d(calc(${-gi * 100}% + ${dx}px), 0, 0)`;
     count.textContent = `${gi + 1} / ${GALLERY.length}`;
     [...bars.children].forEach((b, i) => b.classList.toggle('is-on', i === gi));
-    const m = PRODUCT.model, mt = $('modelText');
-    if (PRODUCT.needsBody) { mt.hidden = true; }
-    else {
-      const show = m && m.height && m.weight && m.size && Array.isArray(m.modelMedia) && m.modelMedia.includes(gi);
-      mt.hidden = !show; if (show) mt.textContent = m.text || `Model is ${m.height} cm and ${m.weight} kg wearing size ${m.size}`;
-    }
     slides.forEach((s, i) => s.setAttribute('aria-hidden', String(i !== gi)));
     const nxt = slides[(gi + 1) % slides.length]?.querySelector('img'); if (nxt) nxt.loading = 'eager';
   }
