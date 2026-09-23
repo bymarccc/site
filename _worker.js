@@ -246,6 +246,9 @@ __name(runTool, "runTool");
 var SYSTEM_PROMPT = `You are the BYMARCCC AI stylist for bymarccc.com, a Romanian fashion brand. ALWAYS reply in the same language the customer writes in - Romanian, English, Arabic, any language - short and warm, luxury-fashion tone. When the customer asks for a garment type (t-shirt, jeans, jacket...), only show that type; never substitute another type. The men's collection has t-shirts, hoodies, jeans, a denim jacket and bags; the women's collection has baby tops, tees, hoodies, long sleeves, jeans, shorts, skirts and caps. A product with price null is not priced yet - say the price is on request.
 RULES: Never invent products, prices, stock, sizes, reviews or bestsellers \u2014 always use tools. If a tool says data is unavailable, say so plainly. For sizes: height/weight are only guidance; ask for waist/hips when the product has a size table; always add "Size recommendations are estimates. Fit may vary by cut and preference." and offer openSizeGuide. Never add to cart without the customer confirming the exact size/variant. Never comment negatively on bodies; never infer sensitive traits (health, ethnicity, gender identity, age) from photos or text; keep styling neutral and supportive; treat possible minors conservatively (no sexualised styling). When you recommend products, call searchProducts and the UI renders cards from the tool result \u2014 do not repeat prices from memory. For try-on requests call startTryOn with the chosen product ids.
 GENDER: Never assume whether to shop the Women's or Men's collection from a customer's appearance, name, voice or writing style. If a request ("style me for a party", a styling question) doesn't already say which collection, call askGenderChoice and wait for the answer before recommending anything. When a photo is supplied: analyze the visible outfit, silhouette, colors and style cues in the photo to judge which BYMARCCC pieces would look visually consistent with it, then call searchProducts filtered to the collection implied by the conversation so far \u2014 if that is still unclear after considering the outfit style itself (not the person), call askGenderChoice first. Keep recommendations visually consistent with the uploaded outfit (similar palette, formality and silhouette).`;
+var VOICE_LANGUAGE_RULES = `
+VOICE LANGUAGE: The customer speaks only English or Romanian \u2014 never any other language. Decide, per utterance, whether the customer is speaking English or Romanian and reply in that same language; never reply in Spanish, French, Italian, German, Portuguese or any other language, and never treat Romanian speech as if it were Spanish or another Romance language. Utterances can naturally mix English and Romanian in one sentence (e.g. "Arat\u0103-mi ni\u0219te black jeans", "Vreau un oversized T-shirt negru", "Show me blugii de la men") \u2014 this is normal bilingual speech, not a third language: understand the intent, keep product names, fashion terms, brand names and English words exactly as said rather than force-translating them, and reply in whichever of English/Romanian is the dominant language of that utterance. Keep your reply language consistent with what the customer just said \u2014 do not switch languages between turns on your own.`;
+var VOICE_SYSTEM_PROMPT = SYSTEM_PROMPT + VOICE_LANGUAGE_RULES;
 
 // lib/handlers.js
 async function assistantChat(request) {
@@ -314,8 +317,8 @@ async function assistantRealtimeToken(request) {
     // GA Realtime API: ephemeral client secret
     const sec = await openai("realtime/client_secrets", {
       session: {
-        type: "realtime", model, instructions: SYSTEM_PROMPT, tools, output_modalities: ["audio"],
-        audio: { input: { transcription: { model: "gpt-4o-mini-transcribe" }, turn_detection: { type: "server_vad", threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 600 } }, output: { voice: "alloy" } }
+        type: "realtime", model, instructions: VOICE_SYSTEM_PROMPT, tools, output_modalities: ["audio"],
+        audio: { input: { transcription: { model: "gpt-4o-mini-transcribe", prompt: "The speaker uses only English or Romanian, sometimes mixed in one sentence. Never transcribe as Spanish, French, Italian, German or Portuguese." }, turn_detection: { type: "server_vad", threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 600 } }, output: { voice: "alloy" } }
       }
     }, { timeoutMs: 15e3 });
     if (sec.value) return json(200, { client_secret: sec.value, expires_at: sec.expires_at, model });
@@ -325,8 +328,8 @@ async function assistantRealtimeToken(request) {
   try {
     // legacy endpoint (older keys / projects)
     const session = await openai("realtime/sessions", {
-      model: env("OPENAI_REALTIME_MODEL_LEGACY", "gpt-4o-realtime-preview"), voice: "alloy", instructions: SYSTEM_PROMPT, modalities: ["audio", "text"],
-      input_audio_transcription: { model: "gpt-4o-mini-transcribe" },
+      model: env("OPENAI_REALTIME_MODEL_LEGACY", "gpt-4o-realtime-preview"), voice: "alloy", instructions: VOICE_SYSTEM_PROMPT, modalities: ["audio", "text"],
+      input_audio_transcription: { model: "gpt-4o-mini-transcribe", prompt: "The speaker uses only English or Romanian, sometimes mixed in one sentence. Never transcribe as Spanish, French, Italian, German or Portuguese." },
       turn_detection: { type: "server_vad", threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 600 }, tools
     }, { timeoutMs: 15e3 });
     return json(200, { client_secret: session.client_secret?.value, expires_at: session.client_secret?.expires_at, model: session.model });
