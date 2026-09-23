@@ -2934,7 +2934,8 @@ body:not(.pdp) .acct-launch{position:fixed;left:16px;top:calc(env(safe-area-inse
       .then(() => { btn.classList.remove('is-loading'); if (window.BYMARCCC?.account) window.BYMARCCC.account.open(); });
     return loading;
   }
-  btn.addEventListener('click', load);
+  btn.addEventListener('click', () => { location.href = 'members.html'; });
+  void load;
 })();
 
 </script>

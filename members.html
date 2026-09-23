@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Members — BYMARCCC</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* =====================================================================
+     BYMARCCC members — apply (sign up) / log in / your membership.
+     Same black / white / #F5F4F1 language as the site.
+     ===================================================================== */
+  :root{
+    --ink:#111; --sub:#6b6b68; --line:#e4e4e1; --bg:#F5F4F1; --err:#d21f3c; --ok:#1f7a3e;
+    --ease:cubic-bezier(0.22,1,0.36,1);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ background:var(--bg); }
+  body{ margin:0; min-height:100vh; min-height:100svh; font-family:"Jost","Helvetica Neue",Helvetica,Arial,sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased; display:flex; flex-direction:column; }
+  a{ color:inherit; }
+  input,button{ font-family:inherit; }
+  .caps{ text-transform:uppercase; letter-spacing:.18em; }
+
+  /* ---------- top bar ---------- */
+  .top{ display:flex; align-items:center; justify-content:space-between; padding:16px clamp(16px,4vw,48px); background:#fff; border-bottom:1px solid var(--line); }
+  .top__logo{ display:flex; align-items:center; gap:10px; text-decoration:none; font-weight:600; font-size:13px; letter-spacing:.28em; }
+  .top__logo img{ width:30px; height:30px; object-fit:contain; display:block; }
+  .top__back{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; text-decoration:none; color:var(--sub); }
+
+  /* ---------- card ---------- */
+  main{ flex:1; display:grid; place-items:start center; padding:clamp(20px,5vw,56px) 16px 56px; }
+  .card{ width:100%; max-width:440px; background:#fff; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.08); overflow:hidden; }
+  .hero{ background:#111; color:#fff; padding:28px 24px 24px; }
+  .hero h1{ margin:0 0 6px; font-size:20px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
+  .hero p{ margin:0 0 16px; color:#c9c9c6; font-size:14px; }
+  .hero ul{ list-style:none; margin:0; padding:0; display:grid; gap:8px; font-size:14px; }
+  .hero li::before{ content:"✓"; margin-right:10px; }
+
+  /* tabs */
+  .tabs{ display:grid; grid-template-columns:1fr 1fr; border-bottom:1px solid var(--line); }
+  .tabs button{ border:0; background:none; padding:16px 8px 14px; font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--sub); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tabs button[aria-selected="true"]{ color:var(--ink); border-bottom-color:var(--ink); }
+
+  /* forms */
+  .panel{ padding:22px 24px 26px; }
+  .panel[hidden]{ display:none; }
+  .f{ display:grid; gap:6px; margin-bottom:14px; }
+  .f label{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--sub); }
+  .f input{ height:46px; padding:0 14px; border:1px solid #c9c9c5; border-radius:4px; background:#fff; font-size:16px; color:var(--ink); width:100%; }
+  .f input:focus{ outline:2px solid #5B95C3; outline-offset:1px; }
+  .f input.is-invalid{ border-color:var(--err); box-shadow:0 0 0 1px var(--err) inset; }
+  .f small{ font-size:12px; color:var(--sub); }
+  .btn{ display:flex; align-items:center; justify-content:center; width:100%; height:50px; border:0; border-radius:4px; background:#111; color:#fff; font-size:12px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; cursor:pointer; text-decoration:none; transition:opacity .2s; }
+  .btn:disabled{ opacity:.55; cursor:default; }
+  .btn--ghost{ background:none; color:var(--ink); border:1px solid #c9c9c5; }
+  .msg{ min-height:20px; margin:0 0 12px; font-size:13px; color:var(--err); }
+  .msg.is-ok{ color:var(--ok); }
+  .switch{ margin:16px 0 0; text-align:center; font-size:13px; color:var(--sub); }
+  .switch button{ border:0; background:none; padding:0; color:var(--ink); text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-size:13px; }
+
+  /* signed-in state */
+  .me{ padding:26px 24px 28px; }
+  .me__badge{ display:inline-block; padding:5px 10px; border-radius:999px; background:#111; color:#fff; font-size:10px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; margin-bottom:14px; }
+  .me h2{ margin:0 0 4px; font-size:22px; font-weight:600; }
+  .me p{ margin:0; color:var(--sub); font-size:14px; }
+  .me dl{ display:grid; grid-template-columns:auto 1fr; gap:8px 16px; margin:20px 0 22px; padding:16px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); font-size:14px; }
+  .me dt{ color:var(--sub); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; align-self:center; }
+  .me dd{ margin:0; }
+  .me .btn + .btn{ margin-top:10px; }
+
+  .note{ padding:26px 24px 30px; font-size:14px; color:var(--sub); line-height:1.5; }
+  .note b{ color:var(--ink); font-weight:600; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="top__logo" href="index.html" aria-label="BYMARCCC home">
+    <img src="data:image/png;base64,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" alt="" width="30" height="30">
+    BYMARCCC
+  </a>
+  <a class="top__back" href="javascript:history.length > 1 ? history.back() : location.assign('index.html')">← Back</a>
+</header>
+
+<main>
+  <section class="card" aria-live="polite">
+    <div class="hero">
+      <h1>BYMARCCC Members</h1>
+      <p id="heroText">Join the BYMARCCC circle.</p>
+      <ul>
+        <li>Free shipping on every order</li>
+        <li>Early access to new drops</li>
+        <li>Members-only pieces</li>
+      </ul>
+    </div>
+
+    <!-- loading -->
+    <div class="note" id="loading">Checking your membership…</div>
+
+    <!-- not configured yet -->
+    <div class="note" id="notReady" hidden><b>Membership sign-ups open very soon.</b><br>We're putting the finishing touches on the members area — check back in a little while.</div>
+
+    <!-- signed out: tabs -->
+    <div id="auth" hidden>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tabApply" aria-selected="true" aria-controls="panelApply">Apply now</button>
+        <button type="button" role="tab" id="tabLogin" aria-selected="false" aria-controls="panelLogin">Log in</button>
+      </div>
+
+      <form class="panel" id="panelApply" role="tabpanel" novalidate>
+        <div class="f"><label for="suName">Name</label><input id="suName" name="name" type="text" autocomplete="name" required maxlength="80"></div>
+        <div class="f"><label for="suEmail">Email</label><input id="suEmail" name="email" type="email" autocomplete="email" inputmode="email" required></div>
+        <div class="f"><label for="suPass">Password</label><input id="suPass" name="password" type="password" autocomplete="new-password" minlength="8" required><small>At least 8 characters.</small></div>
+        <p class="msg" id="suMsg" role="alert"></p>
+        <button class="btn" type="submit" id="suBtn">Become a member</button>
+        <p class="switch">Already a member? <button type="button" data-go="login">Log in</button></p>
+      </form>
+
+      <form class="panel" id="panelLogin" role="tabpanel" novalidate hidden>
+        <div class="f"><label for="liEmail">Email</label><input id="liEmail" name="email" type="email" autocomplete="email" inputmode="email" required></div>
+        <div class="f"><label for="liPass">Password</label><input id="liPass" name="password" type="password" autocomplete="current-password" required></div>
+        <p class="msg" id="liMsg" role="alert"></p>
+        <button class="btn" type="submit" id="liBtn">Log in</button>
+        <p class="switch">Not a member yet? <button type="button" data-go="apply">Apply now</button></p>
+      </form>
+    </div>
+
+    <!-- signed in -->
+    <div class="me" id="me" hidden>
+      <span class="me__badge">Member</span>
+      <h2 id="meName"></h2>
+      <p id="meEmail"></p>
+      <dl>
+        <dt>Status</dt><dd>Active member</dd>
+        <dt>Since</dt><dd id="meSince"></dd>
+      </dl>
+      <a class="btn" href="index.html">Continue shopping</a>
+      <button class="btn btn--ghost" type="button" id="logoutBtn">Log out</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const API = p => `/api/${p}`;
+  const els = {
+    loading: $('loading'), notReady: $('notReady'), auth: $('auth'), me: $('me'),
+    tabApply: $('tabApply'), tabLogin: $('tabLogin'), panelApply: $('panelApply'), panelLogin: $('panelLogin'),
+  };
+
+  const show = (which) => {
+    ['loading', 'notReady', 'auth', 'me'].forEach(k => { els[k].hidden = k !== which; });
+  };
+  const tab = (which) => {
+    const apply = which === 'apply';
+    els.tabApply.setAttribute('aria-selected', String(apply));
+    els.tabLogin.setAttribute('aria-selected', String(!apply));
+    els.panelApply.hidden = !apply;
+    els.panelLogin.hidden = apply;
+    (apply ? $('suName') : $('liEmail')).focus({ preventScroll: true });
+    history.replaceState(null, '', apply ? '#apply' : '#login');
+  };
+  els.tabApply.addEventListener('click', () => tab('apply'));
+  els.tabLogin.addEventListener('click', () => tab('login'));
+  document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => tab(b.dataset.go)));
+
+  const fmtDate = iso => { try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return ''; } };
+  const showMember = (m) => {
+    $('meName').textContent = m.name;
+    $('meEmail').textContent = m.email;
+    $('meSince').textContent = fmtDate(m.since);
+    $('heroText').textContent = `Welcome back, ${m.name.split(' ')[0]}.`;
+    show('me');
+    // let the rest of the site know (cart promo, checkout) — nothing sensitive, just "is a member"
+    try { window.dispatchEvent(new CustomEvent('bymarccc:member', { detail: { name: m.name } })); } catch {}
+  };
+
+  const post = async (path, body) => {
+    const r = await fetch(API(path), { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) });
+    const data = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, data };
+  };
+
+  function wireForm(form, btn, msg, path, fields) {
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      msg.textContent = ''; msg.classList.remove('is-ok');
+      fields.forEach(f => f.classList.remove('is-invalid'));
+      const body = {}; fields.forEach(f => body[f.name] = f.value);
+      btn.disabled = true;
+      try {
+        const { ok, data } = await post(path, body);
+        if (!ok) {
+          msg.textContent = data.error === 'MEMBERS_NOT_CONFIGURED' ? 'Sign-ups open very soon — please try again later.' : (data.error || 'Something went wrong. Please try again.');
+          const bad = fields.find(f => f.name === data.field); if (bad) { bad.classList.add('is-invalid'); bad.focus(); }
+          return;
+        }
+        showMember(data.member);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch {
+        msg.textContent = 'No connection. Please try again.';
+      } finally { btn.disabled = false; }
+    });
+  }
+  wireForm(els.panelApply, $('suBtn'), $('suMsg'), 'members-signup', [$('suName'), $('suEmail'), $('suPass')]);
+  wireForm(els.panelLogin, $('liBtn'), $('liMsg'), 'members-login', [$('liEmail'), $('liPass')]);
+
+  $('logoutBtn').addEventListener('click', async () => {
+    $('logoutBtn').disabled = true;
+    try { await post('members-logout', {}); } catch {}
+    $('heroText').textContent = 'Join the BYMARCCC circle.';
+    $('logoutBtn').disabled = false;
+    show('auth'); tab('login');
+  });
+
+  // Initial state
+  (async () => {
+    try {
+      const r = await fetch(API('members-me'), { credentials: 'same-origin', cache: 'no-store' });
+      const data = await r.json();
+      if (data.configured === false) return show('notReady');
+      if (data.member) return showMember(data.member);
+    } catch {}
+    show('auth');
+    tab(location.hash === '#login' ? 'login' : 'apply');
+  })();
+})();
+</script>
+</body>
+</html>

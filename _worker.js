@@ -404,12 +404,130 @@ async function assistantTryon(request, siteOrigin) {
 }
 __name(assistantTryon, "assistantTryon");
 
+// members.js — BYMARCCC members (Cloudflare KV binding: MEMBERS)
+// Accounts are auto-approved: sign up = member. Passwords are PBKDF2-SHA256 hashed,
+// never stored in clear. Sessions live in KV (sess:<token>, 30 days) behind an
+// HttpOnly cookie, so no signing secret is needed.
+var MEMBERS_COOKIE = "bm_member";
+var MEMBERS_TTL = 60 * 60 * 24 * 30;
+var kv = /* @__PURE__ */ __name(() => ENV.MEMBERS && typeof ENV.MEMBERS.get === "function" ? ENV.MEMBERS : null, "kv");
+var b64 = /* @__PURE__ */ __name((buf) => btoa(String.fromCharCode(...new Uint8Array(buf))), "b64");
+var unb64 = /* @__PURE__ */ __name((s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)), "unb64");
+var normEmail = /* @__PURE__ */ __name((e) => String(e || "").trim().toLowerCase(), "normEmail");
+var validEmail = /* @__PURE__ */ __name((e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e) && e.length <= 254, "validEmail");
+async function pbkdf2(password, saltBytes) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  return crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: saltBytes, iterations: 1e5 }, key, 256);
+}
+__name(pbkdf2, "pbkdf2");
+async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const bits = await pbkdf2(password, salt);
+  return { salt: b64(salt), hash: b64(bits) };
+}
+__name(hashPassword, "hashPassword");
+async function verifyPassword(password, rec) {
+  const bits = new Uint8Array(await pbkdf2(password, unb64(rec.salt)));
+  const want = unb64(rec.hash);
+  if (bits.length !== want.length) return false;
+  let diff = 0;
+  for (let i = 0; i < bits.length; i++) diff |= bits[i] ^ want[i];
+  return diff === 0;
+}
+__name(verifyPassword, "verifyPassword");
+var readCookie = /* @__PURE__ */ __name((request, name) => {
+  const m = ("; " + (request.headers.get("cookie") || "")).match(new RegExp("; " + name + "=([^;]*)"));
+  return m ? decodeURIComponent(m[1]) : "";
+}, "readCookie");
+var setCookie = /* @__PURE__ */ __name((token, maxAge) => `${MEMBERS_COOKIE}=${token}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`, "setCookie");
+var publicMember = /* @__PURE__ */ __name((u) => ({ name: u.name, email: u.email, since: u.createdAt, status: "member" }), "publicMember");
+async function readBody(request) {
+  try {
+    return await request.json();
+  } catch {
+    return {};
+  }
+}
+__name(readBody, "readBody");
+async function currentMember(request) {
+  const store = kv();
+  if (!store) return null;
+  const token = readCookie(request, MEMBERS_COOKIE);
+  if (!token || !/^[A-Za-z0-9_-]{20,}$/.test(token)) return null;
+  const email = await store.get("sess:" + token);
+  if (!email) return null;
+  const u = await store.get("user:" + email, "json");
+  return u || null;
+}
+__name(currentMember, "currentMember");
+async function startSession(store, email) {
+  const token = b64(crypto.getRandomValues(new Uint8Array(24))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  await store.put("sess:" + token, email, { expirationTtl: MEMBERS_TTL });
+  return token;
+}
+__name(startSession, "startSession");
+async function membersSignup(request) {
+  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
+  const store = kv();
+  if (!store) return json(503, { error: "MEMBERS_NOT_CONFIGURED" });
+  if (!rateLimit(request, 10)) return json(429, { error: "Too many attempts. Please wait a moment." });
+  const b = await readBody(request);
+  const name = String(b.name || "").trim().slice(0, 80);
+  const email = normEmail(b.email);
+  const password = String(b.password || "");
+  if (name.length < 2) return json(400, { error: "Please enter your name.", field: "name" });
+  if (!validEmail(email)) return json(400, { error: "Please enter a valid email address.", field: "email" });
+  if (password.length < 8) return json(400, { error: "Password must be at least 8 characters.", field: "password" });
+  if (password.length > 200) return json(400, { error: "Password is too long.", field: "password" });
+  if (await store.get("user:" + email)) return json(409, { error: "There is already a member with this email. Log in instead.", field: "email" });
+  const { salt, hash } = await hashPassword(password);
+  const user = { name, email, salt, hash, createdAt: (/* @__PURE__ */ new Date()).toISOString(), status: "member" };
+  await store.put("user:" + email, JSON.stringify(user));
+  const token = await startSession(store, email);
+  return json(201, { member: publicMember(user) }, { "Set-Cookie": setCookie(token, MEMBERS_TTL) });
+}
+__name(membersSignup, "membersSignup");
+async function membersLogin(request) {
+  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
+  const store = kv();
+  if (!store) return json(503, { error: "MEMBERS_NOT_CONFIGURED" });
+  if (!rateLimit(request, 10)) return json(429, { error: "Too many attempts. Please wait a moment." });
+  const b = await readBody(request);
+  const email = normEmail(b.email);
+  const password = String(b.password || "");
+  const bad = /* @__PURE__ */ __name(() => json(401, { error: "Wrong email or password." }), "bad");
+  if (!validEmail(email) || !password) return bad();
+  const user = await store.get("user:" + email, "json");
+  if (!user || !await verifyPassword(password, user)) return bad();
+  const token = await startSession(store, email);
+  return json(200, { member: publicMember(user) }, { "Set-Cookie": setCookie(token, MEMBERS_TTL) });
+}
+__name(membersLogin, "membersLogin");
+async function membersLogout(request) {
+  const store = kv();
+  const token = readCookie(request, MEMBERS_COOKIE);
+  if (store && token) await store.delete("sess:" + token).catch(() => {
+  });
+  return json(200, { ok: true }, { "Set-Cookie": setCookie("", 0) });
+}
+__name(membersLogout, "membersLogout");
+async function membersMe(request) {
+  if (!kv()) return json(200, { configured: false, member: null });
+  const u = await currentMember(request);
+  return json(200, { configured: true, member: u ? publicMember(u) : null });
+}
+__name(membersMe, "membersMe");
+
 // [[path]].js
 var ROUTES = {
   "assistant-chat": assistantChat,
   "assistant-tool": assistantTool,
   "assistant-realtime-token": assistantRealtimeToken,
-  "assistant-tryon": assistantTryon
+  "assistant-tryon": assistantTryon,
+  "members-signup": membersSignup,
+  "members-login": membersLogin,
+  "members-logout": membersLogout,
+  "members-me": membersMe
 };
 async function onRequest(context) {
   const { request, env: env2 } = context;
@@ -419,7 +537,7 @@ async function onRequest(context) {
   const handler = ROUTES[m[1]];
   if (!handler) return json(404, { error: "Unknown function" });
   setEnv(env2);
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": request.headers.get("origin") || "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } });
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": request.headers.get("origin") || "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } });
   if (m[1] === "health") return json(200, { ok: true });
   try {
     return await handler(request, url.origin);
