@@ -112,6 +112,8 @@
     height: 100%;
     object-fit: contain;
     -webkit-user-drag: none;
+    pointer-events: auto;      /* so taps/drags land on the jeans themselves, not just the arrows */
+    cursor: pointer;
     /* keeps black denim separated from the darkest backgrounds without touching the asset */
   }
   .zebra__slide.is-active img { opacity: 1; }
@@ -302,8 +304,7 @@
     .buy__input { font-size: 14px; padding-left: 14px; }
     .buy__action { font-size: 13px; padding: 0 14px; }
     .buy__added { font-size: 13px; padding-left: 14px; }
-    .zebra__arrow { display: grid; width: 40px; height: 40px; opacity: .9; }   /* arrows shown on phones too: swipe is disabled, the section is static */
-    .zebra__arrow svg { width: 22px; height: 22px; }
+    .zebra__arrow { display: none; }   /* swipe replaces the arrows on phones */
   }
   @media (max-height: 640px) {
     :root { --jeans-h: 46vh; }
@@ -1075,8 +1076,8 @@
   .shop__img { position: relative; display: block; aspect-ratio: 2 / 3; background: #f2f2f0; overflow: hidden; touch-action: pan-y; }
   .shop__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .35s cubic-bezier(.22,1,.36,1); }
   .shop__img img.is-on { opacity: 1; }
-  .shop__bars { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 4px; }
-  .shop__bars i { display: block; width: 18px; height: 2px; background: rgba(17,17,17,.28); border-radius: 1px; transition: background .25s; }
+  .shop__bars { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 4px; }
+  .shop__bars i { display: block; flex: 1 1 0; max-width: 18px; min-width: 4px; height: 2px; background: rgba(17,17,17,.28); border-radius: 1px; transition: background .25s; }
   .shop__bars i.is-on { background: #111; }
   .shop__meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; font-size: 12.5px; letter-spacing: .04em; }
   .shop__name { text-transform: uppercase; }
@@ -1375,7 +1376,7 @@
   const hover = matchMedia('(hover: hover)').matches;
   const genderOf = p => p.genders || [p.gender || 'men'];
   function card(key, p) {
-    const imgs = (p.gallery || []).slice(0, key === 'skinny' || key === 'relaxed' ? 2 : 6);   // jeans: cover + one look
+    const imgs = (p.gallery || []).slice(0, key === 'skinny' || key === 'relaxed' ? 2 : 8);   // jeans: cover + one look; everything else: up to 8 dashes, however many photos that product actually has
     const a = document.createElement('a'); a.className = 'shop__card'; a.href = 'bymarccc-product.html?p=' + key;
     a.innerHTML = `<span class="shop__img">${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
       <span class="shop__meta"><span class="shop__name">${p.title}</span>${typeof p.price === 'number' ? `<span class="shop__price">${fmt(p.price, p.currency)}</span>` : ''}</span>`;
@@ -1768,15 +1769,18 @@
     return v.endsWith('vw') ? window.innerWidth * parseFloat(v) / 100 : parseFloat(v);
   };
 
-  /* Swipe / drag on the jeans is DISABLED: capturing every touch on the stage (setPointerCapture)
-     hijacked vertical swipes on iPhone and made the page jump back and forth while scrolling.
-     The section is now static — colours change only via the arrows. */
-  const ZEBRA_DRAG = false;
+  /* Swipe / drag on the jeans: the axis is locked on the first few px of
+     movement (see below) — a mostly-vertical gesture is left alone (no
+     setPointerCapture, no preventDefault) so the page keeps scrolling
+     normally; only a mostly-horizontal gesture is captured and used to
+     change colour. touch-action: pan-y on .zebra__stage backs this up. */
+  const ZEBRA_DRAG = true;
+  let dragMoved = false;
   if (ZEBRA_DRAG) stage.addEventListener('pointerdown', e => {
     if (e.button !== undefined && e.button !== 0) return;
     if (e.target.closest('.zebra__arrow')) return;
+    dragMoved = false;
     drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, t0: performance.now(), axis: null };
-    stage.setPointerCapture?.(e.pointerId);
   });
 
   stage.addEventListener('pointermove', e => {
@@ -1785,10 +1789,11 @@
     if (!drag.axis) {
       if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
       drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      if (drag.axis === 'x') stage.classList.add('is-dragging');
+      if (drag.axis === 'x') { stage.classList.add('is-dragging'); stage.setPointerCapture?.(e.pointerId); }
     }
     if (drag.axis !== 'x') return;
     drag.x = e.clientX;
+    dragMoved = true;
     // jeans follow the finger immediately, no transition
     layout(dx, true);
     e.preventDefault();
@@ -1812,6 +1817,14 @@
   stage.addEventListener('pointerup', endDrag);
   stage.addEventListener('pointercancel', endDrag);
   stage.addEventListener('lostpointercapture', endDrag);
+
+  // Tap (not drag) on a slide opens that jean's product page — same fit for every colour.
+  stage.addEventListener('click', e => {
+    if (dragMoved) { dragMoved = false; e.preventDefault(); e.stopPropagation(); return; }
+    if (e.target.closest('.zebra__arrow')) return;
+    if (!e.target.closest('.zebra__slide')) return;
+    window.location.href = `bymarccc-product.html?p=${FIT}`;
+  });
 
   /* ------------------------------------------------------------------
      Arrows + keyboard
