@@ -1148,6 +1148,9 @@
   .salegrid__add:active { transform: scale(.98); }
   .salegrid__add.is-ok { background: var(--brand-blue, #5B95C3); }
   .salegrid__price { color: #c8102e; font-weight: 600; }
+  .sales__section { grid-column: 1 / -1; }
+  .sales__standalone { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(22px, 3vw, 34px) clamp(10px, 2vw, 20px); margin: 0 0 clamp(18px, 3vw, 32px); }
+  @media (min-width: 900px) { .sales__standalone { grid-template-columns: repeat(4, 1fr); } }
   .salebar .sales__track { gap: 12px; padding: 2px clamp(16px, 4vw, 48px) 6px; scroll-padding: 0 clamp(16px, 4vw, 48px); }
   .salebar .sales__card { width: min(78vw, 300px); scroll-snap-align: center; background: #fff; border: 1px solid #e9e9e6; border-radius: 18px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.05); }
   @media (min-width: 900px) { .salebar .sales__card { width: 300px; } }
@@ -1300,6 +1303,10 @@
     'sale-pink-striped-jeans': { saleRail: true, gender: 'men', id: 'bymarccc:sale-pink-striped-jeans', title: 'Pink Striped Jeans', price: 500, salePrice: 200, currency: 'RON', cut: 'Skinny', collections: ['sales'],
       details: ['Size 40 only', 'One pair — sample sale', 'All clothing is custom made.'], description: 'Pink Striped Jeans — one pair, size 40.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['40']), gallery: [{ src: 'assets/img/gallery/sale-pink-striped-jeans-89f62413.webp', w: 1024, h: 1536 }] },
+    'sale-embroidered-cross-turtleneck': { saleStandalone: true, gender: 'men', id: 'bymarccc:embroidered-cross-turtleneck', title: 'Embroidered Cross Turtleneck Sweater', price: 400, salePrice: 150, currency: 'RON', cut: 'Turtleneck sweater', collections: ['sales'],
+      details: ['Turtleneck sweater', 'Embroidered cross patch on the sleeve', 'Black', 'All clothing is custom made.'],
+      description: 'A black turtleneck sweater finished with an embroidered cross patch on the sleeve.', shipping: SHIPPING,
+      unavailable: [], colours: [{ id: 'black', name: 'Black', hex: '#111111' }], chart: APPAREL_CHART, gallery: [{ src: 'assets/img/gallery/embroidered-cross-turtleneck-1-56fc7b16.webp', w: 1024, h: 1536 }] },
     'colored-cross-bag': { id: 'shopify:colored-cross-bag', shopifyVariant: 55750249906524, title: 'Colored Cross Bag', price: 700, currency: 'RON', cut: 'Duffle', collections: ['accessories', 'sales'], genders: ['men', 'women'],
       details: ['Luxury duffle bag with colorful crosses', '29 × 16 × 49 cm', 'Signature bymarccc travel tag', 'Black chain detailing', 'Each piece is custom created.'],
       description: 'A luxury duffle bag hand-finished with colorful crosses. Finished with a signature bymarccc travel tag and elegant black chain detailing.', shipping: SHIPPING,
@@ -1698,7 +1705,12 @@
       if (!items.length) { grid.innerHTML = '<p class="shop__empty">COMING SOON</p>'; return; }
       if (active === 'sales') {
         const rail = items.filter(([, p]) => p.saleRail);   // a dedicated sale bar (men): only the sale-rail pieces, all one size
-        if (rail.length) { mountSalesSlider(grid, rail, { compact: true, rail: true, note: 'Size: 40' }); return; }   // one sliding row of shop-sized cards
+        const standalone = items.filter(([, p]) => p.saleStandalone);   // pinned product card(s) shown above the slider, normal shop-card styling
+        if (rail.length) {
+          const section = document.createElement('div'); section.className = 'sales__section'; grid.appendChild(section);
+          if (standalone.length) { const sWrap = document.createElement('div'); sWrap.className = 'sales__standalone'; standalone.forEach(([k, p]) => sWrap.appendChild(saleGridCard(k, p))); section.appendChild(sWrap); }
+          mountSalesSlider(section, rail, { compact: true, rail: true, note: 'Size: 40' }); return;   // one sliding row of shop-sized cards, below the standalone card(s)
+        }
         mountSalesSlider(grid, items); return;
       }
       const feat = gender === 'women' && WOMEN_FEATURED[active];
@@ -3413,7 +3425,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .vp__aartist { display: none !important; font-size: 10.5px; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 .vp__ax { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(255,255,255,.1); color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; touch-action: manipulation; }
 .vp__ax svg { width: 12px; height: 12px; }
-.vp__scrub { position: relative; height: 4px; margin: 10px auto 0; width: 82%; border-radius: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
+.vp__scrub { position: relative; height: 4px; margin: 10px auto 0; width: 57%; border-radius: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
 .vp__scrub::before { content: ""; position: absolute; inset: -12px 0; }
 .vp__scrub i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: #fff; }
 .vp__scrub.is-seeking { height: 9px; margin-top: 12.5px; }
@@ -3712,7 +3724,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     }
     drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: x, oy: y, moved: false, tab: !!fromTab, surface };
     vp.classList.add('is-dragging'); document.documentElement.classList.add('is-vp-drag');
-    surface.setPointerCapture?.(e.pointerId);
+    if (typeof e.pointerId === 'number') surface.setPointerCapture?.(e.pointerId);   // real Pointer Events only — the touch-sentinel id below has no pointer capture
     e.preventDefault();
   }
   function dragMove(e) {
@@ -3743,9 +3755,34 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     el.addEventListener('pointermove', dragMove);
     el.addEventListener('pointerup', endDrag); el.addEventListener('pointercancel', endDrag); el.addEventListener('lostpointercapture', endDrag);
   }
-  tab.addEventListener('pointerdown', e => { if (docked) dragStart(e, tab, true); });
+  // mouse only here — real touch is handled below with native Touch Events, because Safari's system
+  // "swipe from screen edge = go back" gesture only backs off when touchstart/touchmove are preventDefault()'d
+  // directly; the docked tab sits flush against the edge, so it's exactly where that system gesture fires,
+  // and cancelling a Pointer Event there does not reliably suppress it.
+  tab.addEventListener('pointerdown', e => { if (docked && e.pointerType === 'mouse') dragStart(e, tab, true); });
   tab.addEventListener('pointermove', dragMove);
   tab.addEventListener('pointerup', endDrag); tab.addEventListener('pointercancel', endDrag); tab.addEventListener('lostpointercapture', endDrag);
+  const TAB_TOUCH_ID = 'tab-touch';
+  tab.addEventListener('touchstart', e => {
+    if (!docked) return;
+    e.preventDefault();   // kill the system edge-swipe-back gesture before it can start
+    const t = e.touches[0];
+    dragStart({ pointerId: TAB_TOUCH_ID, pointerType: 'touch', clientX: t.clientX, clientY: t.clientY, target: e.target, preventDefault(){} }, tab, true);
+  }, { passive: false });
+  tab.addEventListener('touchmove', e => {
+    if (!drag || drag.id !== TAB_TOUCH_ID) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    dragMove({ pointerId: TAB_TOUCH_ID, clientX: t.clientX, clientY: t.clientY });
+  }, { passive: false });
+  const tabTouchEnd = e => {
+    if (!drag || drag.id !== TAB_TOUCH_ID) return;
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    endDrag({ pointerId: TAB_TOUCH_ID, clientX: t.clientX, clientY: t.clientY, type: 'touchend' });
+  };
+  tab.addEventListener('touchend', tabTouchEnd, { passive: false });
+  tab.addEventListener('touchcancel', tabTouchEnd, { passive: false });
   addEventListener('resize', clampToViewport, { passive: true });
   addEventListener('orientationchange', () => setTimeout(clampToViewport, 250), { passive: true });
 
