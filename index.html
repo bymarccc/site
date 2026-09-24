@@ -1082,6 +1082,7 @@
   @media (min-width: 900px) { .shop__grid { grid-template-columns: repeat(4, 1fr); } }
   .shop__card { display: block; color: inherit; text-decoration: none; }
   .shop__img { position: relative; display: block; aspect-ratio: 2 / 3; background: #f2f2f0; overflow: hidden; touch-action: pan-y pinch-zoom; }
+  .shop__soldout { position: absolute; z-index: 2; top: 10px; left: 10px; background: #111; color: #fff; font-size: 10px; font-weight: 600; letter-spacing: .1em; padding: 5px 9px; border-radius: 3px; }
   .shop__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .35s cubic-bezier(.22,1,.36,1); }
   .shop__img img.is-on { opacity: 1; }
   .shop__bars { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 4px; }
@@ -1325,7 +1326,7 @@
       description: 'A luxury duffle bag painted by hand in purple and blue. Finished with the bymarccc travel tag and elegant black chain detailing.', shipping: SHIPPING,
       unavailable: [], colours: BLACK_ONLY, chart: ONE_SIZE, gallery: [{ src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/B359AF59-8D1C-483E-9213-7D96ACD9C9D5.jpg?v=1760810273&width=1400', w: 2535, h: 3601 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/7067F61D-A4F3-4E3F-8ED3-3AA67381D33E.jpg?v=1760810275&width=1400', w: 2535, h: 3601 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/9CFC9537-4F72-4595-93C1-6AA7226EB931.jpg?v=1760810274&width=1400', w: 2535, h: 3601 }] },
   /* ---- WOMEN — Tops (images from the tops-women export, data from the public Shopify catalogue) ---- */
-    'w-black-hoodie': { designs: ['Blank', 'Logo', 'Lady on the street', 'Hot Girls Are Delulu', 'Muse', 'Delulu', 'NOT FROM PARIS', 'Barbie', 'Happy Hoes', 'Boys Lie', 'Yacht'], gender: 'women', model: { height: 177, weight: 53, size: 'S-M', modelMedia: [0], text: 'Model is 177 cm and 53 kg and wears size S-M' }, id: 'shopify:black-hoodie', title: 'Black Hoodie', price: 450, currency: 'RON', cut: 'Womenswear', collections: ['tops'],
+    'w-black-hoodie': { soldOut: true, designs: ['Blank', 'Logo', 'Lady on the street', 'Hot Girls Are Delulu', 'Muse', 'Delulu', 'NOT FROM PARIS', 'Barbie', 'Happy Hoes', 'Boys Lie', 'Yacht'], gender: 'women', model: { height: 177, weight: 53, size: 'S-M', modelMedia: [0], text: 'Model is 177 cm and 53 kg and wears size S-M' }, id: 'shopify:black-hoodie', title: 'Black Hoodie', price: 450, currency: 'RON', cut: 'Womenswear', collections: ['tops'],
       details: ['Several embroidery designs available (Blank, Logo, Muse, Delulu, NOT FROM PARIS…)', 'All clothing is custom made.', '100% Organic Cotton'], description: 'Black hoodie from the BYMARCCC womenswear collection, available in several embroidery designs.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'black', name: 'Black', hex: '#111111' }], chart: sizeChart(['S-M', 'L-XL']), gallery: [{ src: 'assets/img/gallery/w-black-hoodie-1-79ed5264.webp', w: 900, h: 1279 }, { src: 'assets/img/gallery/w-black-hoodie-2-07f8224e.webp', w: 900, h: 1304 }, { src: 'assets/img/gallery/w-black-hoodie-4-803e0893.webp', w: 900, h: 1304 }, { src: 'assets/img/gallery/w-black-hoodie-6-4940133f.webp', w: 900, h: 1304 }] },
     'w-black-long-sleeve': { designs: ['Delulu', 'Boys Lie', 'Muse', 'NOT FROM PARIS', 'Hot Girls Are Delulu', 'Happy Hoes'], gender: 'women', model: { height: 177, weight: 53, size: 'S-M', modelMedia: [0], text: 'Model is 177 cm and 53 kg and wears size S-M' }, id: 'shopify:black-long-sleeve', title: 'Long Sleeve Top', price: 250, currency: 'RON', cut: 'Womenswear', collections: ['tops'],
@@ -1469,7 +1470,7 @@
   function card(key, p) {
     const imgs = (p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
     const a = document.createElement('a'); a.className = 'shop__card'; a.href = 'bymarccc-product.html?p=' + key;
-    a.innerHTML = `<span class="shop__img">${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
+    a.innerHTML = `<span class="shop__img">${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
       <span class="shop__meta"><span class="shop__name">${p.title}</span>${typeof p.price === 'number' ? `<span class="shop__price">${fmt(p.price, p.currency)}</span>` : ''}</span>`;
     if (imgs.length > 1) {
       const pics = [...a.querySelectorAll('img')], bars = [...a.querySelectorAll('.shop__bars i')]; let i = 0;
@@ -2209,6 +2210,10 @@
       src:   CLD + 'v1790104743/Tyla_-_chhanell.m4a',
       video: CLD + 'v1790104707/Tyla_-_CHANEL.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790104707/Tyla_-_CHANEL.jpg',
       thumb: 'assets/img/thumb-tyla-chanel.jpg' },
+    { id: 'paradise',  title: 'Sade - Paradise',                 channel: '', duration: '4:02',
+      src:   CLD + 'v1790162082/Sade_Paradise_.m4a',
+      video: CLD + 'v1790162088/Sade_-_Paradise.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790162088/Sade_-_Paradise.jpg',
+      thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790162088/Sade_-_Paradise.jpg' },
   ];
   window.BYMARCCC_PLAYLIST = SEED;
 
@@ -2973,6 +2978,8 @@
   .reel__add { display: flex; justify-content: space-between; align-items: center; height: 40px; padding: 0 14px; border: 0; background: #f2f2f0; font: inherit; font-size: 12px; font-weight: 600; letter-spacing: .12em; cursor: pointer; }
   .reel__add:hover { background: #111; color: #fff; }
   .reel__add.is-ok { background: #111; color: #fff; }
+  .reel__add[disabled] { opacity: .5; cursor: default; }
+  .reel__add[disabled]:hover { background: #f2f2f0; color: inherit; }
   .reel__msg { font-size: 11.5px; color: #c8102e; min-height: 0; margin: 0; }
   .reel__msg:empty { display: none; }
   .reel__nav { position: absolute; top: 34%; z-index: 2; width: 40px; height: 40px; border: 1px solid #e4e4e1; border-radius: 50%; background: rgba(255,255,255,.92); display: none; place-items: center; cursor: pointer; }
@@ -2984,49 +2991,32 @@
 (() => {
   'use strict';
   const { CATALOG } = window.BYMARCCC_CATALOG;
-  /* Each reel → the product it shows. Video files live in assets/video (not inlined). */
+  const CLD = 'https://res.cloudinary.com/lpj7yftl/video/upload/';
+  /* Cloudinary derives a jpg poster frame on the fly from the same video — no separate poster upload needed. */
+  const posterFor = url => url.replace('/upload/', '/upload/so_2,w_800,q_auto,f_auto/').replace(/\.\w+$/, '.jpg');
+  /* Each reel → the product(s) it shows. `p` can be a single product key, an array of keys (video features
+     more than one piece), or omitted entirely (video with no shoppable product yet). Video files are hosted
+     on Cloudinary — nothing here is bundled with the site. */
   const REELS = [
-    { v: 'assets/video/reel-01.mp4', p: 'w-white-baby-top-1' },
-    { v: 'assets/video/reel-02.mp4', p: 'w-black-tee', design: 'Hot Girls Are Delulu' },
-    { v: 'assets/video/reel-03.mp4', p: 'w-black-long-sleeve', design: 'Hot Girls Are Delulu' },
-    { v: 'assets/video/reel-04.mp4', p: 'w-transparent-jean' },
-    { v: 'assets/video/reel-05.mp4', p: 'w-cap-2', design: 'Delulu' },
-    { v: 'assets/video/reel-06.mp4', p: 'hoodie-02' },
-    { v: 'assets/video/reel-07.mp4', p: 'w-walking-art-black-jeans' },
-    { v: 'assets/video/reel-08.mp4', p: 'w-art-dept-3' },
+    { v: CLD + 'v1790252473/delulu_blazer.mp4', p: 'w-hg-delulu-blazer' },
+    { v: CLD + 'v1790252474/paris_hoodie_sold_out.mp4', p: 'w-black-hoodie', design: 'NOT FROM PARIS' },
+    { v: CLD + 'v1790252468/delulu_dress.mp4' },   // no matching catalog product yet — video only, no card
+    { v: CLD + 'v1790252468/white_baby_top_and_black_sequin_shorts.mp4', p: ['w-white-baby-top-1', 'w-black-sequin-shorts'] },
+    { v: CLD + 'v1790252465/red_baby_top.mp4', p: 'w-red-baby-top' },
   ];
   const track = document.getElementById('reelTrack');
   const fmt = (n, c) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',')) + ' ' + c;
   const bag = () => window.BYMARCCC && window.BYMARCCC.bag;
   const muteSvg = `<svg class="off" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 8l5 8M22 8l-5 8"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg>`;
   let unmuted = null;
-  REELS.forEach((r, i) => {
-    const p = CATALOG[r.p]; if (!p) return;
-    const url = 'bymarccc-product.html?p=' + r.p, sizes = (p.chart.sizes || []).map(x => x.size), colours = p.colours || [], designs = p.designs || [];
-    const item = document.createElement('article'); item.className = 'reel__item';
-    item.innerHTML = `<div class="reel__video"><video src="${r.v}" poster="${r.v.replace('.mp4', '.webp')}" muted playsinline loop preload="metadata" aria-label="${p.title}"></video><button class="reel__mute" type="button" aria-pressed="false" aria-label="Unmute">${muteSvg}</button><button class="reel__play" type="button" aria-label="Play video"><span><svg viewBox="0 0 24 24" fill="#111" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button></div>
-      <div class="reel__card"><a class="reel__thumb" href="${url}"><img src="${p.gallery[0].src}" alt="${p.title}" loading="lazy"></a>
-      <div class="reel__meta"><a class="reel__name" href="${url}">${p.title}</a><div class="reel__opts">
-        ${sizes.length > 1 ? `<div class="reel__sel"><select data-size aria-label="Size"><option value="">Select Size</option>${sizes.map(s => `<option>${s}</option>`).join('')}</select></div>` : ''}
-        ${colours.length > 1 ? `<div class="reel__sel"><select data-colour aria-label="Colour"><option value="">Select Colour</option>${colours.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>` : ''}
-        ${designs.length ? `<div class="reel__sel"><select data-design aria-label="Design"><option value="">Select Design</option>${designs.map(d => `<option ${d === r.design ? 'selected' : ''}>${d}</option>`).join('')}</select></div>` : ''}
-        <button class="reel__add" type="button"><span>ADD TO BAG</span><span>${typeof p.price === 'number' ? fmt(p.price, p.currency) : ''}</span></button><p class="reel__msg" role="status"></p></div></div></div>`;
-    const video = item.querySelector('video'), mute = item.querySelector('.reel__mute'), playBtn = item.querySelector('.reel__play'), add = item.querySelector('.reel__add'), msg = item.querySelector('.reel__msg');
-    playBtn.addEventListener('click', () => {
-      if (!video.paused) { video.pause(); return; }
-      vids.forEach(v => { if (v !== video && !v.paused) { v.pause(); } });
-      video.play().then(() => video.closest('.reel__video').classList.add('is-playing')).catch(() => {});
-    });
-    video.addEventListener('play', () => video.closest('.reel__video').classList.add('is-playing'));
-    video.addEventListener('pause', () => video.closest('.reel__video').classList.remove('is-playing'));
-    mute.addEventListener('click', () => {
-      const on = video.muted; if (on && unmuted && unmuted !== video) { unmuted.muted = true; unmuted.closest('.reel__video').querySelector('.reel__mute').setAttribute('aria-pressed', 'false'); }
-      video.muted = !on; unmuted = on ? video : null; mute.setAttribute('aria-pressed', String(on)); mute.setAttribute('aria-label', on ? 'Mute' : 'Unmute');
-    });
+  function wireCard(card, p, key, r) {
+    const url = 'bymarccc-product.html?p=' + key, sizes = (p.chart?.sizes || []).map(x => x.size), colours = p.colours || [], designs = p.designs || [];
+    const add = card.querySelector('.reel__add'), msg = card.querySelector('.reel__msg');
+    if (p.soldOut) { add.disabled = true; add.firstElementChild.textContent = 'SOLD OUT'; return; }
     add.addEventListener('click', async () => {
-      const size = sizes.length > 1 ? item.querySelector('[data-size]').value : (sizes[0] || '');
-      const colour = colours.length > 1 ? item.querySelector('[data-colour]').value : (colours[0] && colours[0].id);
-      const design = designs.length ? item.querySelector('[data-design]').value : '';
+      const size = sizes.length > 1 ? card.querySelector('[data-size]').value : (sizes[0] || '');
+      const colour = colours.length > 1 ? card.querySelector('[data-colour]').value : (colours[0] && colours[0].id);
+      const design = designs.length ? card.querySelector('[data-design]').value : '';
       if (p.needsBody) { msg.textContent = ''; location.href = url; return; }          // jeans need height/weight → product page
       if (sizes.length > 1 && !size) { msg.textContent = 'Please select a size.'; return; }
       if (colours.length > 1 && !colour) { msg.textContent = 'Please select a colour.'; return; }
@@ -3037,6 +3027,41 @@
       await store.add({ id: `${p.id}:${colour}:${size}${design ? ':' + design : ''}`, name: p.title, variant, image: p.gallery[0].src, price: p.price, currency: p.currency, quantity: 1 });
       add.classList.add('is-ok'); add.firstElementChild.textContent = 'ADDED'; setTimeout(() => { add.classList.remove('is-ok'); add.firstElementChild.textContent = 'ADD TO BAG'; }, 1800);
     });
+  }
+  function cardHtml(p, key, r) {
+    const url = 'bymarccc-product.html?p=' + key, sizes = (p.chart?.sizes || []).map(x => x.size), colours = p.colours || [], designs = p.designs || [];
+    return `<div class="reel__card"><a class="reel__thumb" href="${url}"><img src="${p.gallery[0].src}" alt="${p.title}" loading="lazy"></a>
+      <div class="reel__meta"><a class="reel__name" href="${url}">${p.title}</a><div class="reel__opts">
+        ${sizes.length > 1 ? `<div class="reel__sel"><select data-size aria-label="Size"><option value="">Select Size</option>${sizes.map(s => `<option>${s}</option>`).join('')}</select></div>` : ''}
+        ${colours.length > 1 ? `<div class="reel__sel"><select data-colour aria-label="Colour"><option value="">Select Colour</option>${colours.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>` : ''}
+        ${designs.length ? `<div class="reel__sel"><select data-design aria-label="Design"><option value="">Select Design</option>${designs.map(d => `<option ${d === r.design ? 'selected' : ''}>${d}</option>`).join('')}</select></div>` : ''}
+        <button class="reel__add" type="button"${p.soldOut ? ' disabled' : ''}><span>${p.soldOut ? 'SOLD OUT' : 'ADD TO BAG'}</span><span>${typeof p.price === 'number' ? fmt(p.price, p.currency) : ''}</span></button><p class="reel__msg" role="status"></p></div></div></div>`;
+  }
+  REELS.forEach((r, i) => {
+    const keys = Array.isArray(r.p) ? r.p : (r.p ? [r.p] : []);
+    const products = keys.map(k => [k, CATALOG[k]]).filter(([, p]) => p);
+    const label = products.length ? products.map(([, p]) => p.title).join(' + ') : 'BYMARCCC';
+    const item = document.createElement('article'); item.className = 'reel__item';
+    item.innerHTML = `<div class="reel__video"><video src="${r.v}" poster="${posterFor(r.v)}" muted playsinline loop preload="metadata" aria-label="${label}"></video><button class="reel__mute" type="button" aria-pressed="false" aria-label="Unmute">${muteSvg}</button><button class="reel__play" type="button" aria-label="Play video"><span><svg viewBox="0 0 24 24" fill="#111" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button></div>
+      ${products.map(([key, p]) => cardHtml(p, key, r)).join('')}`;
+    const video = item.querySelector('video'), mute = item.querySelector('.reel__mute'), playBtn = item.querySelector('.reel__play');
+    /* Preserve each clip's real aspect ratio instead of forcing a fixed crop — the 2:3 box in CSS is only a
+       before-metadata placeholder so the layout doesn't jump. */
+    video.addEventListener('loadedmetadata', () => {
+      if (video.videoWidth && video.videoHeight) video.closest('.reel__video').style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+    });
+    playBtn.addEventListener('click', () => {
+      if (!video.paused) { video.pause(); return; }
+      vids.forEach(v => { if (v !== video && !v.paused) { v.pause(); } });   // only one video plays at a time
+      video.play().then(() => video.closest('.reel__video').classList.add('is-playing')).catch(() => {});
+    });
+    video.addEventListener('play', () => video.closest('.reel__video').classList.add('is-playing'));
+    video.addEventListener('pause', () => video.closest('.reel__video').classList.remove('is-playing'));
+    mute.addEventListener('click', () => {
+      const on = video.muted; if (on && unmuted && unmuted !== video) { unmuted.muted = true; unmuted.closest('.reel__video').querySelector('.reel__mute').setAttribute('aria-pressed', 'false'); }
+      video.muted = !on; unmuted = on ? video : null; mute.setAttribute('aria-pressed', String(on)); mute.setAttribute('aria-label', on ? 'Mute' : 'Unmute');
+    });
+    item.querySelectorAll('.reel__card').forEach((card, ci) => wireCard(card, products[ci][1], products[ci][0], r));
     track.appendChild(item);
   });
   /* No autoplay: videos start paused (poster + play button) and only pause automatically once scrolled far out of view. */

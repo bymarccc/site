@@ -704,7 +704,7 @@
       description: 'A luxury duffle bag painted by hand in purple and blue. Finished with the bymarccc travel tag and elegant black chain detailing.', shipping: SHIPPING,
       unavailable: [], colours: BLACK_ONLY, chart: ONE_SIZE, gallery: [{ src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/B359AF59-8D1C-483E-9213-7D96ACD9C9D5.jpg?v=1760810273&width=1400', w: 2535, h: 3601 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/7067F61D-A4F3-4E3F-8ED3-3AA67381D33E.jpg?v=1760810275&width=1400', w: 2535, h: 3601 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/9CFC9537-4F72-4595-93C1-6AA7226EB931.jpg?v=1760810274&width=1400', w: 2535, h: 3601 }] },
   /* ---- WOMEN — Tops (images from the tops-women export, data from the public Shopify catalogue) ---- */
-    'w-black-hoodie': { designs: ['Blank', 'Logo', 'Lady on the street', 'Hot Girls Are Delulu', 'Muse', 'Delulu', 'NOT FROM PARIS', 'Barbie', 'Happy Hoes', 'Boys Lie', 'Yacht'], gender: 'women', model: { height: 177, weight: 53, size: 'S-M', modelMedia: [0], text: 'Model is 177 cm and 53 kg and wears size S-M' }, id: 'shopify:black-hoodie', title: 'Black Hoodie', price: 450, currency: 'RON', cut: 'Womenswear', collections: ['tops'],
+    'w-black-hoodie': { soldOut: true, designs: ['Blank', 'Logo', 'Lady on the street', 'Hot Girls Are Delulu', 'Muse', 'Delulu', 'NOT FROM PARIS', 'Barbie', 'Happy Hoes', 'Boys Lie', 'Yacht'], gender: 'women', model: { height: 177, weight: 53, size: 'S-M', modelMedia: [0], text: 'Model is 177 cm and 53 kg and wears size S-M' }, id: 'shopify:black-hoodie', title: 'Black Hoodie', price: 450, currency: 'RON', cut: 'Womenswear', collections: ['tops'],
       details: ['Several embroidery designs available (Blank, Logo, Muse, Delulu, NOT FROM PARIS…)', 'All clothing is custom made.', '100% Organic Cotton'], description: 'Black hoodie from the BYMARCCC womenswear collection, available in several embroidery designs.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'black', name: 'Black', hex: '#111111' }], chart: sizeChart(['S-M', 'L-XL']), gallery: [{ src: 'assets/img/gallery/w-black-hoodie-1-79ed5264.webp', w: 900, h: 1279 }, { src: 'assets/img/gallery/w-black-hoodie-2-07f8224e.webp', w: 900, h: 1304 }, { src: 'assets/img/gallery/w-black-hoodie-4-803e0893.webp', w: 900, h: 1304 }, { src: 'assets/img/gallery/w-black-hoodie-6-4940133f.webp', w: 900, h: 1304 }] },
     'w-black-long-sleeve': { designs: ['Delulu', 'Boys Lie', 'Muse', 'NOT FROM PARIS', 'Hot Girls Are Delulu', 'Happy Hoes'], gender: 'women', model: { height: 177, weight: 53, size: 'S-M', modelMedia: [0], text: 'Model is 177 cm and 53 kg and wears size S-M' }, id: 'shopify:black-long-sleeve', title: 'Long Sleeve Top', price: 250, currency: 'RON', cut: 'Womenswear', collections: ['tops'],
@@ -1100,7 +1100,8 @@
     if (state.size && !isAvailable(state.colour, state.size)) state.size = null;
     sizesEl.querySelectorAll('.pdp-size').forEach(b => { b.disabled = !isAvailable(state.colour, b.dataset.s); b.setAttribute('aria-checked', String(b.dataset.s === state.size)); });
     $('sizeName').textContent = state.size ? sizeLabel(state.size) : 'Select a size';
-    addBtn.textContent = 'ADD TO BAG';
+    if (PRODUCT.soldOut) { addBtn.textContent = 'SOLD OUT'; addBtn.disabled = true; addBtn.classList.add('is-soldout'); }
+    else { addBtn.textContent = 'ADD TO BAG'; addBtn.disabled = false; addBtn.classList.remove('is-soldout'); }
     if (state.size) { barMsg.textContent = ''; }
   }
   state.listeners.add(renderSelection); renderSelection();
@@ -1183,6 +1184,7 @@
 
   let adding = false;
   async function addMain(btn = addBtn, msg = barMsg) {
+    if (PRODUCT.soldOut) { msg.classList.remove('is-ok'); msg.textContent = 'This item is sold out.'; return false; }
     if (adding) return false;
     adding = true; setTimeout(() => { adding = false; }, 400);
     const hw = hwCheck(true);
