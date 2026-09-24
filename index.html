@@ -3478,9 +3478,11 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .vp__scrub i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: #fff; }
 .vp__scrub.is-seeking { height: 9px; margin-top: 12.5px; }
 /* times pulled in from 82% width so "0:15"/"-1:58" sit closer to center instead of hugging the outer edges, and the row is nudged up (was margin-top 6px) to close the gap under the seek bar — leaving more open, empty card surface below for dragging */
-.vp__atimes { display: flex; align-items: center; justify-content: space-between; width: 68%; margin: 4px auto 0; font-size: 9px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
+/* Times + transport form ONE compact centered cluster, not spread edge-to-edge — this leaves large
+   empty (still draggable) margins on the left/right of the row for grabbing the whole PiP. */
+.vp__atimes { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; margin: 6px 0 0; padding: 6px 0; font-size: 9px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
 .vp__atimes span { flex: 0 0 auto; }
-.vp__actr { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.vp__actr { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .vp__abtn { position: relative; border: 0; background: none; color: #fff; padding: 0; width: 26px; height: 26px; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
 .vp__abtn::after { content: ""; position: absolute; inset: -5px; }   /* a bit more touch target without growing the visible icon, kept short of the 10px gap so adjacent buttons never overlap */
 .vp__abtn svg { width: 14px; height: 14px; }
