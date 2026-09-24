@@ -368,7 +368,7 @@
 .obj {
   position: absolute;
   left: var(--dx); top: var(--dy);
-  width: calc(var(--dw) * var(--obj-scale));
+  width: calc(var(--dw) * var(--obj-scale) * var(--dw-x, 1));
   --rot: var(--dr, 0deg);
   --tx: 0px; --ty: 0px; --s: 1;
   transform: translate3d(var(--tx), var(--ty), 0) rotate(var(--rot)) scale(var(--s));
@@ -670,6 +670,14 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1024px) { .play { --obj-scale: .72; --card-w: clamp(234px, 32.4vw, 306px); } }
+/* Desktop/laptop only (>1024px): bigger bag, jeans, money pouch, hang tag and alien card. Tablet/mobile untouched. */
+@media (min-width: 1025px) {
+  .play { --card-w: clamp(378px, 40.5vw, 513px); }
+  .obj[data-obj="bag"]      { --dw-x: 1.4; }
+  .obj[data-obj="artjeans"] { --dw-x: 1.6; }
+  .obj[data-obj="money"]    { --dw-x: 1.4; }
+  .obj[data-obj="tag"]      { --dw-x: 1.5; }
+}
 @media (max-width: 640px) {
   .play { --obj-scale: 1; --card-w: min(59.4vw, 270px); --card-ratio: 0.86; }
   .play__stage { height: 100vh; height: 100svh; }

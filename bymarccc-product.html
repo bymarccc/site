@@ -60,7 +60,7 @@
 .pdp-gallery__track { display: flex; height: 100%; will-change: transform; transition: transform .5s var(--ease); }
 .pdp-gallery__track.no-anim { transition: none; }
 .pdp-gallery__slide { flex: 0 0 100%; height: 100%; display: grid; place-items: center; padding: 0; }
-.pdp-gallery__slide img { width: 100%; height: 100%; object-fit: contain; display: block; -webkit-user-drag: none; }
+.pdp-gallery__slide img { width: 100%; height: 100%; object-fit: contain; display: block; -webkit-user-drag: none; will-change: transform; transform-origin: center center; }
 .pdp-gallery__arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: 0; background: transparent; display: grid; place-items: center; z-index: 3; }
 .pdp-gallery__arrow svg { width: 22px; height: 22px; }
 .pdp-gallery__arrow--prev { left: 6px; } .pdp-gallery__arrow--next { right: 6px; }
@@ -947,6 +947,27 @@
   const track = $('galleryTrack'), count = $('galCount'), bars = $('galBars');
   if (GALLERY.length > 1) bars.innerHTML = GALLERY.map(() => '<i></i>').join('');
   let gi = 0, drag = null;
+  /* Pinch-to-zoom (iPhone/touch): two fingers scale the current photo; one finger pans while
+     zoomed in. Fully independent of the swipe-to-change-photo drag above — only one of the two
+     is ever active at a time. Zoom resets whenever the active photo changes. */
+  const zoomPointers = new Map();
+  let pinch = null, panDrag = null, zoomScale = 1, panX = 0, panY = 0;
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const currentImg = () => slides[gi]?.querySelector('img');
+  function clampPan() {
+    const img = currentImg(); if (!img) return;
+    const maxX = (img.clientWidth * (zoomScale - 1)) / 2, maxY = (img.clientHeight * (zoomScale - 1)) / 2;
+    panX = Math.max(-maxX, Math.min(maxX, panX)); panY = Math.max(-maxY, Math.min(maxY, panY));
+  }
+  function applyZoom(anim = false) {
+    const img = currentImg(); if (!img) return;
+    img.style.transition = anim ? 'transform .25s var(--ease)' : 'none';
+    img.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${zoomScale})`;
+  }
+  function resetZoom(anim = false) {
+    zoomScale = 1; panX = 0; panY = 0; pinch = null; panDrag = null;
+    slides.forEach(s => { const img = s.querySelector('img'); if (img) { img.style.transition = anim ? 'transform .25s var(--ease)' : 'none'; img.style.transform = ''; } });
+  }
   GALLERY.forEach((g, i) => {
     const s = document.createElement('div'); s.className = 'pdp-gallery__slide'; s.setAttribute('role', 'group'); s.setAttribute('aria-label', `${i + 1} of ${GALLERY.length}: ${PRODUCT.title}`);
     const img = document.createElement('img'); img.src = g.src; img.alt = `${PRODUCT.title} — look ${i + 1}`; img.width = g.w; img.height = g.h;
@@ -980,26 +1001,63 @@
     const nxt = slides[(gi + 1) % slides.length]?.querySelector('img'); if (nxt) nxt.loading = 'eager';
   }
   function goTo(i) {
-    gi = ((i % GALLERY.length) + GALLERY.length) % GALLERY.length; layout();
+    /* Finite carousel: clamp to the real bounds instead of wrapping — reaching the last
+       image must never jump back to the first, and vice-versa. */
+    gi = Math.max(0, Math.min(GALLERY.length - 1, i)); layout(); resetZoom();
     if (PRODUCT.imageColours && COLOURS[gi] && state.colour !== COLOURS[gi].id) setColour(COLOURS[gi].id);
+    if (PRODUCT.imageDesigns && DESIGNS[gi] && state.design !== DESIGNS[gi]) { state.design = DESIGNS[gi]; emit(); }
   }
   if (GALLERY.length < 2) { gallery.classList.add('is-single'); $('galPrev').hidden = true; $('galNext').hidden = true; }
   layout(0, false);
   $('galPrev').addEventListener('click', () => goTo(gi - 1));
   $('galNext').addEventListener('click', () => goTo(gi + 1));
   gallery.addEventListener('pointerdown', e => {
-    if (e.target.closest('button, input, label, form') || GALLERY.length < 2) return;
-    drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, axis: null, x: e.clientX, t: performance.now() };
+    if (e.target.closest('button, input, label, form')) return;
     gallery.setPointerCapture?.(e.pointerId);
+    zoomPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (zoomPointers.size === 2) {
+      drag = null;   // a second finger landed: this is a pinch, not a swipe
+      const pts = [...zoomPointers.values()];
+      pinch = { d0: Math.max(1, dist(pts[0], pts[1])), scale0: zoomScale };
+    } else if (zoomPointers.size === 1) {
+      if (zoomScale > 1.02) { panDrag = { id: e.pointerId, x0: e.clientX - panX, y0: e.clientY - panY }; }
+      else if (GALLERY.length >= 2) { drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, axis: null, x: e.clientX, t: performance.now() }; }
+    }
   });
   gallery.addEventListener('pointermove', e => {
+    if (!zoomPointers.has(e.pointerId)) return;
+    zoomPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && zoomPointers.size === 2) {
+      const pts = [...zoomPointers.values()];
+      zoomScale = Math.max(1, Math.min(3, pinch.scale0 * (dist(pts[0], pts[1]) / pinch.d0)));
+      clampPan(); applyZoom(); e.preventDefault(); return;
+    }
+    if (panDrag && panDrag.id === e.pointerId) {
+      panX = e.clientX - panDrag.x0; panY = e.clientY - panDrag.y0;
+      clampPan(); applyZoom(); e.preventDefault(); return;
+    }
     if (!drag || e.pointerId !== drag.id) return;
     const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
     if (!drag.axis) { if (Math.hypot(dx, dy) < 6) return; drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; }
     if (drag.axis !== 'x') return;
-    drag.x = e.clientX; layout(dx, false); e.preventDefault();
+    /* Rubber-band resistance at the first/last image — no sliding past a real boundary into a blank frame. */
+    let ddx = dx;
+    if (gi === 0 && ddx > 0) ddx *= 0.35;
+    if (gi === GALLERY.length - 1 && ddx < 0) ddx *= 0.35;
+    drag.x = e.clientX; layout(ddx, false); e.preventDefault();
   });
   const endDrag = e => {
+    if (e) zoomPointers.delete(e.pointerId);
+    if (e && pinch && zoomPointers.size < 2) {
+      pinch = null;
+      if (zoomScale <= 1.05) { resetZoom(true); }
+      else {
+        clampPan(); applyZoom(true);
+        const rest = [...zoomPointers.entries()][0];   // one finger still down → start panning from here
+        if (rest) panDrag = { id: rest[0], x0: rest[1].x - panX, y0: rest[1].y - panY };
+      }
+    }
+    if (e && panDrag && e.pointerId === panDrag.id) { panDrag = null; if (zoomScale <= 1.05) resetZoom(true); }
     if (!drag || (e && e.pointerId !== drag.id)) return;
     const dx = drag.x - drag.x0, v = dx / Math.max(1, performance.now() - drag.t), axis = drag.axis; drag = null;
     if (axis !== 'x') return;
@@ -1031,7 +1089,7 @@
   const designsEl = $('designs');
   if (DESIGNS.length) {
     $('designLabel').hidden = false; designsEl.hidden = false;
-    DESIGNS.forEach(dname => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-size'; b.setAttribute('role', 'radio'); b.dataset.d = dname; b.textContent = dname; b.addEventListener('click', () => { state.design = dname; emit(); }); designsEl.appendChild(b); });
+    DESIGNS.forEach(dname => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-size'; b.setAttribute('role', 'radio'); b.dataset.d = dname; b.textContent = dname; b.addEventListener('click', () => { state.design = dname; emit(); if (PRODUCT.imageDesigns) goTo(DESIGNS.indexOf(dname)); }); designsEl.appendChild(b); });
     state.listeners.add(() => { designsEl.querySelectorAll('.pdp-size').forEach(b => b.setAttribute('aria-checked', String(b.dataset.d === state.design))); $('designName').textContent = state.design || 'Select a design'; });
   }
   const addBtn = $('addBtn'), barMsg = $('barMsg');
