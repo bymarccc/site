@@ -2947,9 +2947,9 @@
   .reel__video video { width: 100%; height: 100%; object-fit: cover; display: block; }
   .reel__mute { position: absolute; right: 12px; bottom: 12px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgba(255,255,255,.85); display: grid; place-items: center; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   .reel__mute svg { width: 18px; height: 18px; }
-  /* Fallback for browsers that block autoplay (even muted): a visible play button over the poster frame. */
-  .reel__play { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: rgba(0,0,0,.15); display: none; place-items: center; cursor: pointer; }
-  .reel__video.needs-tap .reel__play { display: grid; }
+  /* Videos start paused: a visible play button sits over the poster frame until the user taps it. */
+  .reel__play { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: rgba(0,0,0,.15); display: grid; place-items: center; cursor: pointer; }
+  .reel__video.is-playing .reel__play { display: none; }
   .reel__play span { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.92); display: grid; place-items: center; }
   .reel__play svg { width: 22px; height: 22px; margin-left: 3px; }
   .reel__mute .on { display: none; } .reel__mute[aria-pressed="true"] .on { display: block; } .reel__mute[aria-pressed="true"] .off { display: none; }
@@ -3004,7 +3004,13 @@
         ${designs.length ? `<div class="reel__sel"><select data-design aria-label="Design"><option value="">Select Design</option>${designs.map(d => `<option ${d === r.design ? 'selected' : ''}>${d}</option>`).join('')}</select></div>` : ''}
         <button class="reel__add" type="button"><span>ADD TO BAG</span><span>${typeof p.price === 'number' ? fmt(p.price, p.currency) : ''}</span></button><p class="reel__msg" role="status"></p></div></div></div>`;
     const video = item.querySelector('video'), mute = item.querySelector('.reel__mute'), playBtn = item.querySelector('.reel__play'), add = item.querySelector('.reel__add'), msg = item.querySelector('.reel__msg');
-    playBtn.addEventListener('click', () => { video.play().then(() => video.closest('.reel__video').classList.remove('needs-tap')).catch(() => {}); });
+    playBtn.addEventListener('click', () => {
+      if (!video.paused) { video.pause(); return; }
+      vids.forEach(v => { if (v !== video && !v.paused) { v.pause(); } });
+      video.play().then(() => video.closest('.reel__video').classList.add('is-playing')).catch(() => {});
+    });
+    video.addEventListener('play', () => video.closest('.reel__video').classList.add('is-playing'));
+    video.addEventListener('pause', () => video.closest('.reel__video').classList.remove('is-playing'));
     mute.addEventListener('click', () => {
       const on = video.muted; if (on && unmuted && unmuted !== video) { unmuted.muted = true; unmuted.closest('.reel__video').querySelector('.reel__mute').setAttribute('aria-pressed', 'false'); }
       video.muted = !on; unmuted = on ? video : null; mute.setAttribute('aria-pressed', String(on)); mute.setAttribute('aria-label', on ? 'Mute' : 'Unmute');
@@ -3025,20 +3031,19 @@
     });
     track.appendChild(item);
   });
-  /* autoplay only while the video sits in the middle band of the screen (both axes) */
+  /* No autoplay: videos start paused (poster + play button) and only pause automatically once scrolled far out of view. */
   const vids = [...track.querySelectorAll('video')];
   const check = () => {
     const vh = innerHeight, vw = innerWidth;
     vids.forEach(v => {
+      if (v.paused) return;
       const r = v.getBoundingClientRect(), cy = r.top + r.height / 2, cx = r.left + r.width / 2;
-      const on = cy > vh * 0.2 && cy < vh * 0.8 && cx > -r.width * 0.2 && cx < vw + r.width * 0.2 && r.width > 0;
-      const box = v.closest('.reel__video');
-      if (on) { if (v.paused) v.play().then(() => box.classList.remove('needs-tap')).catch(() => box.classList.add('needs-tap')); }
-      else if (!v.paused) { v.pause(); }
+      const on = cy > -vh * 0.5 && cy < vh * 1.5 && cx > -r.width && cx < vw + r.width && r.width > 0;
+      if (!on) v.pause();
     });
   };
   let raf = 0; const tick = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; check(); }); };
-  addEventListener('scroll', tick, { passive: true }); track.addEventListener('scroll', tick, { passive: true }); addEventListener('resize', tick); tick();
+  addEventListener('scroll', tick, { passive: true }); track.addEventListener('scroll', tick, { passive: true }); addEventListener('resize', tick);
   document.querySelector('.reel__nav--prev').addEventListener('click', () => track.scrollBy({ left: -track.clientWidth * 0.6, behavior: 'smooth' }));
   document.querySelector('.reel__nav--next').addEventListener('click', () => track.scrollBy({ left: track.clientWidth * 0.6, behavior: 'smooth' }));
 })();
