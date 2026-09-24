@@ -2954,7 +2954,7 @@
   .reel__wrap { position: relative; }
   .reel__track { display: flex; gap: clamp(10px, 1.6vw, 22px); overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 clamp(16px, 4vw, 48px); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .reel__track::-webkit-scrollbar { display: none; }
-  .reel__item { flex: 0 0 min(78vw, 445px); scroll-snap-align: center; }
+  .reel__item { flex: 0 0 min(62vw, 356px); scroll-snap-align: center; }
   @media (min-width: 900px) { .reel__item { flex-basis: calc((100vw - 2 * clamp(16px, 4vw, 48px) - 3 * clamp(10px, 1.6vw, 22px)) / 4.3); max-width: 445px; } }
   .reel__video { position: relative; aspect-ratio: 2 / 3; background: #f2f2f0; overflow: hidden; }
   .reel__video video { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -2966,22 +2966,12 @@
   .reel__play span { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.92); display: grid; place-items: center; }
   .reel__play svg { width: 22px; height: 22px; margin-left: 3px; }
   .reel__mute .on { display: none; } .reel__mute[aria-pressed="true"] .on { display: block; } .reel__mute[aria-pressed="true"] .off { display: none; }
-  .reel__card { display: grid; grid-template-columns: 96px 1fr; gap: 12px; margin-top: 12px; }
-  .reel__thumb { display: block; aspect-ratio: 1 / 1; background: #f2f2f0; overflow: hidden; }
+  .reel__card { margin-top: 12px; }
+  .reel__thumb { display: block; aspect-ratio: 3 / 4; background: #f2f2f0; overflow: hidden; position: relative; }
   .reel__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .reel__meta { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-  .reel__name { font-size: 14px; letter-spacing: .02em; color: inherit; text-decoration: none; }
-  .reel__opts { display: flex; flex-direction: column; gap: 6px; }
-  .reel__sel { position: relative; }
-  .reel__sel select { width: 100%; height: 40px; padding: 0 34px 0 12px; border: 1px solid #e4e4e1; border-radius: 0; background: #fff; font: inherit; font-size: 13px; color: #111; appearance: none; -webkit-appearance: none; }
-  .reel__sel::after { content: ""; position: absolute; right: 14px; top: 50%; width: 7px; height: 7px; border-right: 1.4px solid #111; border-bottom: 1.4px solid #111; transform: translateY(-70%) rotate(45deg); pointer-events: none; }
-  .reel__add { display: flex; justify-content: space-between; align-items: center; height: 40px; padding: 0 14px; border: 0; background: #f2f2f0; font: inherit; font-size: 12px; font-weight: 600; letter-spacing: .12em; cursor: pointer; }
-  .reel__add:hover { background: #111; color: #fff; }
-  .reel__add.is-ok { background: #111; color: #fff; }
-  .reel__add[disabled] { opacity: .5; cursor: default; }
-  .reel__add[disabled]:hover { background: #f2f2f0; color: inherit; }
-  .reel__msg { font-size: 11.5px; color: #c8102e; min-height: 0; margin: 0; }
-  .reel__msg:empty { display: none; }
+  .reel__meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin-top: 8px; }
+  .reel__name { font-size: 13px; letter-spacing: .02em; color: inherit; text-decoration: none; }
+  .reel__price { font-size: 12.5px; color: #666; }
   .reel__nav { position: absolute; top: 34%; z-index: 2; width: 40px; height: 40px; border: 1px solid #e4e4e1; border-radius: 50%; background: rgba(255,255,255,.92); display: none; place-items: center; cursor: pointer; }
   .reel__nav svg { width: 18px; height: 18px; }
   .reel__nav--prev { left: 10px; } .reel__nav--next { right: 10px; }
@@ -3009,33 +2999,10 @@
   const bag = () => window.BYMARCCC && window.BYMARCCC.bag;
   const muteSvg = `<svg class="off" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 8l5 8M22 8l-5 8"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg>`;
   let unmuted = null;
-  function wireCard(card, p, key, r) {
-    const url = 'bymarccc-product.html?p=' + key, sizes = (p.chart?.sizes || []).map(x => x.size), colours = p.colours || [], designs = p.designs || [];
-    const add = card.querySelector('.reel__add'), msg = card.querySelector('.reel__msg');
-    if (p.soldOut) { add.disabled = true; add.firstElementChild.textContent = 'SOLD OUT'; return; }
-    add.addEventListener('click', async () => {
-      const size = sizes.length > 1 ? card.querySelector('[data-size]').value : (sizes[0] || '');
-      const colour = colours.length > 1 ? card.querySelector('[data-colour]').value : (colours[0] && colours[0].id);
-      const design = designs.length ? card.querySelector('[data-design]').value : '';
-      if (p.needsBody) { msg.textContent = ''; location.href = url; return; }          // jeans need height/weight → product page
-      if (sizes.length > 1 && !size) { msg.textContent = 'Please select a size.'; return; }
-      if (colours.length > 1 && !colour) { msg.textContent = 'Please select a colour.'; return; }
-      if (designs.length && !design) { msg.textContent = 'Please select a design.'; return; }
-      const cname = colours.find(c => c.id === colour); const variant = [cname && cname.id !== 'default' ? cname.name : '', size !== 'One size' ? size : '', design].filter(Boolean).join(' · ');
-      const store = bag(); if (!store) { msg.textContent = 'Bag unavailable.'; return; }
-      msg.textContent = '';
-      await store.add({ id: `${p.id}:${colour}:${size}${design ? ':' + design : ''}`, name: p.title, variant, image: p.gallery[0].src, price: p.price, currency: p.currency, quantity: 1 });
-      add.classList.add('is-ok'); add.firstElementChild.textContent = 'ADDED'; setTimeout(() => { add.classList.remove('is-ok'); add.firstElementChild.textContent = 'ADD TO BAG'; }, 1800);
-    });
-  }
-  function cardHtml(p, key, r) {
-    const url = 'bymarccc-product.html?p=' + key, sizes = (p.chart?.sizes || []).map(x => x.size), colours = p.colours || [], designs = p.designs || [];
-    return `<div class="reel__card"><a class="reel__thumb" href="${url}"><img src="${p.gallery[0].src}" alt="${p.title}" loading="lazy"></a>
-      <div class="reel__meta"><a class="reel__name" href="${url}">${p.title}</a><div class="reel__opts">
-        ${sizes.length > 1 ? `<div class="reel__sel"><select data-size aria-label="Size"><option value="">Select Size</option>${sizes.map(s => `<option>${s}</option>`).join('')}</select></div>` : ''}
-        ${colours.length > 1 ? `<div class="reel__sel"><select data-colour aria-label="Colour"><option value="">Select Colour</option>${colours.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>` : ''}
-        ${designs.length ? `<div class="reel__sel"><select data-design aria-label="Design"><option value="">Select Design</option>${designs.map(d => `<option ${d === r.design ? 'selected' : ''}>${d}</option>`).join('')}</select></div>` : ''}
-        <button class="reel__add" type="button"${p.soldOut ? ' disabled' : ''}><span>${p.soldOut ? 'SOLD OUT' : 'ADD TO BAG'}</span><span>${typeof p.price === 'number' ? fmt(p.price, p.currency) : ''}</span></button><p class="reel__msg" role="status"></p></div></div></div>`;
+  function cardHtml(p, key) {
+    const url = 'bymarccc-product.html?p=' + key;
+    return `<div class="reel__card"><a class="reel__thumb" href="${url}">${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}<img src="${p.gallery[0].src}" alt="${p.title}" loading="lazy"></a>
+      <div class="reel__meta"><a class="reel__name" href="${url}">${p.title}</a>${typeof p.price === 'number' ? `<span class="reel__price">${fmt(p.price, p.currency)}</span>` : ''}</div></div>`;
   }
   REELS.forEach((r, i) => {
     const keys = Array.isArray(r.p) ? r.p : (r.p ? [r.p] : []);
@@ -3043,7 +3010,7 @@
     const label = products.length ? products.map(([, p]) => p.title).join(' + ') : 'BYMARCCC';
     const item = document.createElement('article'); item.className = 'reel__item';
     item.innerHTML = `<div class="reel__video"><video src="${r.v}" poster="${posterFor(r.v)}" muted playsinline loop preload="metadata" aria-label="${label}"></video><button class="reel__mute" type="button" aria-pressed="false" aria-label="Unmute">${muteSvg}</button><button class="reel__play" type="button" aria-label="Play video"><span><svg viewBox="0 0 24 24" fill="#111" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button></div>
-      ${products.map(([key, p]) => cardHtml(p, key, r)).join('')}`;
+      ${products.map(([key, p]) => cardHtml(p, key)).join('')}`;
     const video = item.querySelector('video'), mute = item.querySelector('.reel__mute'), playBtn = item.querySelector('.reel__play');
     /* Preserve each clip's real aspect ratio instead of forcing a fixed crop — the 2:3 box in CSS is only a
        before-metadata placeholder so the layout doesn't jump. */
@@ -3061,7 +3028,6 @@
       const on = video.muted; if (on && unmuted && unmuted !== video) { unmuted.muted = true; unmuted.closest('.reel__video').querySelector('.reel__mute').setAttribute('aria-pressed', 'false'); }
       video.muted = !on; unmuted = on ? video : null; mute.setAttribute('aria-pressed', String(on)); mute.setAttribute('aria-label', on ? 'Mute' : 'Unmute');
     });
-    item.querySelectorAll('.reel__card').forEach((card, ci) => wireCard(card, products[ci][1], products[ci][0], r));
     track.appendChild(item);
   });
   /* No autoplay: videos start paused (poster + play button) and only pause automatically once scrolled far out of view. */

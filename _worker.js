@@ -70,6 +70,133 @@ async function readJson(request) {
 }
 __name(readJson, "readJson");
 
+// lib/stripe.js — dynamic Stripe Checkout (real multi-item cart, real card payments)
+function stripeFormEncode(obj, prefix, out) {
+  if (Array.isArray(obj)) {
+    obj.forEach((v, i) => stripeFormEncode(v, `${prefix}[${i}]`, out));
+  } else if (obj && typeof obj === "object") {
+    for (const k of Object.keys(obj)) {
+      const val = obj[k];
+      if (val === void 0 || val === null || val === "") continue;
+      stripeFormEncode(val, prefix ? `${prefix}[${k}]` : k, out);
+    }
+  } else {
+    out.append(prefix, String(obj));
+  }
+}
+__name(stripeFormEncode, "stripeFormEncode");
+async function stripeRequest(path, { method = "GET", params } = {}) {
+  const key = env("STRIPE_SECRET_KEY");
+  if (!key) {
+    const e = new Error("STRIPE_NOT_CONFIGURED");
+    e.status = 503;
+    throw e;
+  }
+  const body = new URLSearchParams();
+  if (params) stripeFormEncode(params, "", body);
+  const r = await fetch(`https://api.stripe.com/v1/${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: method === "GET" ? void 0 : body.toString()
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const e = new Error(data?.error?.message || `Stripe ${r.status}`);
+    e.status = r.status;
+    throw e;
+  }
+  return data;
+}
+__name(stripeRequest, "stripeRequest");
+function stripeGuard(request) {
+  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
+  if (!checkOrigin(request)) return json(403, { error: "Forbidden origin" });
+  if (!rateLimit(request)) return json(429, { error: "Too many requests. Please wait a moment." });
+  if (!env("STRIPE_SECRET_KEY")) return json(503, { error: "STRIPE_NOT_CONFIGURED" });
+  return null;
+}
+__name(stripeGuard, "stripeGuard");
+async function checkoutCreate(request, origin) {
+  const g = stripeGuard(request);
+  if (g) return g;
+  const body = await readJson(request);
+  if (!body) return json(400, { error: "Invalid JSON" });
+  const items = Array.isArray(body.items) ? body.items : [];
+  if (!items.length) return json(400, { error: "Empty bag" });
+  const currency = String(items[0].currency || "RON").toLowerCase();
+  const line_items = items.slice(0, 50).map((it) => ({
+    price_data: {
+      currency,
+      product_data: {
+        name: String(it.name || "Product").slice(0, 250),
+        ...it.variant ? { description: String(it.variant).slice(0, 250) } : {}
+      },
+      unit_amount: Math.max(0, Math.round(Number(it.price || 0) * 100))
+    },
+    quantity: Math.max(1, Math.min(99, Math.round(Number(it.quantity || 1))))
+  }));
+  const shipping = Number(body.shipping || 0);
+  if (shipping > 0) {
+    line_items.push({
+      price_data: { currency, product_data: { name: "Shipping" }, unit_amount: Math.round(shipping * 100) },
+      quantity: 1
+    });
+  }
+  const c = body.customer || {};
+  try {
+    const session = await stripeRequest("checkout/sessions", {
+      method: "POST",
+      params: {
+        mode: "payment",
+        line_items,
+        success_url: `${origin}/checkout.html?paid=1&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/checkout.html?canceled=1`,
+        customer_email: c.email || void 0,
+        shipping_address_collection: void 0,
+        metadata: {
+          order_id: String(body.order_id || "").slice(0, 100),
+          full_name: String(c.full_name || "").slice(0, 200),
+          phone: String(c.phone || "").slice(0, 60),
+          address: String(c.address || "").slice(0, 200),
+          apartment: String(c.apartment || "").slice(0, 100),
+          city: String(c.city || "").slice(0, 100),
+          postal_code: String(c.postal_code || "").slice(0, 30),
+          country: String(c.country || "").slice(0, 60),
+          billing: String(c.billing || "").slice(0, 60),
+          items_summary: String(body.items_summary || "").slice(0, 480)
+        }
+      }
+    });
+    return json(200, { url: session.url, id: session.id });
+  } catch (e) {
+    return json(e.status || 500, { error: "STRIPE_ERROR", detail: env("ASSISTANT_DEBUG") ? String(e.message) : void 0 });
+  }
+}
+__name(checkoutCreate, "checkoutCreate");
+async function checkoutSession(request) {
+  if (request.method !== "GET") return json(405, { error: "Method not allowed" });
+  if (!checkOrigin(request)) return json(403, { error: "Forbidden origin" });
+  if (!env("STRIPE_SECRET_KEY")) return json(503, { error: "STRIPE_NOT_CONFIGURED" });
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id") || "";
+  if (!/^cs_[a-zA-Z0-9_]+$/.test(id)) return json(400, { error: "Invalid session id" });
+  try {
+    const data = await stripeRequest(`checkout/sessions/${encodeURIComponent(id)}`);
+    if (data.payment_status !== "paid") return json(200, { paid: false });
+    return json(200, {
+      paid: true,
+      order_id: data.metadata?.order_id || "",
+      email: data.customer_details?.email || data.customer_email || "",
+      amount_total: (data.amount_total || 0) / 100,
+      currency: String(data.currency || "ron").toUpperCase(),
+      metadata: data.metadata || {}
+    });
+  } catch (e) {
+    return json(e.status || 500, { error: "STRIPE_ERROR" });
+  }
+}
+__name(checkoutSession, "checkoutSession");
+
 // lib/catalog.js
 var cache = { t: 0, items: [] };
 var CURRENT_ORIGIN = "";
@@ -522,7 +649,9 @@ var ROUTES = {
   "members-signup": membersSignup,
   "members-login": membersLogin,
   "members-logout": membersLogout,
-  "members-me": membersMe
+  "members-me": membersMe,
+  "checkout-create": checkoutCreate,
+  "checkout-session": checkoutSession
 };
 async function onRequest(context) {
   const { request, env: env2 } = context;
