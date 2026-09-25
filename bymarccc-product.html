@@ -1629,21 +1629,20 @@
   }
 
   /* ---- Silhouette ---- */
-  /* Production illustration assets (supplied, not generated). Each value maps
-     to its own supplied image; a missing value falls back to the neutral
-     default illustration until its own active asset is supplied. */
+  /* Production illustration assets (supplied, not generated) — every option now has
+     its own dedicated image. */
   const SIL_IMG = {
     abdomen: {
       default: 'assets/img/silhouette/sil-abdomen-default.webp',
-      Flat: 'assets/img/silhouette/sil-abdomen-default.webp',
+      Flat: 'assets/img/silhouette/sil-abdomen-flat.webp',
       Medium: 'assets/img/silhouette/sil-abdomen-medium.webp',
-      Full: 'assets/img/silhouette/sil-abdomen-default.webp',
+      Full: 'assets/img/silhouette/sil-abdomen-full.webp',
     },
     hips: {
       default: 'assets/img/silhouette/sil-hips-default.webp',
-      Slim: 'assets/img/silhouette/sil-hips-default.webp',
+      Slim: 'assets/img/silhouette/sil-hips-slim.webp',
       Regular: 'assets/img/silhouette/sil-hips-regular.webp',
-      Wide: 'assets/img/silhouette/sil-hips-default.webp',
+      Wide: 'assets/img/silhouette/sil-hips-wide.webp',
     },
   };
   function renderShape() {
