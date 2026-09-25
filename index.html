@@ -2247,38 +2247,38 @@
   const SEED = [
     { id: 'madness',   title: 'Central Cee x Nemzzz - Madness', channel: '', duration: '4:28',
       src:   CLD + 'v1790104516/Central_Cee_x_Nemzzz_-_Madness.mp3',
-      video: CLD + 'v1790104856/Central_Cee_x_Nemzzz_-_Madnesss.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790104856/Central_Cee_x_Nemzzz_-_Madnesss.jpg',
+      video: CLD + 'q_auto,f_auto/v1790104856/Central_Cee_x_Nemzzz_-_Madnesss.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790104856/Central_Cee_x_Nemzzz_-_Madnesss.jpg',
       thumb: 'assets/img/thumb-madness.jpg' },
     { id: 'killin-em', title: "Nemzzz - Killin' Em",            channel: '', duration: '2:10',
       src:   CLD + 'v1790101740/Nemzzz_Killin_Em_compressed.m4a',
-      video: CLD + 'v1790098937/Nemzzz_-_Killin_Em.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790098937/Nemzzz_-_Killin_Em.jpg',
+      video: CLD + 'q_auto,f_auto/v1790098937/Nemzzz_-_Killin_Em.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790098937/Nemzzz_-_Killin_Em.jpg',
       thumb: 'assets/img/thumb-killin-em.jpg' },
     { id: 'chanel',    title: 'Tyla - CHANEL',                  channel: '', duration: '1:47',
       src:   CLD + 'v1790104743/Tyla_-_chhanell.m4a',
-      video: CLD + 'v1790104707/Tyla_-_CHANEL.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790104707/Tyla_-_CHANEL.jpg',
+      video: CLD + 'q_auto,f_auto/v1790104707/Tyla_-_CHANEL.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790104707/Tyla_-_CHANEL.jpg',
       thumb: 'assets/img/thumb-tyla-chanel.jpg' },
     { id: 'paradise',  title: 'Sade - Paradise',                 channel: '', duration: '4:02',
       src:   CLD + 'v1790162082/Sade_Paradise_.m4a',
-      video: CLD + 'v1790162088/Sade_-_Paradise.mp4', poster: 'assets/img/thumb-sade-paradise.jpg',
+      video: CLD + 'q_auto,f_auto/v1790162088/Sade_-_Paradise.mp4', poster: 'assets/img/thumb-sade-paradise.jpg',
       thumb: 'assets/img/thumb-sade-paradise.jpg' },
     { id: 'weeknd-earned-it', title: 'The Weeknd - Earned It',   channel: '', duration: '',
       src:   CLD + 'v1790321199/The_Weeknd_-_Earned_itt.m4a',
-      video: CLD + 'v1790321215/The_Weeknd_-_Earned_It_Fifty_Shades_Of_Grey.mp4',
+      video: CLD + 'q_auto,f_auto/v1790321215/The_Weeknd_-_Earned_It_Fifty_Shades_Of_Grey.mp4',
       poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321215/The_Weeknd_-_Earned_It_Fifty_Shades_Of_Grey.jpg',
       thumb: 'assets/img/thumb-weeknd-earned-it.jpg' },
     { id: 'goosebumps', title: 'Travis Scott - Goosebumps',      channel: '', duration: '',
       src:   CLD + 'v1790322008/Travis_Scott_-_Goosebumps.mp4',
-      video: CLD + 'v1790321227/Travis_Scott_-_goosebumps_Official_Video_ft._Kendrick_Lamar.mp4',
+      video: CLD + 'q_auto,f_auto/v1790321227/Travis_Scott_-_goosebumps_Official_Video_ft._Kendrick_Lamar.mp4',
       poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321227/Travis_Scott_-_goosebumps_Official_Video_ft._Kendrick_Lamar.jpg',
       thumb: 'assets/img/thumb-goosebumps.jpg' },
     { id: 'miley-flowers', title: 'Miley Cyrus - Flowers',       channel: '', duration: '',
       src:   CLD + 'v1790321201/Miley_Cyrus_-_Flowerss.m4a',
-      video: CLD + 'v1790321227/Miley_Cyrus_-_Flowers_Official_Video.mp4',
+      video: CLD + 'q_auto,f_auto/v1790321227/Miley_Cyrus_-_Flowers_Official_Video.mp4',
       poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321227/Miley_Cyrus_-_Flowers_Official_Video.jpg',
       thumb: 'assets/img/thumb-miley-flowers.jpg' },
     { id: 'carbonne-imagine', title: 'Carbonne - Imagine',       channel: '', duration: '',
       src:   CLD + 'v1790321282/Carbonne_Imagine.m4a',
-      video: CLD + 'v1790321296/Carbonne_-_Imagine_Clip_Officiel.mp4',
+      video: CLD + 'q_auto,f_auto/v1790321296/Carbonne_-_Imagine_Clip_Officiel.mp4',
       poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321296/Carbonne_-_Imagine_Clip_Officiel.jpg',
       thumb: 'assets/img/thumb-carbonne-imagine.jpg' },
     { id: 'mj-heal-the-world', title: 'Michael Jackson - Heal the World', channel: '', duration: '',
@@ -3711,8 +3711,11 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     idx = (i + list.length) % list.length;
     const v = list[idx];
     video.pause();
-    // lazy: only the ACTIVE video has a src; preload="metadata" keeps the download tiny until play
-    video.removeAttribute('src'); video.load();
+    // lazy: only the ACTIVE video has a src; preload="metadata" keeps the download tiny until play.
+    // Setting .src already (re)loads the element on its own — an explicit removeAttribute+load()
+    // right before reassigning .src double-triggers the load pipeline and, on Safari/iOS
+    // especially, can leave the element stuck (never past readyState 0) after a quick track
+    // switch, since the immediately-following tryPlay() races the first load's teardown.
     video.poster = posterOf(v) || '';
     video.preload = 'metadata';
     video.src = v.src;
