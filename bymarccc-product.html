@@ -353,9 +353,8 @@
 .f-consent a { color: inherit; }
 
 /* silhouette */
-.sil-figure { border: 1px solid var(--line); height: 210px; display: grid; place-items: center; margin-bottom: 0; }
-.sil-figure svg { height: 180px; width: auto; }
-.sil-figure .accent { stroke: #ff5a5a; }
+.sil-figure { display: block; width: 100%; margin-bottom: 0; line-height: 0; }
+.sil-figure img { display: block; width: 100%; height: auto; object-fit: contain; }
 .sil-opts { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid #999; margin-top: -1px; }
 .sil-opts button { height: 56px; border: 0; border-left: 1px solid #999; background: #fff; font-size: 16px; }
 .sil-opts button:first-child { border-left: 0; }
@@ -756,9 +755,9 @@
     'w-fuchsia-baby-top': { gender: 'women', model: { height: 177, weight: 53, size: 'S-M', modelMedia: [0], text: 'Model is 177 cm and 53 kg and wears size S-M' }, id: 'shopify:fuchsia-baby-top', title: 'Fuchsia Baby Top', price: 250, currency: 'RON', cut: 'Womenswear', collections: ['tops'],
       details: ['All clothing is custom made.', '100% Organic Cotton'], description: 'Fuchsia Baby Top from the BYMARCCC womenswear collection.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'fuchsia', name: 'Fuchsia', hex: '#c5197d' }], chart: sizeChart(['S-M', 'L-XL']), gallery: [{ src: 'assets/img/gallery/w-fuchsia-baby-top-1-753ead9b.webp', w: 900, h: 1303 }, { src: 'assets/img/gallery/w-fuchsia-baby-top-2-b5413c5d.webp', w: 900, h: 1303 }, { src: 'assets/img/gallery/w-fuchsia-baby-top-3-e9532e93.webp', w: 900, h: 1303 }, { src: 'assets/img/gallery/w-fuchsia-baby-top-4-a9df5fe4.webp', w: 900, h: 1303 }, { src: 'assets/img/gallery/w-fuchsia-baby-top-5-56985e7c.webp', w: 900, h: 1303 }, { src: 'assets/img/gallery/w-fuchsia-baby-top-6-b1547c61.webp', w: 900, h: 1303 }, { src: 'assets/img/gallery/w-fuchsia-baby-top-7-ed567aab.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-fuchsia-baby-top-8-c22bd187.webp', w: 900, h: 1353 }] },
-    'w-burgundy-baby-top': { designs: ['Muse', 'NOT FROM PARIS', 'Happy Hoes', 'Boys Lie', 'Delulu', 'Blank', 'Hot Girls Are Delulu', 'Yacht'], designImages: { 'muse': 1, 'not-from-paris': 2, 'happy-hoes': 3, 'boys-lie': 4, 'delulu': 5, 'hot-girls-are-delulu': 7 }, gender: 'women', model: { height: 177, weight: 53, size: 'S-M', modelMedia: [0], text: 'Model is 177 cm and 53 kg and wears size S-M' }, id: 'shopify:burgundy-baby-top', title: 'Burgundy Baby Top', price: 250, currency: 'RON', cut: 'Womenswear', collections: ['tops'],
-      details: ['Several embroidery designs available (Muse, NOT FROM PARIS, Happy Hoes, Boys Lie, Delulu, Blank, Hot Girls Are Delulu, Yacht)', 'All clothing is custom made.', '100% Organic Cotton'], description: 'Burgundy Baby Top from the BYMARCCC womenswear collection, available in several embroidery designs.', shipping: SHIPPING,
-      unavailable: [], colours: [{ id: 'burgundy', name: 'Burgundy', hex: '#5c1a2b' }], chart: sizeChart(['S-M', 'L-XL']), gallery: [{ src: 'assets/img/gallery/w-burgundy-baby-top-11-ad1e0418.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-3-3373f7bf.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-4-c647dfb4.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-5-f7477dc5.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-6-5aa55cf2.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-7-bafd65be.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-8-f60598ac.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-9-9e1f00eb.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-10-b3530b77.webp', w: 900, h: 1353 }] },
+    'w-burgundy-baby-top': { designs: ['Muse', 'NOT FROM PARIS', 'Happy Hoes', 'Boys Lie', 'Delulu', 'Logo', 'Hot Girls Are Delulu', 'Yacht'], designImages: { 'muse': 1, 'not-from-paris': 2, 'happy-hoes': 3, 'boys-lie': 4, 'delulu': 5, 'logo': 0, 'hot-girls-are-delulu': 7, 'yacht': 8 }, gender: 'women', model: { height: 177, weight: 53, size: 'S-M', modelMedia: [0], text: 'Model is 177 cm and 53 kg and wears size S-M' }, id: 'shopify:burgundy-baby-top', title: 'Burgundy Baby Top', price: 250, currency: 'RON', cut: 'Womenswear', collections: ['tops'],
+      details: ['Several embroidery designs available (Muse, NOT FROM PARIS, Happy Hoes, Boys Lie, Delulu, Logo, Hot Girls Are Delulu, Yacht)', 'All clothing is custom made.', '100% Organic Cotton'], description: 'Burgundy Baby Top from the BYMARCCC womenswear collection, available in several embroidery designs.', shipping: SHIPPING,
+      unavailable: [], colours: [{ id: 'burgundy', name: 'Burgundy', hex: '#5c1a2b' }], chart: sizeChart(['S-M', 'L-XL']), gallery: [{ src: 'assets/img/gallery/w-burgundy-baby-top-11-ad1e0418.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-3-3373f7bf.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-4-c647dfb4.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-5-f7477dc5.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-6-5aa55cf2.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-7-bafd65be.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-8-f60598ac.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-9-9e1f00eb.webp', w: 900, h: 1353 }, { src: 'assets/img/gallery/w-burgundy-baby-top-10-0101d2ab.webp', w: 900, h: 1353 }] },
     'w-no-bra-tank-top': { gender: 'women', model: { height: 184, weight: 73, size: 'S-M', modelMedia: [0], text: 'Model is 184 cm and 73 kg and wears size S-M' }, id: 'shopify:no-bra-tank-top', title: 'no bra Tank Top', price: 150, currency: 'RON', cut: 'Womenswear', collections: ['tops'],
       details: ['Available in Black and White', 'All clothing is custom made.', '100% Organic Cotton'], description: 'no bra Tank Top from the BYMARCCC womenswear collection, in black or white.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'black', name: 'Black', hex: '#111111' }, { id: 'white', name: 'White', hex: '#f2f2f2' }], chart: sizeChart(['XS-S', 'M-L']), gallery: [{ src: 'assets/img/gallery/w-no-bra-tank-top-1-5db60546.webp', w: 900, h: 1303 }, { src: 'assets/img/gallery/w-no-bra-tank-top-2-c8a0ff98.webp', w: 900, h: 1303 }] },
@@ -1618,16 +1617,32 @@
   }
 
   /* ---- Silhouette ---- */
-  const FIG = {
-    abdomen: v => `<svg viewBox="0 0 120 200" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M50 10c-10 0-14 12-10 24 3 8 2 16-6 22-8 6-12 18-10 30l4 58c1 14 4 30 10 40M70 10c10 0 14 12 10 24-3 8-2 16 6 22"/><path d="M76 56c6 8 8 20 6 32"/><path d="M82 88 ${v === 'Flat' ? 'l0 60' : v === 'Medium' ? 'c6 20 6 40 0 60' : 'c14 20 14 44 0 64'}" class="accent" stroke-width="3"/><path d="M38 66c10-6 30-6 40 0"/></svg>`,
-    hips: v => `<svg viewBox="0 0 200 200" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M60 8c-6 30-24 40-34 70-6 20-4 44 4 66M140 8c6 30 24 40 34 70 6 20 4 44-4 66"/><path d="M60 30h80M60 30c-4 20 6 40 40 40s44-20 40-40"/><path d="M62 110h76"/><path d="M62 110 ${v === 'Slim' ? 'l-2 80' : v === 'Regular' ? 'c-8 20-8 50-4 80' : 'c-18 20-20 50-10 80'}M138 110 ${v === 'Slim' ? 'l2 80' : v === 'Regular' ? 'c8 20 8 50 4 80' : 'c18 20 20 50 10 80'}" class="accent" stroke-width="3"/><path d="M62 110c14 10 24 30 38 30s24-20 38-30"/></svg>`,
+  /* Production illustration assets (supplied, not generated). Each value maps
+     to its own supplied image; a missing value falls back to the neutral
+     default illustration until its own active asset is supplied. */
+  const SIL_IMG = {
+    abdomen: {
+      default: 'assets/img/silhouette/sil-abdomen-default.webp',
+      Flat: 'assets/img/silhouette/sil-abdomen-default.webp',
+      Medium: 'assets/img/silhouette/sil-abdomen-medium.webp',
+      Full: 'assets/img/silhouette/sil-abdomen-default.webp',
+    },
+    hips: {
+      default: 'assets/img/silhouette/sil-hips-default.webp',
+      Slim: 'assets/img/silhouette/sil-hips-default.webp',
+      Regular: 'assets/img/silhouette/sil-hips-regular.webp',
+      Wide: 'assets/img/silhouette/sil-hips-default.webp',
+    },
   };
   function renderShape() {
     const f = form;
-    const grp = (key, title, opts) => `
+    const grp = (key, title, opts) => {
+      const src = f[key] ? SIL_IMG[key][f[key]] : SIL_IMG[key].default;
+      return `
       <h3 class="f-label" id="lbl-${key}">${title}</h3>
-      <div class="sil-figure" aria-hidden="true">${f[key] ? FIG[key](f[key]) : FIG[key]('Medium').replace(/stroke="#111"/, 'stroke="#c8c8c8"').replace(/class="accent"/, 'class="muted" stroke="#c8c8c8"')}</div>
+      <div class="sil-figure"><img src="${src}" alt="" aria-hidden="true"></div>
       <div class="sil-opts" role="radiogroup" aria-labelledby="lbl-${key}">${opts.map(o => `<button type="button" role="radio" aria-checked="${f[key] === o}" data-k="${key}" data-v="${o}">${o}</button>`).join('')}</div>`;
+    };
     sgBody.innerHTML = grp('abdomen', 'SHAPE OF YOUR ABDOMEN', ['Flat', 'Medium', 'Full']) + grp('hips', 'SHAPE OF YOUR HIPS', ['Slim', 'Regular', 'Wide']);
     sgFoot.innerHTML = `<button type="button" class="pdp-btn" id="sNext" ${f.abdomen && f.hips ? '' : 'disabled'}>CONTINUE</button>`;
     sgBody.querySelectorAll('[data-k]').forEach(b => b.addEventListener('click', () => { f[b.dataset.k] = b.dataset.v; render('shape'); }));
