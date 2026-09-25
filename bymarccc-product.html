@@ -117,6 +117,7 @@
 /* ---------- Product info ---------- */
 .pdp-info { padding: 22px 16px 0; max-width: 640px; margin: 0 auto; }
 .pdp-summary__row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.pdp-summary__row { display: none; }
 .pdp-info__title { margin: 0; font-size: 14px; font-weight: 400; letter-spacing: .04em; min-width: 0; line-height: 1.4; }
 .pdp-info__price { margin: 0; font-size: 14px; font-weight: 400; letter-spacing: .04em; flex: 0 0 auto; }
 .pdp-summary__reviews { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 13px; color: var(--muted); }
@@ -171,7 +172,9 @@
 }
 .pdp-bar.is-hidden { transform: translateY(110%); }
 .pdp-bar__row { display: flex; gap: 10px; }
-.pdp-bar__row .pdp-btn { flex: 1 1 auto; }
+.pdp-bar__row .pdp-btn { flex: 1 1 auto; height: 60px; font-size: 15px; }
+.pdp-bar__price { flex: 0 0 30%; display: flex; align-items: center; justify-content: center; font-size: 16.5px; font-weight: 600; letter-spacing: .02em; color: #111; }
+.pdp-bar__price[hidden] { display: none; }
 .pdp-bar__applepay { flex: 0 0 35%; height: 52px; border: 1.5px solid #111; border-radius: 10px; background: #fff; display: grid; place-items: center; overflow: hidden; }
 .pdp-bar__applepay[hidden] { display: none; }
 .pdp-member { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; margin-top: 18px; margin-bottom: 30px; color: #111; text-decoration: none; font-size: 15px; font-weight: 400; border-radius: 6px; }
@@ -519,6 +522,7 @@
 
       <div class="pdp-bar" id="bar">
         <div class="pdp-bar__row">
+          <p class="pdp-bar__price" id="barPrice" hidden></p>
           <!-- Apple Pay slot: rendered ONLY when the real Stripe Express Checkout / Apple Pay
                integration reports availability (see APPLE_PAY in product.js). Never a drawn logo. -->
           <div class="pdp-bar__applepay" id="applePaySlot" hidden></div>
@@ -828,9 +832,9 @@
       details: ['All clothing is custom made.', '100% Organic Cotton'], description: 'Black sweatpants with Art Dept print and hand-painted splatter.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: sizeChart(['S', 'M', 'L']), gallery: [{ src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/ACEF2008-4A66-4F6A-A4C1-605462CEE988.jpg?v=1760028518&width=1400', w: 1200, h: 1600 }] },
   /* ---- WOMEN — Accessories (public collection accessories; images served from the Shopify CDN) ---- */
-    'w-cap-1': { gender: 'women', id: 'shopify:cap-1', title: 'Cap', price: 125, currency: 'RON', cut: 'Accessory', collections: ['accessories'],
-      details: ['Available in Pink, Black, White and Blue', 'Each piece is custom created.', '100% Organic Cotton'], description: 'Black alien print. One size fits most.', shipping: SHIPPING,
-      unavailable: [], colours: [{ id: 'pink', name: 'Pink', hex: '#e8a3c3' }, { id: 'black', name: 'Black', hex: '#111111' }, { id: 'white', name: 'White', hex: '#f2f2f2' }, { id: 'blue', name: 'Blue', hex: '#3b6fb6' }], chart: ONE_SIZE, gallery: [{ src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/252514DF-577D-4F29-8695-91447C63BFF3.jpg?v=1782761065&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/5980FCDA-1E16-4195-BB0A-6A83E9FDA674.jpg?v=1782761064&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/C5A07232-1F55-4402-836B-F013D9B4B94A.jpg?v=1782761065&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/EE765725-F67C-4ECD-B82B-1D5C2AD5B002.jpg?v=1782761064&width=1400', w: 1200, h: 1600 }] },
+    'w-cap-1': { gender: 'women', id: 'shopify:cap-1', title: 'Cap', price: 125, currency: 'RON', cut: 'Accessory', collections: ['accessories'], needsBody: true, imageColours: true,
+      details: ['Available in Blue, Pink, White and Black', 'Each piece is custom created.', '100% Organic Cotton'], description: 'Black alien print. One size fits most.', shipping: SHIPPING,
+      unavailable: [], colours: [{ id: 'blue', name: 'Blue', hex: '#3b6fb6' }, { id: 'pink', name: 'Pink', hex: '#e8a3c3' }, { id: 'white', name: 'White', hex: '#f2f2f2' }, { id: 'black', name: 'Black', hex: '#111111' }], chart: ONE_SIZE, gallery: [{ src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/252514DF-577D-4F29-8695-91447C63BFF3.jpg?v=1782761065&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/5980FCDA-1E16-4195-BB0A-6A83E9FDA674.jpg?v=1782761064&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/C5A07232-1F55-4402-836B-F013D9B4B94A.jpg?v=1782761065&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/EE765725-F67C-4ECD-B82B-1D5C2AD5B002.jpg?v=1782761064&width=1400', w: 1200, h: 1600 }] },
     'w-diamond-rocks': { gender: 'women', id: 'shopify:diamond-rocks', title: 'Diamond Rocks', price: 200, currency: 'RON', cut: 'Accessory', collections: ['accessories'],
       details: ['Each piece is custom created.', '100% Organic Cotton'], description: 'BYMARCCC logo cap with diamond rocks. One size fits most.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: ONE_SIZE, gallery: [{ src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/IMG_4181.jpg?v=1759443607&width=1400', w: 1200, h: 1600 }] },
@@ -885,7 +889,7 @@
     /* DISPLAY-ONLY. The two-payment option has no backend yet (no card collection,
        no Stripe, no consent flow). Keep `enabled: false` in production until the
        server-side integration, consent, retry/failure and legal wording exist. */
-    splitPay: { enabled: true, label: n => `Make 2 payments of ${n}` },
+    splitPay: { enabled: false, label: n => `Make 2 payments of ${n}` },
   };
   /* money helpers — minor units (bani), never floats */
   const toMinor = ron => Math.round(ron * 100);
@@ -1144,6 +1148,8 @@
   }
   state.listeners.add(renderSelection); renderSelection();
   if (PRODUCT.noSize) { sizesEl.hidden = true; sizesEl.previousElementSibling.hidden = true; $('openGuide').hidden = true; }
+  if (SIZE_CHART === ONE_SIZE && COLOURS.length > 1) { sizesEl.hidden = true; sizesEl.previousElementSibling.hidden = true; $('openGuide').hidden = true; }   // colour is the real choice here — no redundant "One size" pill
+  if (COLOURS.length > 1) { swatches.hidden = false; swatches.previousElementSibling.hidden = false; }   // real colour choice — show the swatches (was never unhidden before)
   if (PRODUCT.imageColours) { swatches.previousElementSibling.hidden = true; }   // no "COLOUR / name" row — the swatch is the image
   if (COLOURS.length === 1 && COLOURS[0].id === 'default') { swatches.hidden = true; swatches.previousElementSibling.hidden = true; }   // no colour choice to make
 
@@ -1247,7 +1253,7 @@
   ================================================================== */
   const priceMinor = () => toMinor(PRODUCT.price);      // variant-aware hook: all Zebra variants share one price today
   $('pTitle').textContent = PRODUCT.title;
-  function renderPrice() { $('pPrice').textContent = hasPrice ? fmtMinor(priceMinor()) : ''; $('pPrice').hidden = !hasPrice; renderSplit(); }
+  function renderPrice() { $('pPrice').textContent = hasPrice ? fmtMinor(priceMinor()) : ''; $('pPrice').hidden = !hasPrice; const bp = $('barPrice'); if (bp) { bp.textContent = hasPrice ? fmtMinor(priceMinor()) : ''; bp.hidden = !hasPrice; } renderSplit(); }
   (function renderReviews() {
     const r = PRODUCT.reviews, row = $('reviewRow');
     if (!r || !r.count) { row.innerHTML = '<span>No reviews yet</span>'; return; }
