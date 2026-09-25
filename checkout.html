@@ -170,6 +170,21 @@
         <div class="co-opt__body"><div class="co-opt__text"><b data-i18n="payCod">Cash on delivery</b></div></div>
       </label>
       <p class="co-note" id="coCardNote" style="display:none; margin-top:8px;" data-i18n="cardRedirectNote">You’ll enter your address and card details on the secure Stripe payment page after this step.</p>
+
+      <div id="coSplitWrap" style="display:none; margin-top:10px;">
+        <label class="co-opt is-selected" id="coSplitFullOpt">
+          <input type="radio" name="coSplitPay" id="coSplitFull" checked>
+          <div class="co-opt__body"><div class="co-opt__text"><b data-i18n="payFull">Pay in full</b></div></div>
+        </label>
+        <label class="co-opt" id="coSplitTwoOpt">
+          <input type="radio" name="coSplitPay" id="coSplitTwo">
+          <div class="co-opt__body"><div class="co-opt__text"><b data-i18n="paySplit">Pay in 2 installments</b></div></div>
+        </label>
+        <p class="co-note" id="coSplitNote" style="display:none; margin-top:6px;" data-i18n="splitNote">You pay 50% now by card. The remaining 50% is charged automatically to the same card in 30 days.</p>
+        <div id="coSplitConsentWrap" style="display:none; margin-top:8px;">
+          <label class="co-check"><input type="checkbox" id="coSplitConsent"><span data-i18n="splitConsent">I agree that the remaining 50% will be charged automatically to the same card in 30 days.</span></label>
+        </div>
+      </div>
     </div>
 
     <div id="coCodExtra">
@@ -243,6 +258,7 @@
       <h1 class="co-ty__title"><span data-i18n="tyThanks">Thank you</span><span id="coTyName"></span></h1>
       <p class="co-ty__msg" data-i18n="tyMsg">Your order is in. Every bymarccc piece is custom made, so we’ll reach out to confirm the details and the delivery date.</p>
       <p class="co-ty__num"><span data-i18n="tyConfirmNum">Order</span> <span id="coTyOrderNum">—</span></p>
+      <p class="co-ty__msg" id="coTyInstallment" style="display:none;"></p>
       <div class="co-ty__sec"><h3 data-i18n="tyContactInfo">Contact</h3><p id="coTyEmail"></p><p id="coTyPhone"></p></div>
       <div class="co-ty__sec"><h3 data-i18n="tyShipAddr">Shipping address</h3><p id="coTyAddress"></p></div>
       <div class="co-ty__row">
@@ -291,6 +307,11 @@
       hShipping:'Shipping method', shipDays:'2–3 business days', hBilling:'Billing address', billingSame:'Same as shipping address',
       billingDiff:'Use a different billing address', billingDiffShort:'Different billing address',
       btnCompleteOrder:'Complete order', btnContinuePayment:'Continue to secure payment',
+      payFull:'Pay in full', paySplit:'Pay in 2 installments',
+      splitNote:'You pay 50% now by card. The remaining 50% is charged automatically to the same card in 30 days.',
+      splitConsent:'I agree that the remaining 50% will be charged automatically to the same card in 30 days.',
+      errSplitConsent:'Please confirm you agree to the 2-installment payment terms.',
+      tyInstallmentNote:'Remaining payment of {amount} will be charged automatically to the same card on {date}.',
       linkRefund:'Delivery & returns', linkTerms:'Terms & conditions', linkContact:'Contact',
       hBag:'Your bag', hOrder:'Order summary', emptyBag:'Your bag is empty.', continue:'Continue shopping', qty:'Qty', remove:'Remove',
       phDiscount:'Discount code', btnApply:'Apply', subtotal:'Subtotal', shipping:'Shipping', total:'Total',
@@ -309,6 +330,11 @@
       hShipping:'Metodă de livrare', shipDays:'2–3 zile lucrătoare', hBilling:'Adresă de facturare', billingSame:'Aceeași ca adresa de livrare',
       billingDiff:'Folosește o altă adresă de facturare', billingDiffShort:'Adresă de facturare diferită',
       btnCompleteOrder:'Finalizează comanda', btnContinuePayment:'Continuă spre plata securizată',
+      payFull:'Plata integrală', paySplit:'Plată în 2 rate',
+      splitNote:'Plătești 50% acum cu cardul. Restul de 50% este taxat automat pe același card peste 30 de zile.',
+      splitConsent:'Sunt de acord ca restul de 50% să fie taxat automat pe același card peste 30 de zile.',
+      errSplitConsent:'Te rugăm să confirmi că ești de acord cu termenii plății în 2 rate.',
+      tyInstallmentNote:'Restul de plată de {amount} va fi taxat automat pe același card la data de {date}.',
       linkRefund:'Livrare și retur', linkTerms:'Termeni și condiții', linkContact:'Contact',
       hBag:'Coșul tău', hOrder:'Rezumatul comenzii', emptyBag:'Coșul tău este gol.', continue:'Continuă cumpărăturile', qty:'Cant.', remove:'Șterge',
       phDiscount:'Cod de reducere', btnApply:'Aplică', subtotal:'Subtotal', shipping:'Livrare', total:'Total',
@@ -381,11 +407,24 @@
   });
   var payCard = $('coPayCard'), payCod = $('coPayCod'), codExtra = $('coCodExtra'), cardNote = $('coCardNote'), submitBtn = $('coSubmit');
   var codFields = codExtra.querySelectorAll('.co-cod');
+  /* 2-installments is card-only (never cash on delivery): the whole group is hidden and
+     reset back to "pay in full" whenever cash on delivery is selected. */
+  var splitWrap = $('coSplitWrap'), splitFull = $('coSplitFull'), splitTwoRadio = $('coSplitTwo'), splitNote = $('coSplitNote'), splitConsentWrap = $('coSplitConsentWrap'), splitConsent = $('coSplitConsent');
+  function updateSplitView(){
+    var wantsSplit = splitTwoRadio.checked;
+    splitNote.style.display = wantsSplit ? '' : 'none';
+    splitConsentWrap.style.display = wantsSplit ? '' : 'none';
+    splitConsent.required = wantsSplit;
+  }
+  splitFull.addEventListener('change', updateSplitView); splitTwoRadio.addEventListener('change', updateSplitView);
   function updatePaymentView(){
     var isCard = payCard.checked;
     codExtra.style.display = isCard ? 'none' : '';
     cardNote.style.display = isCard ? '' : 'none';
     codFields.forEach(function(f){ f.required = !isCard; });
+    splitWrap.style.display = isCard ? '' : 'none';
+    if (!isCard) { splitFull.checked = true; splitFull.closest('.co-opt').classList.add('is-selected'); splitTwoRadio.closest('.co-opt').classList.remove('is-selected'); splitConsent.checked = false; }
+    updateSplitView();
     submitBtn.textContent = isCard ? t('btnContinuePayment') : t('btnCompleteOrder');
   }
   payCard.addEventListener('change', updatePaymentView); payCod.addEventListener('change', updatePaymentView);
@@ -408,6 +447,14 @@
     $('coTyEmail').textContent = d.email; $('coTyPhone').textContent = d.phone;
     $('coTyAddress').innerHTML = esc(d.full_name) + '<br>' + esc(d.address + (d.apartment ? ', ' + d.apartment : '')) + '<br>' + esc(d.city + ' ' + d.postal_code) + '<br>' + esc(d.country);
     $('coTyItems').innerHTML = items.map(function(it){ return itemHtml(it, false); }).join('');
+    var tyInstallment = $('coTyInstallment');
+    if (d.installment && d.installment.remainingMinor) {
+      var amount = fmt(d.installment.remainingMinor / 100, (d.installment.currency || 'ron').toUpperCase());
+      var dueDate = new Date(d.installment.dueDate);
+      var dateStr = isNaN(dueDate) ? '' : dueDate.toLocaleDateString(LANG === 'ro' ? 'ro-RO' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+      tyInstallment.textContent = t('tyInstallmentNote').replace('{amount}', amount).replace('{date}', dateStr);
+      tyInstallment.style.display = '';
+    } else { tyInstallment.style.display = 'none'; tyInstallment.textContent = ''; }
     $('coGrid').style.display = 'none'; $('coThankYou').style.display = 'block'; window.scrollTo(0, 0);
   }
   function orderId(){
@@ -434,14 +481,16 @@
     var phoneDigits = $('coPhone').value.replace(/\D/g, '');
     if (!$('coForm').checkValidity()) { setStatus(t('errFields'), 'is-error'); $('coForm').reportValidity(); return; }
     if (phoneDigits.length < 10) { setStatus(t('errPhone'), 'is-error'); $('coPhone').focus(); return; }
+    var wantsSplit = splitTwoRadio.checked;
+    if (wantsSplit && !splitConsent.checked) { setStatus(t('errSplitConsent'), 'is-error'); splitConsent.focus(); return; }
     var items = BAG.items.slice(), customer = collectCustomer(), oid = orderId();
     persistSavedInfo();
-    try { sessionStorage.setItem('bym.pendingOrder', JSON.stringify({ order_id: oid, customer: customer, items: items, language: LANG })); } catch(e){}
+    try { sessionStorage.setItem('bym.pendingOrder', JSON.stringify({ order_id: oid, customer: customer, items: items, language: LANG, installments: wantsSplit ? 2 : 1 })); } catch(e){}
     var lines = items.map(function(it){ return (it.quantity || 1) + ' × ' + it.name + (it.variant ? ' (' + it.variant + ')' : ''); });
     submitBtn.disabled = true; setStatus(t('statusSending'), 'is-sending');
     fetch('/api/checkout-create', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_id: oid, items: items, shipping: shippingFor(), items_summary: lines.join('\n'), customer: customer })
+      body: JSON.stringify({ order_id: oid, items: items, shipping: shippingFor(), items_summary: lines.join('\n'), customer: customer, installments: wantsSplit ? 2 : 1 })
     }).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); }).then(function(res){
       if (!res.ok || !res.d || !res.d.url) { setStatus(t('errNoService'), 'is-error'); submitBtn.disabled = false; return; }
       window.location.href = res.d.url;
@@ -473,7 +522,8 @@
         full_name: customer.full_name || '', phone: customer.phone || '', email: d.email || customer.email || '',
         address: customer.address || '', apartment: customer.apartment || '', city: customer.city || '',
         postal_code: customer.postal_code || '', country: customer.country || '', billing: customer.billing || '',
-        language: (pending && pending.language) || LANG
+        language: (pending && pending.language) || LANG,
+        installment: d.installment || null
       };
       if (window.emailjs && !/^PUNE_AICI/.test(EMAILJS_PUBLIC_KEY)) {
         emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params).catch(function(err){ console.error('EmailJS send failed:', err); });

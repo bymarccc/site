@@ -90,7 +90,7 @@ function stripeFormEncode(obj, prefix, out) {
   }
 }
 __name(stripeFormEncode, "stripeFormEncode");
-async function stripeRequest(path, { method = "GET", params } = {}) {
+async function stripeRequest(path, { method = "GET", params, idempotencyKey } = {}) {
   const key = env("STRIPE_SECRET_KEY");
   if (!key) {
     const e = new Error("STRIPE_NOT_CONFIGURED");
@@ -99,9 +99,17 @@ async function stripeRequest(path, { method = "GET", params } = {}) {
   }
   const body = new URLSearchParams();
   if (params) stripeFormEncode(params, "", body);
-  const r = await fetch(`https://api.stripe.com/v1/${path}`, {
+  const headers = { Authorization: `Bearer ${key}` };
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+  let url = `https://api.stripe.com/v1/${path}`;
+  if (method === "GET") {
+    if (params) url += `?${body.toString()}`;
+  } else {
+    headers["Content-Type"] = "application/x-www-form-urlencoded";
+  }
+  const r = await fetch(url, {
     method,
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
+    headers,
     body: method === "GET" ? void 0 : body.toString()
   });
   const data = await r.json().catch(() => ({}));
@@ -129,6 +137,82 @@ async function checkoutCreate(request, origin) {
   const items = Array.isArray(body.items) ? body.items : [];
   if (!items.length) return json(400, { error: "Empty bag" });
   const currency = String(items[0].currency || "RON").toLowerCase();
+  const c = body.customer || {};
+  const order_id = String(body.order_id || "").slice(0, 100);
+  const metaBase = {
+    order_id,
+    full_name: String(c.full_name || "").slice(0, 200),
+    phone: String(c.phone || "").slice(0, 60),
+    address: String(c.address || "").slice(0, 200),
+    apartment: String(c.apartment || "").slice(0, 100),
+    city: String(c.city || "").slice(0, 100),
+    postal_code: String(c.postal_code || "").slice(0, 30),
+    country: String(c.country || "").slice(0, 60),
+    billing: String(c.billing || "").slice(0, 60),
+    items_summary: String(body.items_summary || "").slice(0, 480)
+  };
+  const shipping = Number(body.shipping || 0);
+  const shippingMinor = shipping > 0 ? Math.round(shipping * 100) : 0;
+  // Server-side total, in minor units (bani) — never trust a client-sent total for what gets charged.
+  const itemsTotalMinor = items.slice(0, 50).reduce((sum, it) => {
+    const unit = Math.max(0, Math.round(Number(it.price || 0) * 100));
+    const qty = Math.max(1, Math.min(99, Math.round(Number(it.quantity || 1))));
+    return sum + unit * qty;
+  }, 0);
+  const totalMinor = itemsTotalMinor + shippingMinor;
+
+  // "Pay in 2 installments" — card only (the frontend only ever sends this for the card
+  // payment method). Charges 50% now via a normal Checkout Session, saves the card for an
+  // off-session charge (setup_future_usage: 'off_session' + customer_creation: 'always'),
+  // and records the remaining 50% + due date so a separate scheduled job (see
+  // cronChargeInstallments below) can charge it automatically in 30 days. Cloudflare Pages
+  // has no cron trigger of its own — that job runs in a small separate Worker that calls the
+  // cron-charge-installments route below on a schedule.
+  if (Number(body.installments) === 2) {
+    const firstMinor = Math.ceil(totalMinor / 2);
+    const secondMinor = totalMinor - firstMinor;
+    const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3).toISOString();
+    try {
+      const session = await stripeRequest("checkout/sessions", {
+        method: "POST",
+        params: {
+          mode: "payment",
+          customer_creation: "always",
+          payment_intent_data: {
+            setup_future_usage: "off_session",
+            metadata: { order_id, installment_plan: "2", leg: "1" }
+          },
+          line_items: [{
+            price_data: {
+              currency,
+              product_data: {
+                name: `Order ${order_id} — deposit (1 of 2 payments)`,
+                description: metaBase.items_summary.slice(0, 250)
+              },
+              unit_amount: firstMinor
+            },
+            quantity: 1
+          }],
+          success_url: `${origin}/checkout.html?paid=1&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${origin}/checkout.html?canceled=1`,
+          customer_email: c.email || void 0,
+          metadata: {
+            ...metaBase,
+            installment_plan: "2",
+            currency,
+            total_minor: String(totalMinor),
+            first_minor: String(firstMinor),
+            second_minor: String(secondMinor),
+            due_date: dueDate
+          }
+        }
+      });
+      return json(200, { url: session.url, id: session.id });
+    } catch (e) {
+      return json(e.status || 500, { error: "STRIPE_ERROR", detail: env("ASSISTANT_DEBUG") ? String(e.message) : void 0 });
+    }
+  }
+
   const line_items = items.slice(0, 50).map((it) => ({
     price_data: {
       currency,
@@ -140,14 +224,12 @@ async function checkoutCreate(request, origin) {
     },
     quantity: Math.max(1, Math.min(99, Math.round(Number(it.quantity || 1))))
   }));
-  const shipping = Number(body.shipping || 0);
-  if (shipping > 0) {
+  if (shippingMinor > 0) {
     line_items.push({
-      price_data: { currency, product_data: { name: "Shipping" }, unit_amount: Math.round(shipping * 100) },
+      price_data: { currency, product_data: { name: "Shipping" }, unit_amount: shippingMinor },
       quantity: 1
     });
   }
-  const c = body.customer || {};
   try {
     const session = await stripeRequest("checkout/sessions", {
       method: "POST",
@@ -158,18 +240,7 @@ async function checkoutCreate(request, origin) {
         cancel_url: `${origin}/checkout.html?canceled=1`,
         customer_email: c.email || void 0,
         shipping_address_collection: void 0,
-        metadata: {
-          order_id: String(body.order_id || "").slice(0, 100),
-          full_name: String(c.full_name || "").slice(0, 200),
-          phone: String(c.phone || "").slice(0, 60),
-          address: String(c.address || "").slice(0, 200),
-          apartment: String(c.apartment || "").slice(0, 100),
-          city: String(c.city || "").slice(0, 100),
-          postal_code: String(c.postal_code || "").slice(0, 30),
-          country: String(c.country || "").slice(0, 60),
-          billing: String(c.billing || "").slice(0, 60),
-          items_summary: String(body.items_summary || "").slice(0, 480)
-        }
+        metadata: metaBase
       }
     });
     return json(200, { url: session.url, id: session.id });
@@ -178,6 +249,40 @@ async function checkoutCreate(request, origin) {
   }
 }
 __name(checkoutCreate, "checkoutCreate");
+async function recordPendingInstallment(session) {
+  // Called once, right after the FIRST (deposit) payment is confirmed paid. Saves what the
+  // scheduled cron-charge-installments job needs to charge the remaining 50% automatically in
+  // 30 days: the Stripe customer + payment method the first charge attached the card to, the
+  // amount still owed, and the due date. Stored in the same KV namespace the members system
+  // already uses (binding MEMBERS), under an "inst:" prefix so the two never collide.
+  const store = kv();
+  if (!store) return;
+  const md = session.metadata || {};
+  const order_id = md.order_id || session.id;
+  const existing = await store.get(`inst:${order_id}`);
+  if (existing) return;
+  const pi = session.payment_intent;
+  const customerId = typeof pi === "object" ? pi.customer : session.customer;
+  const paymentMethodId = typeof pi === "object" ? pi.payment_method : void 0;
+  if (!customerId || !paymentMethodId) return;
+  const record = {
+    order_id,
+    customerId,
+    paymentMethodId,
+    currency: md.currency || String(session.currency || "ron").toLowerCase(),
+    remainingMinor: Number(md.second_minor || 0),
+    dueDate: md.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3).toISOString(),
+    email: session.customer_details?.email || session.customer_email || "",
+    full_name: md.full_name || "",
+    phone: md.phone || "",
+    status: "pending",
+    attempts: 0,
+    createdAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  if (!record.remainingMinor) return;
+  await store.put(`inst:${order_id}`, JSON.stringify(record));
+}
+__name(recordPendingInstallment, "recordPendingInstallment");
 async function checkoutSession(request) {
   if (request.method !== "GET") return json(405, { error: "Method not allowed" });
   if (!checkOrigin(request)) return json(403, { error: "Forbidden origin" });
@@ -186,21 +291,104 @@ async function checkoutSession(request) {
   const id = url.searchParams.get("id") || "";
   if (!/^cs_[a-zA-Z0-9_]+$/.test(id)) return json(400, { error: "Invalid session id" });
   try {
-    const data = await stripeRequest(`checkout/sessions/${encodeURIComponent(id)}`);
+    const data = await stripeRequest(`checkout/sessions/${encodeURIComponent(id)}`, {
+      params: { "expand[]": "payment_intent" }
+    });
     if (data.payment_status !== "paid") return json(200, { paid: false });
+    let installment;
+    if (data.metadata?.installment_plan === "2") {
+      await recordPendingInstallment(data);
+      installment = {
+        remainingMinor: Number(data.metadata.second_minor || 0),
+        currency: String(data.metadata.currency || data.currency || "ron").toUpperCase(),
+        dueDate: data.metadata.due_date || ""
+      };
+    }
     return json(200, {
       paid: true,
       order_id: data.metadata?.order_id || "",
       email: data.customer_details?.email || data.customer_email || "",
       amount_total: (data.amount_total || 0) / 100,
       currency: String(data.currency || "ron").toUpperCase(),
-      metadata: data.metadata || {}
+      metadata: data.metadata || {},
+      ...installment ? { installment } : {}
     });
   } catch (e) {
     return json(e.status || 500, { error: "STRIPE_ERROR" });
   }
 }
 __name(checkoutSession, "checkoutSession");
+async function cronChargeInstallments(request) {
+  // Charges the remaining 50% for every due "pay in 2 installments" order. Not reachable from
+  // the browser: guarded by a shared secret header instead of the usual origin/rate-limit
+  // checks, since it's meant to be called server-to-server by a scheduled job (Cloudflare Pages
+  // itself has no Cron Triggers — see the separate cron worker this is designed to be called
+  // from). Set CRON_SECRET in this project's environment variables to enable it.
+  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
+  const secret = env("CRON_SECRET");
+  if (!secret) return json(503, { error: "CRON_NOT_CONFIGURED" });
+  if (request.headers.get("x-cron-secret") !== secret) return json(403, { error: "Forbidden" });
+  if (!env("STRIPE_SECRET_KEY")) return json(503, { error: "STRIPE_NOT_CONFIGURED" });
+  const store = kv();
+  if (!store) return json(503, { error: "KV_NOT_CONFIGURED" });
+  const now = Date.now();
+  const MAX_ATTEMPTS = 5;
+  const results = { charged: [], failed: [], skipped: 0 };
+  let cursor = void 0;
+  let done = false;
+  while (!done) {
+    const page = await store.list({ prefix: "inst:", cursor, limit: 200 });
+    for (const key of page.keys) {
+      const raw = await store.get(key.name);
+      if (!raw) continue;
+      let rec;
+      try {
+        rec = JSON.parse(raw);
+      } catch {
+        continue;
+      }
+      if (rec.status !== "pending") {
+        results.skipped++;
+        continue;
+      }
+      if (new Date(rec.dueDate).getTime() > now) {
+        results.skipped++;
+        continue;
+      }
+      const attempt = rec.attempts || 0;
+      try {
+        const pi = await stripeRequest("payment_intents", {
+          method: "POST",
+          params: {
+            amount: rec.remainingMinor,
+            currency: rec.currency,
+            customer: rec.customerId,
+            payment_method: rec.paymentMethodId,
+            off_session: true,
+            confirm: true,
+            metadata: { order_id: rec.order_id, leg: "2" }
+          },
+          idempotencyKey: `installment2-${rec.order_id}-try${attempt}`
+        });
+        rec.status = "paid";
+        rec.paidAt = (/* @__PURE__ */ new Date()).toISOString();
+        rec.paymentIntentId = pi.id;
+        await store.put(key.name, JSON.stringify(rec));
+        results.charged.push(rec.order_id);
+      } catch (e) {
+        rec.attempts = attempt + 1;
+        rec.lastError = String(e && e.message || e);
+        rec.status = rec.attempts >= MAX_ATTEMPTS ? "failed" : "pending";
+        await store.put(key.name, JSON.stringify(rec));
+        results.failed.push({ order_id: rec.order_id, error: rec.lastError, attempts: rec.attempts });
+      }
+    }
+    done = page.list_complete;
+    cursor = page.cursor;
+  }
+  return json(200, results);
+}
+__name(cronChargeInstallments, "cronChargeInstallments");
 
 // lib/catalog.js
 var cache = { t: 0, items: [] };
@@ -776,7 +964,8 @@ var ROUTES = {
   "members-logout": membersLogout,
   "members-me": membersMe,
   "checkout-create": checkoutCreate,
-  "checkout-session": checkoutSession
+  "checkout-session": checkoutSession,
+  "cron-charge-installments": cronChargeInstallments
 };
 async function onRequest(context) {
   const { request, env: env2 } = context;

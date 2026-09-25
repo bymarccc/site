@@ -896,10 +896,11 @@
   const SERVICE = {
     expressRomania: { enabled: true, text: 'Express Romania Shipping', body: 'Bucharest: next working day. Rest of Romania: 1–2 working days with Sameday / FAN Courier. Order before 14:00 for same-day dispatch.' },
     euDuties: { enabled: false, text: 'EU Import Duties Included' },      // set true only when DDP shipping to the EU is really configured
-    /* DISPLAY-ONLY. The two-payment option has no backend yet (no card collection,
-       no Stripe, no consent flow). Keep `enabled: false` in production until the
-       server-side integration, consent, retry/failure and legal wording exist. */
-    splitPay: { enabled: false, label: n => `Make 2 payments of ${n}` },
+    /* Backed by a real Stripe flow on checkout.html: card payment can be split into
+       two payments (deposit now via Stripe Checkout, remainder auto-charged to the
+       same saved card in 30 days once the customer ticks the mandatory consent
+       checkbox there). Card-only — never offered for cash on delivery. */
+    splitPay: { enabled: true, label: n => `Make 2 payments of ${n}` },
   };
   /* money helpers — minor units (bani), never floats */
   const toMinor = ron => Math.round(ron * 100);
