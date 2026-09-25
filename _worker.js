@@ -8,10 +8,15 @@ var setEnv = /* @__PURE__ */ __name((e) => {
 }, "setEnv");
 var env = /* @__PURE__ */ __name((k, d = "") => String(ENV[k] ?? d).trim(), "env");
 var json = /* @__PURE__ */ __name((status, body, extra = {}) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...extra } }), "json");
+var DEFAULT_ASSISTANT_ALLOWED_ORIGINS = ["https://bymarccc.com", "https://bymarccc-test.pages.dev"];
 function checkOrigin(request) {
-  const allowed = env("ASSISTANT_ALLOWED_ORIGINS").split(",").map((s) => s.trim()).filter(Boolean);
+  const configured = env("ASSISTANT_ALLOWED_ORIGINS").split(",").map((s) => s.trim()).filter(Boolean);
+  // Fail closed, not open: when the env var isn't set in Cloudflare, fall back to the site's own
+  // known origins instead of allowing every origin. This was previously `if (!allowed.length) return
+  // true`, which meant a missing/misconfigured env var silently disabled the origin check in
+  // production. Setting ASSISTANT_ALLOWED_ORIGINS explicitly in Cloudflare still overrides this list.
+  const allowed = configured.length ? configured : DEFAULT_ASSISTANT_ALLOWED_ORIGINS;
   const origin = request.headers.get("origin") || "";
-  if (!allowed.length) return true;
   return allowed.includes(origin);
 }
 __name(checkOrigin, "checkOrigin");
@@ -550,6 +555,14 @@ function dataUrlToBlob(u) {
   return new Blob([bytes], { type: m[1] });
 }
 __name(dataUrlToBlob, "dataUrlToBlob");
+// `user_image_file_id` (the value returned by assistant-upload-photo and passed back into
+// assistant-tryon / the generate_try_on tool) is OUR OWN transient token: a crypto.randomUUID()
+// key into this in-memory PHOTO_STORE Map, valid for PHOTO_TTL_MS and deleted after first use.
+// It is NOT an OpenAI file id and is never sent to OpenAI or stored by OpenAI — this Worker never
+// calls OpenAI's Files API. When a try-on request resolves this id, it looks up the stored data
+// URL here and sends the RAW IMAGE BYTES (as multipart form data) to OpenAI's images/edits
+// endpoint directly; OpenAI never sees this id or any id at all. Do not confuse this with an
+// OpenAI-side identifier of any kind.
 var PHOTO_STORE = /* @__PURE__ */ new Map();
 var PHOTO_TTL_MS = 5 * 60 * 1e3;
 function purgePhotoStore() {
