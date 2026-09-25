@@ -445,6 +445,21 @@
 
 .pdp-sizes[hidden], .pdp-swatches[hidden] { display: none; }
 
+/* ---------- Mobile product-page layout: hide the Design/Size labels, center the size
+   selector, and reorder title/price/reviews + accordions + info rows below it ---------- */
+@media (max-width: 899px) {
+  .pdp-info { display: flex; flex-direction: column; }
+  .pdp-info > .pdp-label { display: none; }
+  .pdp-info > #designs { order: 1; }
+  .pdp-info > .pdp-swatches { order: 2; }
+  .pdp-info > #sizes { order: 3; justify-content: center; }
+  .pdp-info > .pdp-summary { order: 4; margin-top: 22px; }
+  .pdp-info > .pdp-acc { order: 5; margin-top: 20px; }
+  .pdp-info > #memberRow { order: 6; }
+  .pdp-info > #serviceRows { order: 7; }
+  .pdp-info > #bar { order: 8; }
+}
+
 </style>
 <style>html,body{margin:0;padding:0;background:#fff}</style>
 </head>
