@@ -318,6 +318,46 @@ async function checkoutSession(request) {
   }
 }
 __name(checkoutSession, "checkoutSession");
+async function notifyOwnerInstallmentFailure(rec, kind) {
+  // Alerts the store owner by email when an automatic "2nd installment" charge fails —
+  // once on the FIRST decline (so it can be looked into quickly) and once when it's given
+  // up for good after MAX_ATTEMPTS. Uses EmailJS's server-side REST API (no browser
+  // involved, so this needs a PRIVATE key, not the public key checkout.html uses) — set
+  // EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_INSTALLMENT_ALERT and EMAILJS_PRIVATE_KEY in
+  // this project's environment variables to enable it. Silently does nothing (just logs)
+  // if those aren't configured yet, or if the send itself fails — a notification problem
+  // must never break the actual charge/retry logic above.
+  const serviceId = env("EMAILJS_SERVICE_ID");
+  const templateId = env("EMAILJS_TEMPLATE_ID_INSTALLMENT_ALERT");
+  const privateKey = env("EMAILJS_PRIVATE_KEY");
+  if (!serviceId || !templateId || !privateKey) return;
+  try {
+    const r = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        service_id: serviceId,
+        template_id: templateId,
+        user_id: env("EMAILJS_PUBLIC_KEY", ""),
+        accessToken: privateKey,
+        template_params: {
+          kind,
+          order_id: rec.order_id,
+          amount: `${(rec.remainingMinor / 100).toFixed(2)} ${String(rec.currency || "ron").toUpperCase()}`,
+          error: rec.lastError || "",
+          attempt: String(rec.attempts || 0),
+          full_name: rec.full_name || "",
+          phone: rec.phone || "",
+          email: rec.email || ""
+        }
+      })
+    });
+    if (!r.ok) console.error("notifyOwnerInstallmentFailure: EmailJS responded", r.status, await r.text().catch(() => ""));
+  } catch (e) {
+    console.error("notifyOwnerInstallmentFailure: send failed", e && e.message || e);
+  }
+}
+__name(notifyOwnerInstallmentFailure, "notifyOwnerInstallmentFailure");
 async function cronChargeInstallments(request) {
   // Charges the remaining 50% for every due "pay in 2 installments" order. Not reachable from
   // the browser: guarded by a shared secret header instead of the usual origin/rate-limit
@@ -381,6 +421,8 @@ async function cronChargeInstallments(request) {
         rec.status = rec.attempts >= MAX_ATTEMPTS ? "failed" : "pending";
         await store.put(key.name, JSON.stringify(rec));
         results.failed.push({ order_id: rec.order_id, error: rec.lastError, attempts: rec.attempts });
+        if (rec.attempts === 1) await notifyOwnerInstallmentFailure(rec, "first_decline");
+        else if (rec.status === "failed") await notifyOwnerInstallmentFailure(rec, "gave_up");
       }
     }
     done = page.list_complete;
