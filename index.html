@@ -1429,7 +1429,7 @@
     'w-black-sequin-shorts': { gender: 'women', id: 'shopify:black-sequin-shorts', title: 'Black Sequin Shorts', price: 300, currency: 'RON', cut: 'Womenswear', collections: ['bottoms', 'sales'],
       details: ['All clothing is custom made.', '100% Organic Cotton'], description: 'Black sequin shorts with bymarccc tag.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'black', name: 'Black', hex: '#111111' }], chart: sizeChart(['S', 'M', 'L']), gallery: [{ src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/B8DCCBEB-0795-49A2-BB82-15758B30E788.jpg?v=1773176987&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/95051829-853C-40F2-A998-499BE949F8E2.jpg?v=1&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/51B9056C-5068-468D-AC85-964563827D0B.jpg?v=1&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/AEE9E0B6-2B45-434D-BC99-4F703247728F.jpg?v=1&width=1400', w: 1200, h: 1600 }] },
-    'w-walking-art-black-jeans': { gender: 'women', id: 'shopify:walking-art-black-jeans', title: 'Walking Art Black Jeans', price: 499, currency: 'RON', cut: 'Womenswear', collections: ['bottoms'],
+    'w-walking-art-black-jeans': { gender: 'women', id: 'shopify:walking-art-black-jeans', title: 'Walking Art Black Jeans', price: 399, currency: 'RON', cut: 'Womenswear', collections: ['bottoms'],
       details: ['All clothing is custom made.', '100% Organic Cotton'], description: 'Crafted from premium denim, featuring a flattering bootcut fit and Walking Art embroidery.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'black', name: 'Black', hex: '#111111' }], chart: sizeChart(['34', '36', '38', '40']), gallery: [{ src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/1433EF88-8840-49F3-BF6F-4DBE5B5C7976.jpg?v=1769272869&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/imgi_88_IMG_7620.jpg?v=1&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/imgi_21_IMG_7627.jpg?v=1&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/imgi_20_IMG_7622.jpg?v=1&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/imgi_18_IMG_7621.jpg?v=1&width=1400', w: 1200, h: 1600 }] },
     'w-walking-art-blue-jeans': { gender: 'women', id: 'shopify:walking-art-blue-jeans', title: 'Walking Art Blue Jeans', price: 399, currency: 'RON', cut: 'Womenswear', collections: ['bottoms'],
@@ -3522,19 +3522,19 @@ body.pdp .ai-launch{--ai-offset:92px}
 .vp__head[hidden], .vp__foot[hidden] { display: none; }
 .vp__ov { position: absolute; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; touch-action: manipulation; padding: 0; opacity: .9; }
 .vp__ov svg { width: 13px; height: 13px; }
-.vp__ov--close { top: 6px; right: 6px; }
+.vp__ov--close { top: 6px; left: 6px; }
 .vp__ov--mute { bottom: 6px; right: 6px; }
-.vp__ov--full { bottom: 6px; right: 6px; }
+.vp__ov--full { top: 6px; right: 6px; }
 
 .vp__video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
 /* YouTube-style mini-player controls: shown while paused or for a moment after a tap */
-.vp__ctr { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; gap: 18px; pointer-events: none; opacity: 0; transition: opacity .18s ease; }
+.vp__ctr { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; gap: 10px; pointer-events: none; opacity: 0; transition: opacity .18s ease; }
 .vp__skip, .vp__pp { pointer-events: auto; border: 0; padding: 0; cursor: pointer; color: #fff; display: grid; place-items: center; touch-action: manipulation; background: rgba(0,0,0,.45); border-radius: 50%; }
-.vp__skip { width: 38px; height: 38px; position: relative; }
-.vp__skip svg { width: 24px; height: 24px; }
+.vp__skip { width: 32px; height: 32px; position: relative; }
+.vp__skip svg { width: 20px; height: 20px; }
 .vp__skip span { position: absolute; font: 600 8px/1 "Jost", Helvetica, Arial, sans-serif; letter-spacing: 0; top: 55%; left: 50%; transform: translate(-50%, -50%); }
-.vp__pp { width: 52px; height: 52px; }
-.vp__pp svg { width: 26px; height: 26px; }
+.vp__pp { width: 44px; height: 44px; }
+.vp__pp svg { width: 22px; height: 22px; }
 .vp__shade { position: absolute; inset: 0; background: rgba(0,0,0,.28); opacity: 0; transition: opacity .18s ease; pointer-events: none; }
 .vp.is-ctrls .vp__ctr, .vp.is-ctrls .vp__shade { opacity: 1; }
 .vp:not(.is-ctrls) .vp__ov { opacity: 0; pointer-events: none; }
@@ -3774,8 +3774,10 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     vp.classList.remove('is-ended');
     try { await video.play(); userStarted = true; }
     catch {
-      // unmuted autoplay blocked → the browser may still allow MUTED autoplay; otherwise wait for a tap
-      if (!video.muted) { video.muted = true; setMuteIcon(); try { await video.play(); return; } catch {} }
+      // Autoplay-with-sound blocked (no fresh user gesture, e.g. right after a cross-page
+      // resume). Stay paused with sound intact instead of silently falling back to muted
+      // playback — a picture that moves with no audio reads as broken. One tap plays it with
+      // sound, matching how the plain-audio widget already behaves.
       setPlayIcon(false);
     }
   }
