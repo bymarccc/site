@@ -303,7 +303,7 @@ __name(specSummarize, "specSummarize");
 var TOOL_DEFS = [
   { type: "function", name: "search_products", description: "Search the real BYMARCCC catalogue — the ONLY source of truth for products, prices, stock and sizes. Never invent or recall products from anywhere else. Pass gender/collection/category to narrow, in_stock to only return available items, and set a high limit (e.g. 50) when the customer asks for ALL products in a collection.", parameters: { type: "object", properties: { query: { type: "string", description: "Free text search terms (Romanian or English)." }, gender: { type: "string", enum: ["women", "men", "unisex"] }, collection: { type: "string", description: "e.g. tops, jeans, jackets, hoodie, bag, accessories, bottoms, sales" }, category: { type: "string", description: "Product type, e.g. jeans, top, jacket, accessory, bottoms" }, in_stock: { type: "boolean" }, max_price: { type: "number" }, limit: { type: "number" } } } },
   { type: "function", name: "get_product", description: "Full details for exactly one BYMARCCC product by its product_id.", parameters: { type: "object", properties: { product_id: { type: "string" } }, required: ["product_id"] } },
-  { type: "function", name: "generate_try_on", description: "Generate a virtual try-on preview of one BYMARCCC product on the customer's own uploaded photo. Ask the customer to choose a single product first if it isn't already clear.", parameters: { type: "object", properties: { product_id: { type: "string" }, user_image_file_id: { type: "string", description: "Reference to the customer's uploaded photo already held by the browser session." }, language: { type: "string", enum: ["ro", "en"] } }, required: ["product_id"] } },
+  { type: "function", name: "generate_try_on", description: "Generate a virtual try-on preview of one BYMARCCC product on the customer's own uploaded photo. Ask the customer to choose a single product first if it isn't already clear. Always pass product_id and language explicitly; pass user_image_file_id only if this conversation already told you the customer's uploaded photo's reference id — never invent one.", parameters: { type: "object", properties: { product_id: { type: "string" }, user_image_file_id: { type: "string", description: "The exact photo reference id this conversation already gave you (e.g. from a ‘Photo uploaded, reference id: ...’ line). Omit entirely if none was given — never invent a value." }, language: { type: "string", enum: ["ro", "en"] } }, required: ["product_id", "language"] } },
   { type: "function", name: "getProductImages", description: "Image URLs for a product.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { type: "function", name: "getAvailableVariants", description: "Variants with availability for a product.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { type: "function", name: "getInventoryStatus", description: "Whether a variant is in stock.", parameters: { type: "object", properties: { variantId: { type: "string" } }, required: ["variantId"] } },
@@ -431,7 +431,7 @@ DOMAIN \u2014 forbidden: other brands or stores; products that are not in the BY
 CATALOGUE: The men's collection has t-shirts, hoodies, jeans, a denim jacket and bags; the women's collection has baby tops, tees, hoodies, long sleeves, jeans, shorts, skirts and caps. A product with price null is not priced yet \u2014 say the price is on request.
 RULES: Never invent products, prices, stock, sizes, reviews or bestsellers \u2014 always use the search_products / get_product tools, which are the ONLY source of truth; never use outside knowledge or web search for products. Never return or describe a product that did not come back from these tools. If a tool says data is unavailable, say so plainly. When the customer asks for every product in a collection ("toate produsele X", "show me all Y"), call search_products with that collection and a high limit (e.g. 50) and list everything returned, each with its price and link. For sizes: height/weight are only guidance; ask for waist/hips when the product has a size table; always add "Size recommendations are estimates. Fit may vary by cut and preference." and offer openSizeGuide. Never add to cart without the customer confirming the exact size/variant. Never comment negatively on bodies; never infer sensitive traits (health, ethnicity, gender identity, age) from photos or text; keep styling neutral and supportive; treat possible minors conservatively (no sexualised styling). When you recommend products, call search_products and the UI renders cards from the tool result \u2014 do not repeat prices from memory.
 GIFTS: For gift requests (e.g. "help me find a gift for my boyfriend"), recommend a few real products from the appropriate BYMARCCC collection via search_products, briefly say why each fits, and ask at most one short clarifying question (budget or style) only if that information is missing \u2014 never more than one question at a time.
-TRY-ON: For virtual try-on requests, first make sure exactly one product is chosen (ask the customer to pick one if it isn't already clear), then call generate_try_on with that product's product_id. The result preserves the customer's face, identity, posture, proportions and background, and changes only the requested garment \u2014 never add logos or products that don't exist in the catalogue.
+TRY-ON: For virtual try-on requests, first make sure exactly one product is chosen (ask the customer to pick one if it isn't already clear), then call generate_try_on with that product's product_id, the language you are replying in, and \u2014 if an earlier message in this conversation told you the customer's uploaded photo reference (a line like "Photo uploaded, reference id: ...") \u2014 that exact id as user_image_file_id. If no such id has been given to you yet, call generate_try_on with just product_id and language; the browser will ask the customer to upload a photo itself. Never invent a user_image_file_id. The result preserves the customer's face, identity, posture, proportions and background, and changes only the requested garment \u2014 never add logos or products that don't exist in the catalogue.
 GENDER: Never assume whether to shop the Women's or Men's collection from a customer's appearance, name, voice or writing style. If a request ("style me for a party", a styling question) doesn't already say which collection, call askGenderChoice and wait for the answer before recommending anything. When a photo is supplied: analyze the visible outfit, silhouette, colors and style cues in the photo to judge which BYMARCCC pieces would look visually consistent with it, then call search_products filtered to the collection implied by the conversation so far \u2014 if that is still unclear after considering the outfit style itself (not the person), call askGenderChoice first. Keep recommendations visually consistent with the uploaded outfit (similar palette, formality and silhouette).`;
 var VOICE_LANGUAGE_RULES = `
 VOICE LANGUAGE: The customer speaks only English or Romanian \u2014 never any other language. Decide, per utterance, whether the customer is speaking English or Romanian and reply in that same language; never reply in Spanish, French, Italian, German, Portuguese or any other language, and never treat Romanian speech as if it were Spanish or another Romance language. Utterances can naturally mix English and Romanian in one sentence (e.g. "Arat\u0103-mi ni\u0219te black jeans", "Vreau un oversized T-shirt negru", "Show me blugii de la men") \u2014 this is normal bilingual speech, not a third language: understand the intent, keep product names, fashion terms, brand names and English words exactly as said rather than force-translating them, and reply in whichever of English/Romanian is the dominant language of that utterance. Keep your reply language consistent with what the customer just said \u2014 do not switch languages between turns on your own. If the customer is clearly speaking a third language, say the following in English: "${LANGUAGE_REFUSAL}"`;
@@ -475,7 +475,7 @@ async function assistantChat(request) {
         let out;
         if (CLIENT_TOOLS.has(c.name)) {
           if (c.name === "generate_try_on") {
-            actions.push({ tool: "startTryOn", args: { productIds: args.product_id ? [String(args.product_id)] : [] } });
+            actions.push({ tool: "startTryOn", args: { productIds: args.product_id ? [String(args.product_id)] : [], userImageFileId: typeof args.user_image_file_id === "string" ? args.user_image_file_id : null, language: args.language === "ro" || args.language === "en" ? args.language : null } });
           } else {
             actions.push({ tool: c.name, args });
           }
@@ -550,6 +550,31 @@ function dataUrlToBlob(u) {
   return new Blob([bytes], { type: m[1] });
 }
 __name(dataUrlToBlob, "dataUrlToBlob");
+var PHOTO_STORE = /* @__PURE__ */ new Map();
+var PHOTO_TTL_MS = 5 * 60 * 1e3;
+function purgePhotoStore() {
+  const now = Date.now();
+  for (const [id, entry] of PHOTO_STORE) {
+    if (now - entry.t > PHOTO_TTL_MS) PHOTO_STORE.delete(id);
+  }
+  if (PHOTO_STORE.size > 500) PHOTO_STORE.clear();
+}
+__name(purgePhotoStore, "purgePhotoStore");
+async function assistantUploadPhoto(request) {
+  const g = guard(request);
+  if (g) return g;
+  const b = await readJson(request);
+  if (!b) return json(400, { error: "Bad JSON" });
+  const check = dataUrlToBlob(b.photo);
+  if (check === "TOO_LARGE") return json(413, { error: "Photo too large (max 6 MB)." });
+  if (!check) return json(400, { error: "Unsupported photo format. Use JPG, PNG or WEBP." });
+  purgePhotoStore();
+  const id = crypto.randomUUID();
+  PHOTO_STORE.set(id, { dataUrl: b.photo, t: Date.now() });
+  logEvent("assistant-upload-photo", { ip: (request.headers.get("cf-connecting-ip") || "").split(".").slice(0, 2).join(".") + ".x.x" });
+  return json(200, { user_image_file_id: id, expires_in: Math.round(PHOTO_TTL_MS / 1e3) });
+}
+__name(assistantUploadPhoto, "assistantUploadPhoto");
 async function assistantTryon(request, siteOrigin) {
   const g = guard(request);
   if (g) return g;
@@ -559,7 +584,19 @@ async function assistantTryon(request, siteOrigin) {
   if (b.consent !== true) return json(400, { error: "CONSENT_REQUIRED" });
   const ids = Array.isArray(b.productIds) ? b.productIds.filter((x) => typeof x === "string" && x.trim()).slice(0, 3) : [];
   if (!ids.length) return json(400, { error: "Select at least one product." });
-  const photo = dataUrlToBlob(b.photo);
+  let photoDataUrl = null;
+  if (typeof b.userImageFileId === "string" && b.userImageFileId) {
+    purgePhotoStore();
+    const entry = PHOTO_STORE.get(b.userImageFileId);
+    if (!entry) return json(410, { error: "PHOTO_EXPIRED", message: "That photo reference has expired. Please upload the photo again." });
+    photoDataUrl = entry.dataUrl;
+    PHOTO_STORE.delete(b.userImageFileId);
+  } else if (typeof b.photo === "string" && b.photo) {
+    photoDataUrl = b.photo;
+  } else {
+    return json(400, { error: "Photo required." });
+  }
+  const photo = dataUrlToBlob(photoDataUrl);
   if (photo === "TOO_LARGE") return json(413, { error: "Photo too large (max 6 MB)." });
   if (!photo) return json(400, { error: "Unsupported photo format. Use JPG, PNG or WEBP." });
   const items = await loadCatalog();
@@ -567,7 +604,7 @@ async function assistantTryon(request, siteOrigin) {
   if (!products.length) return json(404, { error: "Products not found." });
   logEvent("assistant-tryon", { ip: (request.headers.get("cf-connecting-ip") || "").split(".").slice(0, 2).join(".") + ".x.x", products: products.map((p) => p.id) });
   try {
-    const mod = await openai("moderations", { model: "omni-moderation-latest", input: [{ type: "image_url", image_url: { url: b.photo } }] }, { timeoutMs: 15e3 });
+    const mod = await openai("moderations", { model: "omni-moderation-latest", input: [{ type: "image_url", image_url: { url: photoDataUrl } }] }, { timeoutMs: 15e3 });
     if (mod.results?.[0]?.flagged) return json(422, { error: "This photo can\u2019t be used for a try-on preview." });
   } catch {
   }
@@ -720,6 +757,7 @@ var ROUTES = {
   "assistant-tool": assistantTool,
   "assistant-realtime-token": assistantRealtimeToken,
   "assistant-tryon": assistantTryon,
+  "assistant-upload-photo": assistantUploadPhoto,
   "members-signup": membersSignup,
   "members-login": membersLogin,
   "members-logout": membersLogout,
