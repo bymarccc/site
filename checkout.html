@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Checkout — BYMARCCC</title>
+<title>Checkout — bymarccc</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   /* =====================================================================
-     BYMARCCC checkout — same black / white / #F5F4F1 language as the site.
+     bymarccc checkout — same black / white / #F5F4F1 language as the site.
      Logic adapted from the Glowy checkout kit (COD via EmailJS, card via a
      real Stripe Checkout Session created per-order by the /api/checkout-create
      worker route, so each customer is charged the actual bag total), rebuilt
-     for the multi-item BYMARCCC bag.
+     for the multi-item bymarccc bag.
      ===================================================================== */
   :root{
     --ink:#111; --sub:#6b6b68; --line:#e4e4e1; --bg:#F5F4F1; --blue:#5B95C3;
@@ -143,7 +143,7 @@
 <body>
 
 <div class="co-top">
-  <a class="co-logo" href="index.html" aria-label="BYMARCCC home">BYMARCCC</a>
+  <a class="co-logo" href="index.html" aria-label="bymarccc home">bymarccc</a>
   <div class="co-lang" role="group" aria-label="Language">
     <button type="button" data-lang="en" aria-pressed="true">EN</button>
     <button type="button" data-lang="ro" aria-pressed="false">RO</button>
@@ -241,7 +241,7 @@
       <div class="co-ty__check">&#10003;</div>
       <p class="co-ty__eyebrow" data-i18n="tyEyebrow">Order confirmed</p>
       <h1 class="co-ty__title"><span data-i18n="tyThanks">Thank you</span><span id="coTyName"></span></h1>
-      <p class="co-ty__msg" data-i18n="tyMsg">Your order is in. Every BYMARCCC piece is custom made, so we’ll reach out to confirm the details and the delivery date.</p>
+      <p class="co-ty__msg" data-i18n="tyMsg">Your order is in. Every bymarccc piece is custom made, so we’ll reach out to confirm the details and the delivery date.</p>
       <p class="co-ty__num"><span data-i18n="tyConfirmNum">Order</span> <span id="coTyOrderNum">—</span></p>
       <div class="co-ty__sec"><h3 data-i18n="tyContactInfo">Contact</h3><p id="coTyEmail"></p><p id="coTyPhone"></p></div>
       <div class="co-ty__sec"><h3 data-i18n="tyShipAddr">Shipping address</h3><p id="coTyAddress"></p></div>
@@ -294,7 +294,7 @@
       linkRefund:'Delivery & returns', linkTerms:'Terms & conditions', linkContact:'Contact',
       hBag:'Your bag', hOrder:'Order summary', emptyBag:'Your bag is empty.', continue:'Continue shopping', qty:'Qty', remove:'Remove',
       phDiscount:'Discount code', btnApply:'Apply', subtotal:'Subtotal', shipping:'Shipping', total:'Total',
-      tyEyebrow:'Order confirmed', tyThanks:'Thank you', tyMsg:'Your order is in. Every BYMARCCC piece is custom made, so we’ll reach out to confirm the details and the delivery date.',
+      tyEyebrow:'Order confirmed', tyThanks:'Thank you', tyMsg:'Your order is in. Every bymarccc piece is custom made, so we’ll reach out to confirm the details and the delivery date.',
       tyConfirmNum:'Order', tyContactInfo:'Contact', tyShipAddr:'Shipping address', tyPayMethod:'Payment',
       statusSending:'Sending your order…', statusSent:'Order sent ✓', errEmpty:'Your bag is empty.', errFields:'Please fill in all the required fields.',
       errPhone:'Phone number must have at least 10 digits.', errNoService:'Could not reach the order service. Please try again in a moment or contact us directly.',
@@ -312,7 +312,7 @@
       linkRefund:'Livrare și retur', linkTerms:'Termeni și condiții', linkContact:'Contact',
       hBag:'Coșul tău', hOrder:'Rezumatul comenzii', emptyBag:'Coșul tău este gol.', continue:'Continuă cumpărăturile', qty:'Cant.', remove:'Șterge',
       phDiscount:'Cod de reducere', btnApply:'Aplică', subtotal:'Subtotal', shipping:'Livrare', total:'Total',
-      tyEyebrow:'Comandă confirmată', tyThanks:'Mulțumim', tyMsg:'Comanda ta a ajuns la noi. Fiecare piesă BYMARCCC este făcută la comandă, așa că te vom contacta pentru confirmarea detaliilor și a datei de livrare.',
+      tyEyebrow:'Comandă confirmată', tyThanks:'Mulțumim', tyMsg:'Comanda ta a ajuns la noi. Fiecare piesă bymarccc este făcută la comandă, așa că te vom contacta pentru confirmarea detaliilor și a datei de livrare.',
       tyConfirmNum:'Comanda', tyContactInfo:'Contact', tyShipAddr:'Adresă de livrare', tyPayMethod:'Plată',
       statusSending:'Se trimite comanda ta…', statusSent:'Comandă trimisă ✓', errEmpty:'Coșul tău este gol.', errFields:'Te rugăm să completezi toate câmpurile obligatorii.',
       errPhone:'Numărul de telefon trebuie să aibă cel puțin 10 cifre.', errNoService:'Nu am putut contacta serviciul de comenzi. Te rugăm să încerci din nou sau să ne contactezi direct.',
@@ -688,7 +688,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 </style>
 
 <div class="vp-layer" id="vpLayer" aria-hidden="false">
-<div class="vp" id="vp" hidden role="dialog" aria-label="BYMARCCC music videos">
+<div class="vp" id="vp" hidden role="dialog" aria-label="bymarccc music videos">
   <div class="vp__head" hidden>
     <span class="vp__grip" aria-hidden="true"></span>
     <span class="vp__title" id="vpTitle">MUSIC VIDEOS</span>
@@ -1084,8 +1084,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   let scrubbing = false;
   const setMode = m => { vp.dataset.mode = m; clampToViewport(); };
   const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-  const aMetaSet = (t, a) => { aTitle.innerHTML = a ? `<b>${esc(a)}</b> - ${esc(t)}` : esc(t || 'BYMARCCC'); aArtist.textContent = ''; };
-  const aMeta = () => { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || 'BYMARCCC', a = (document.getElementById('miniArtist')?.textContent || '').trim(); aMetaSet(t, a); };
+  const aMetaSet = (t, a) => { aTitle.innerHTML = a ? `<b>${esc(a)}</b> - ${esc(t)}` : esc(t || 'bymarccc'); aArtist.textContent = ''; };
+  const aMeta = () => { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || 'bymarccc', a = (document.getElementById('miniArtist')?.textContent || '').trim(); aMetaSet(t, a); };
   const aUI = () => { const on = A && !A.paused && !A.ended; aPlayIcon.setAttribute('d', on ? ICON_PAUSE : ICON_PLAY); aPlay.setAttribute('aria-label', on ? 'Pause' : 'Play'); };
   const aTime = () => { if (!A || !A.duration) return; const p = A.currentTime / A.duration; if (!scrubbing) scrubFill.style.width = (p * 100) + '%'; aCur.textContent = fmtT(A.currentTime); aRem.textContent = '-' + fmtT(A.duration - A.currentTime); };
   if (A) {
@@ -1114,7 +1114,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   /* ---------- lock screen / CarPlay for the music video's audio ---------- */
   if ('mediaSession' in navigator) {
     const ART = [{ src: new URL('assets/img/lockscreen-alien-512.jpg', location.href).href, sizes: '512x512', type: 'image/jpeg' }, { src: new URL('assets/img/lockscreen-alien.jpg', location.href).href, sizes: '1024x1024', type: 'image/jpeg' }];
-    const vMeta = () => { try { navigator.mediaSession.metadata = new MediaMetadata({ title: title.textContent || 'BYMARCCC', artist: 'BYMARCCC', album: 'BYMARCCC', artwork: ART }); } catch {} };
+    const vMeta = () => { try { navigator.mediaSession.metadata = new MediaMetadata({ title: title.textContent || 'bymarccc', artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
     const vHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
       set('play', () => video.play().catch(() => {})); set('pause', () => video.pause());
       set('seekbackward', d => { video.currentTime = Math.max(0, video.currentTime - (d.seekOffset || 10)); });
@@ -1125,7 +1125,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     video.addEventListener('pause', () => { if (vp.dataset.mode === 'video') navigator.mediaSession.playbackState = 'paused'; });
     // ...and the same for plain music, so lock-screen / CarPlay controls and background
     // playback work for audio too, not just music videos.
-    const aMediaMeta = () => { try { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle?.textContent || '').replace(/^.*? - /, '') || 'BYMARCCC'; navigator.mediaSession.metadata = new MediaMetadata({ title: t, artist: 'BYMARCCC', album: 'BYMARCCC', artwork: ART }); } catch {} };
+    const aMediaMeta = () => { try { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle?.textContent || '').replace(/^.*? - /, '') || 'bymarccc'; navigator.mediaSession.metadata = new MediaMetadata({ title: t, artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
     const aHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
       set('play', () => A.play().catch(() => {})); set('pause', () => A.pause());
       set('seekbackward', d => { A.currentTime = Math.max(0, A.currentTime - (d.seekOffset || 10)); });
@@ -1186,7 +1186,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       const item = (window.BYMARCCC_PLAYLIST || []).find(tr => tr.src === st.src);
       // open the widget right away (matches the video branch above) — only the seek/resume
       // itself needs to wait for the audio's metadata, so the UI doesn't sit blank meanwhile.
-      aMetaSet(st.title || (item && item.title) || 'BYMARCCC', st.artist || '');
+      aMetaSet(st.title || (item && item.title) || 'bymarccc', st.artist || '');
       setMode('audio');
       vp.hidden = false; tab.hidden = true; restore();
       aUI();
