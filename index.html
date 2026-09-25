@@ -1091,8 +1091,8 @@
   .shop__meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; font-size: 12.5px; letter-spacing: .04em; }
   .shop__name { text-transform: uppercase; }
   .shop__price { flex: 0 0 auto; color: #111; }
-  .shop__all { grid-column: 1 / -1; justify-self: center; margin-top: 8px; height: 46px; padding: 0 28px; border: 1px solid #111; border-radius: 999px; background: #fff; font: inherit; font-size: 12.5px; letter-spacing: .14em; cursor: pointer; }
-  .shop__all:hover { background: #111; color: #fff; }
+  .shop__all, .shop__next { grid-column: 1 / -1; width: 100%; height: 54px; margin-top: 8px; border: 0; background: #111; color: #fff; font: inherit; font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; cursor: pointer; }
+  .shop__all:hover, .shop__next:hover { background: #000; }
   .shop__empty { grid-column: 1 / -1; padding: 48px 0; text-align: center; font-size: 13px; letter-spacing: .1em; color: #6f6f6f; }
   .shop__card:focus-visible { outline: 1.5px solid #111; outline-offset: 4px; }
   @media (prefers-reduced-motion: reduce) { .shop__img img { transition: none; } }
@@ -1747,6 +1747,7 @@
     const tabs = section.querySelector('.shop__tabs'), grid = section.querySelector('.shop__grid');
     let active = collections[0].key;
     const LIMIT = 6;
+    const tabBtns = [];
     const render = (all = false) => {
       grid.innerHTML = '';
       grid.classList.remove('shop__grid--sales');
@@ -1767,14 +1768,28 @@
       }
       const feat = gender === 'women' && WOMEN_FEATURED[active];
       if (feat) items = [...feat.map(k => items.find(([x]) => x === k)).filter(Boolean), ...items.filter(([k]) => !feat.includes(k))];
-      const show = gender === 'women' && !all && items.length > LIMIT ? items.slice(0, LIMIT) : items;
+      const show = !all && items.length > LIMIT ? items.slice(0, LIMIT) : items;
       show.forEach(([k, p]) => grid.appendChild(card(k, p)));
-      if (show.length < items.length) { const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__all'; b.textContent = `VIEW ALL (${items.length})`; b.addEventListener('click', () => render(true)); grid.appendChild(b); }
+      if (show.length < items.length) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__all'; b.textContent = 'LOAD MORE';
+        b.addEventListener('click', () => render(true));
+        grid.appendChild(b);
+      } else {
+        // Every item in this category is showing — offer to jump straight into the next
+        // category in this tab group instead of scrolling back up to the tab bar.
+        const nextCol = collections[collections.findIndex(c => c.key === active) + 1];
+        if (nextCol) {
+          const n = document.createElement('button'); n.type = 'button'; n.className = 'shop__next'; n.textContent = `NEXT: ${nextCol.label.toUpperCase()}`;
+          n.addEventListener('click', () => { tabBtns.find(t => t.dataset.key === nextCol.key)?.click(); grid.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+          grid.appendChild(n);
+        }
+      }
     };
     collections.forEach(c => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__tab'; b.setAttribute('role', 'tab'); b.dataset.key = c.key; b.textContent = c.label;
       b.setAttribute('aria-selected', String(c.key === active));
       b.addEventListener('click', () => { active = c.key; tabs.querySelectorAll('.shop__tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.key === active))); render(); b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
+      tabBtns.push(b);
       tabs.appendChild(b);
     });
     render();
@@ -3477,6 +3492,10 @@ body.pdp .ai-launch{--ai-offset:92px}
 .vp.is-dragging { touch-action: none; }
 .vp.is-dragging, .vp.is-dragging * { cursor: grabbing; }
 .vp[data-orient="portrait"] { width: clamp(150px, 11vw, 180px); }
+@media (min-width: 900px) {
+  .vp { width: clamp(390px, 33vw, 480px); }
+  .vp[data-orient="portrait"] { width: clamp(225px, 16.5vw, 270px); }
+}
 .vp__head { display: flex; align-items: center; gap: 8px; padding: 10px 8px 10px 14px; cursor: grab; touch-action: none; }
 .vp__grip { width: 26px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.22); flex: 0 0 auto; }
 .vp__title { flex: 1 1 auto; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .18em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -3934,8 +3953,11 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     A.addEventListener('loadedmetadata', () => { aMeta(); aTime(); }); A.addEventListener('timeupdate', aTime);
     A.addEventListener('emptied', () => { if (vp.dataset.mode === 'audio') { vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; } });
     aPlay.addEventListener('click', () => { A.paused ? A.play().catch(() => {}) : A.pause(); });
-    $('vpAPrev').addEventListener('click', () => document.getElementById('miniPrev')?.click());
-    $('vpANext').addEventListener('click', () => document.getElementById('miniNext')?.click());
+    // ±10s seek within the current song, mirroring the video widget's vpBack/vpFwd — these
+    // buttons no longer jump to the previous/next track (still reachable from the track list).
+    const skipA = d => { if (!A.duration) return; A.currentTime = Math.max(0, Math.min(A.duration, A.currentTime + d)); aTime(); };
+    $('vpAPrev').addEventListener('click', () => skipA(-10));
+    $('vpANext').addEventListener('click', () => skipA(10));
     $('vpAClose').addEventListener('click', () => { document.getElementById('miniClose')?.click(); vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; });
     // Apple-Music-style scrubber: drag anywhere on the bar
     const seekAt = cx => { const r = scrub.getBoundingClientRect(); const p = Math.min(1, Math.max(0, (cx - r.left) / r.width)); scrubFill.style.width = (p * 100) + '%'; if (A.duration) { aCur.textContent = fmtT(p * A.duration); aRem.textContent = '-' + fmtT(A.duration - p * A.duration); } return p; };
