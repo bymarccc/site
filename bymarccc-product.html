@@ -441,8 +441,8 @@
 
 .pdp-swatches[hidden], .pdp-label[hidden] { display: none; }
 
-.pdp-designs { display: grid; grid-template-columns: repeat(5, 1fr); justify-content: center; gap: 6px; }
-.pdp-designs .pdp-size { width: 100%; min-width: 0; height: 24px; padding: 0 10px; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; }
+.pdp-designs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.pdp-designs .pdp-size { width: auto; min-width: 0; white-space: nowrap; height: 24px; padding: 0 10px; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; }
 .pdp-designs[hidden] { display: none; }
 
 .pdp-sizes[hidden], .pdp-swatches[hidden] { display: none; }
@@ -867,7 +867,7 @@
   const COLLECTIONS = [
     { key: 'tops', label: 'TOPS' }, { key: 'denim', label: 'DENIM' }, { key: 'jackets', label: 'JACKETS' }, { key: 'accessories', label: 'ACCESSORIES' },
   ];
-  window.BYMARCCC_CATALOG = { CATALOG, COLLECTIONS, WOMEN_COLLECTIONS, WOMEN_FEATURED, MODEL, REVIEWS };
+  window.BYMARCCC_CATALOG = { CATALOG, COLLECTIONS, WOMEN_COLLECTIONS, WOMEN_FEATURED, MODEL, REVIEWS, ONE_SIZE };
 })();
 
 </script>
@@ -885,7 +885,7 @@
   /* ==================================================================
      DATA
   ================================================================== */
-  const { CATALOG, MODEL, REVIEWS } = window.BYMARCCC_CATALOG;
+  const { CATALOG, MODEL, REVIEWS, ONE_SIZE } = window.BYMARCCC_CATALOG;
   const KEY = (new URLSearchParams(location.search).get('p') || (location.hash.match(/^#p=([\w-]+)/) || [])[1] || 'skinny').toLowerCase();
   const PRODUCT = Object.assign({ model: MODEL, reviews: REVIEWS }, CATALOG[KEY] || CATALOG.skinny);
   const COLOURS = PRODUCT.colours, SIZE_CHART = PRODUCT.chart, GALLERY = PRODUCT.gallery;
