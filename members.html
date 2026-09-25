@@ -231,5 +231,684 @@
   })();
 })();
 </script>
+
+<!-- ============================================================
+     Cross-page "now playing" widget (music + music video) — same
+     module as the homepage, so playback picked up there keeps
+     showing here: reopens already loaded, resumes where it left
+     off (may need one tap under mobile autoplay rules), and stops
+     only on pause or the widget's own close (X).
+     ============================================================ -->
+<audio id="miniAudio" preload="metadata"></audio>
+<!-- =====================================================================
+     FLOATING MUSIC-VIDEO PLAYER — 3 Cloudinary MP4s (playlist, draggable)
+     Paste your three public Cloudinary MP4 URLs in the VIDEOS list below.
+     ===================================================================== -->
+<style>
+.play__reset { display: none !important; }
+.vp-layer { position: fixed; inset: 0; z-index: 1200; overflow: hidden; pointer-events: none; }   /* clips the player: dragging it past an edge can never widen or scroll the page */
+.vp {
+  position: absolute; left: 0; top: 0; z-index: 2; pointer-events: auto;
+  --vx: 0px; --vy: 0px;
+  transform: translate3d(var(--vx), var(--vy), 0);
+  width: clamp(260px, 22vw, 320px);            /* YouTube-style mini player */
+  background: #000; color: #fff;
+  border-radius: 14px;
+  box-shadow: 0 30px 70px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.06);
+  overflow: hidden;
+  font-family: "Jost", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  user-select: none; -webkit-user-select: none;
+  transition: opacity .3s var(--ease, ease);
+}
+.vp[hidden] { display: none; }
+.vp.is-dragging { touch-action: none; }
+.vp.is-dragging, .vp.is-dragging * { cursor: grabbing; }
+.vp[data-orient="portrait"] { width: clamp(150px, 11vw, 180px); }
+@media (min-width: 900px) {
+  .vp { width: clamp(390px, 33vw, 480px); }
+  .vp[data-orient="portrait"] { width: clamp(225px, 16.5vw, 270px); }
+}
+.vp__head { display: flex; align-items: center; gap: 8px; padding: 10px 8px 10px 14px; cursor: grab; touch-action: none; }
+.vp__grip { width: 26px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.22); flex: 0 0 auto; }
+.vp__title { flex: 1 1 auto; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .18em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vp__btn {
+  width: 44px; height: 44px; margin: -8px 0; flex: 0 0 auto;
+  display: grid; place-items: center;
+  border: 0; border-radius: 10px; background: transparent; color: #fff; cursor: pointer;
+  touch-action: manipulation; padding: 0; font: inherit;
+}
+.vp__btn:hover { background: rgba(255,255,255,.08); }
+.vp__btn:focus-visible { outline: 2px solid var(--play-blue, #5B95C3); outline-offset: -2px; }
+.vp__btn svg { width: 16px; height: 16px; }
+.vp__screen { position: relative; width: 100%; aspect-ratio: var(--ar, 16 / 9); background: #000; touch-action: none; cursor: grab; }   /* --ar = the video's real ratio */
+.vp__head[hidden], .vp__foot[hidden] { display: none; }
+.vp__ov { position: absolute; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; touch-action: manipulation; padding: 0; opacity: .9; }
+.vp__ov svg { width: 13px; height: 13px; }
+.vp__ov--close { top: 6px; right: 6px; }
+.vp__ov--mute { bottom: 6px; right: 6px; }
+.vp__ov--full { bottom: 6px; right: 6px; }
+
+.vp__video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
+/* YouTube-style mini-player controls: shown while paused or for a moment after a tap */
+.vp__ctr { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; gap: 18px; pointer-events: none; opacity: 0; transition: opacity .18s ease; }
+.vp__skip, .vp__pp { pointer-events: auto; border: 0; padding: 0; cursor: pointer; color: #fff; display: grid; place-items: center; touch-action: manipulation; background: rgba(0,0,0,.45); border-radius: 50%; }
+.vp__skip { width: 38px; height: 38px; position: relative; }
+.vp__skip svg { width: 24px; height: 24px; }
+.vp__skip span { position: absolute; font: 600 8px/1 "Jost", Helvetica, Arial, sans-serif; letter-spacing: 0; top: 55%; left: 50%; transform: translate(-50%, -50%); }
+.vp__pp { width: 52px; height: 52px; }
+.vp__pp svg { width: 26px; height: 26px; }
+.vp__shade { position: absolute; inset: 0; background: rgba(0,0,0,.28); opacity: 0; transition: opacity .18s ease; pointer-events: none; }
+.vp.is-ctrls .vp__ctr, .vp.is-ctrls .vp__shade { opacity: 1; }
+.vp:not(.is-ctrls) .vp__ov { opacity: 0; pointer-events: none; }
+.vp.is-ctrls .vp__ov { opacity: .95; pointer-events: auto; }
+.vp__prog { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
+.vp__prog::before { content: ""; position: absolute; inset: -12px 0; }
+.vp__prog.is-seeking { height: 9px; }
+.vp__prog i { display: block; height: 100%; width: 0; background: #ff0033; pointer-events: none; }
+/* end of song: black card with replay / next */
+.vp__end { position: absolute; inset: 0; background: #000; display: none; align-items: center; justify-content: center; gap: 22px; }
+.vp.is-ended .vp__end { display: flex; }
+.vp.is-ended .vp__ctr, .vp.is-ended .vp__shade, .vp.is-ended .vp__prog, .vp.is-ended .vp__ov--full { display: none; }
+.vp.is-ended .vp__ov--close { opacity: .95; pointer-events: auto; }
+.vp__endbtn { border: 0; padding: 0; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
+.vp__endbtn svg { width: 22px; height: 22px; }
+.vp__endbtn small { position: absolute; }
+/* docked at the left edge: keeps playing off-screen, only the arrow tab shows */
+.vp.is-snapping { transition: transform .45s cubic-bezier(.22,1,.36,1), opacity .3s var(--ease, ease); }
+html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }
+.vp.is-docked { pointer-events: none; }
+.vp-tab.is-dock { width: 26px; height: 64px; top: var(--ty, 58%); border-radius: 0 10px 10px 0; background: rgba(20,20,20,.92); }
+.vp-tab.is-dock svg { width: 16px; height: 16px; }
+.vp-tab.is-right { left: auto; right: 0; border-radius: 10px 0 0 10px; }
+.vp-tab.is-right .vp-tab__c { transform: scaleX(-1); }
+.vp-tab { touch-action: none; }
+/* ---- audio mode: black Apple-Music-style card (same widget, no video) ---- */
+.vp[data-mode="audio"] { width: clamp(150px, 56vw, 300px) !important; }
+.vp[data-mode="audio"] .vp__screen, .vp[data-mode="audio"] .vp__end { display: none; }
+.vp__audio { display: none; position: relative; padding: 10px 12px 16px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.vp[data-mode="audio"] .vp__audio { display: block; }
+.vp__atitle { font-size: 11.5px; font-weight: 400; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 34px; }
+.vp__atitle b { font-weight: 700; }
+.vp__aartist { display: none !important; font-size: 10.5px; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+/* nudged a touch inward from the edge (was right:6px) so there's a hair more empty margin to grab past it, and given an invisible ::after hit-area — its visual size and position stay put */
+.vp__ax { position: absolute; top: 6px; right: 11px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(255,255,255,.1); color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; touch-action: manipulation; }
+.vp__ax::after { content: ""; position: absolute; inset: -6px; }
+.vp__ax svg { width: 12px; height: 12px; }
+.vp__scrub { position: relative; height: 4px; margin: 10px auto 0; width: 57%; border-radius: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
+.vp__scrub::before { content: ""; position: absolute; inset: -12px 0; }
+.vp__scrub i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: #fff; }
+.vp__scrub.is-seeking { height: 9px; margin-top: 12.5px; }
+/* times pulled in from 82% width so "0:15"/"-1:58" sit closer to center instead of hugging the outer edges, and the row is nudged up (was margin-top 6px) to close the gap under the seek bar — leaving more open, empty card surface below for dragging */
+/* Times + transport form ONE compact centered cluster, not spread edge-to-edge — this leaves large
+   empty (still draggable) margins on the left/right of the row for grabbing the whole PiP. */
+.vp__atimes { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; margin: 6px 0 0; padding: 6px 0; font-size: 9px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
+.vp__atimes span { flex: 0 0 auto; }
+.vp__actr { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.vp__abtn { position: relative; border: 0; background: none; color: #fff; padding: 0; width: 26px; height: 26px; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
+.vp__abtn::after { content: ""; position: absolute; inset: -5px; }   /* a bit more touch target without growing the visible icon, kept short of the 10px gap so adjacent buttons never overlap */
+.vp__abtn svg { width: 14px; height: 14px; }
+.vp__abtn--play svg { width: 17px; height: 17px; }
+.vp__big {
+  position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 50%; background: rgba(255,255,255,.94); color: #111; cursor: pointer;
+  box-shadow: 0 10px 28px rgba(0,0,0,.35);
+  touch-action: manipulation; transition: transform .2s var(--ease, ease), opacity .2s var(--ease, ease);
+}
+.vp__big svg { width: 26px; height: 26px; margin-left: 3px; }
+.vp__big:hover { transform: scale(1.05); }
+.vp__big[hidden] { display: none; }
+.vp__big { display: none !important; }
+.vp__foot { display: flex; align-items: center; justify-content: center; gap: 2px; padding: 6px 8px 8px; }
+.vp__foot .vp__btn { margin: 0; }
+.vp__btn[hidden], .vp__count[hidden] { display: none; }
+.vp__foot .vp__btn--play svg { width: 20px; height: 20px; }
+.vp__count { margin-left: auto; font-size: 11px; color: rgba(255,255,255,.55); letter-spacing: .06em; padding: 0 6px; font-variant-numeric: tabular-nums; }
+.vp__status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* re-open tab on the LEFT edge (the audio player's tab lives on the right edge) */
+.vp-tab {
+  position: absolute; z-index: 3; pointer-events: auto; left: 0; top: 58%;
+  transform: translate3d(0, -50%, 0);
+  width: 48px; height: 96px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 0 14px 14px 0;
+  background: #0b0b0b; color: #fff;
+  box-shadow: 0 16px 40px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.06);
+  cursor: pointer; touch-action: manipulation;
+}
+.vp-tab[hidden] { display: none; }
+.vp-tab svg[hidden] { display: none; }
+.vp-tab svg { width: 22px; height: 22px; }
+.vp-tab:focus-visible { outline: 2px solid var(--play-blue, #5B95C3); outline-offset: -3px; }
+
+@media (max-width: 640px) {
+  .vp { width: 56vw; border-radius: 12px; }
+  .vp[data-orient="portrait"] { width: 34vw; }
+  .vp__head { padding: 8px 4px 8px 10px; }
+  .vp__title { font-size: 10px; }
+  .vp__foot { padding: 4px 4px 6px; flex-wrap: nowrap; }
+  .vp__foot .vp__btn { width: 38px; height: 38px; }
+  .vp__big { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
+  .vp__big svg { width: 20px; height: 20px; }
+  .vp__count { font-size: 10px; padding: 0 4px; }
+}
+@media (prefers-reduced-motion: reduce) { .vp, .vp__big { transition: none; } }
+</style>
+
+<div class="vp-layer" id="vpLayer" aria-hidden="false">
+<div class="vp" id="vp" hidden role="dialog" aria-label="BYMARCCC music videos">
+  <div class="vp__head" hidden>
+    <span class="vp__grip" aria-hidden="true"></span>
+    <span class="vp__title" id="vpTitle">MUSIC VIDEOS</span>
+    <button class="vp__btn" id="vpReset" type="button" aria-label="Reset player position" title="Reset position">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+    </button>
+    <button class="vp__btn" id="vpClose" type="button" aria-label="Close video player">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="vp__screen" id="vpHandle">
+    <video class="vp__video" id="vpVideo" preload="metadata" playsinline webkit-playsinline x-webkit-airplay="allow" disablepictureinpicture></video>
+    <button class="vp__big" id="vpBig" type="button" aria-label="Play video">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <div class="vp__shade" aria-hidden="true"></div>
+    <div class="vp__ctr">
+      <button class="vp__skip" id="vpBack" type="button" aria-label="Back 10 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4.5h4.5"/></svg><span>10</span></button>
+      <button class="vp__pp" id="vpPP" type="button" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path id="vpPPIcon" d="M8 5v14l11-7z"/></svg></button>
+      <button class="vp__skip" id="vpFwd" type="button" aria-label="Forward 10 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4.5h-4.5"/></svg><span>10</span></button>
+    </div>
+    <div class="vp__prog" id="vpProgBar" aria-hidden="true"><i id="vpProg"></i></div>
+    <div class="vp__end">
+      <button class="vp__endbtn" id="vpReplay" type="button" aria-label="Replay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4.5h4.5"/></svg></button>
+      <button class="vp__endbtn" id="vpNextEnd" type="button" aria-label="Next song"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5v14l9-7zM16 5h2v14h-2z"/></svg></button>
+    </div>
+    <button class="vp__ov vp__ov--close" id="vpCloseOv" type="button" aria-label="Close video">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <button class="vp__ov vp__ov--full" id="vpFullOv" type="button" aria-label="Fullscreen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+  </div>
+  <div class="vp__audio" id="vpAudio">
+    <div class="vp__atitle" id="vpATitle">—</div><div class="vp__aartist" id="vpAArtist"></div>
+    <button class="vp__ax" id="vpAClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="vp__scrub" id="vpScrub" role="slider" aria-label="Seek"><i id="vpScrubFill"></i></div>
+    <div class="vp__atimes">
+      <span id="vpACur">0:00</span>
+      <div class="vp__actr">
+        <button class="vp__abtn" id="vpAPrev" type="button" aria-label="Previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 12l9-6v12zM2 12l9-6v12z"/></svg></button>
+        <button class="vp__abtn vp__abtn--play" id="vpAPlay" type="button" aria-label="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><path id="vpAPlayIcon" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+        <button class="vp__abtn" id="vpANext" type="button" aria-label="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6l9 6-9 6zM13 6l9 6-9 6z"/></svg></button>
+      </div>
+      <span id="vpARem">-0:00</span>
+    </div>
+  </div>
+  <div class="vp__foot" hidden>
+    <button class="vp__btn" id="vpPrev" type="button" aria-label="Previous video">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM19 5v14L9 12z"/></svg>
+    </button>
+    <button class="vp__btn vp__btn--play" id="vpPlay" type="button" aria-label="Play">
+      <svg viewBox="0 0 24 24" fill="currentColor" id="vpPlayIcon"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button class="vp__btn" id="vpNext" type="button" aria-label="Next video">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM5 5v14l10-7z"/></svg>
+    </button>
+    <button class="vp__btn" id="vpMute" type="button" aria-label="Mute">
+      <svg viewBox="0 0 24 24" fill="currentColor" id="vpMuteIcon"><path d="M4 9v6h4l5 5V4L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+    </button>
+    <button class="vp__btn" id="vpFull" type="button" aria-label="Fullscreen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+    <span class="vp__count" id="vpCount">1 / 3</span>
+  </div>
+  <span class="vp__status" id="vpStatus" role="status" aria-live="polite"></span>
+</div>
+<button class="vp-tab" id="vpTab" type="button" hidden aria-label="Show music videos">
+  <svg class="vp-tab__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg>
+  <svg class="vp-tab__c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M9 5l7 7-7 7"/></svg>
+</button>
+</div>
+<script>
+  // Shared "GOOD VIBES ONLY" playlist data (duplicated per page, same convention as CATALOG) —
+  // only used here to resolve a track's src/poster/title for the cross-page player widget below.
+  (function () {
+    var CLD = 'https://res.cloudinary.com/lpj7yftl/video/upload/';
+    var SEED = [
+      { id: 'madness',   title: 'Central Cee x Nemzzz - Madness', channel: '', duration: '4:28',
+        src:   CLD + 'v1790104516/Central_Cee_x_Nemzzz_-_Madness.mp3',
+        video: CLD + 'q_auto,f_auto/v1790104856/Central_Cee_x_Nemzzz_-_Madnesss.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790104856/Central_Cee_x_Nemzzz_-_Madnesss.jpg',
+        thumb: 'assets/img/thumb-madness.jpg' },
+      { id: 'killin-em', title: "Nemzzz - Killin' Em",            channel: '', duration: '2:10',
+        src:   CLD + 'v1790101740/Nemzzz_Killin_Em_compressed.m4a',
+        video: CLD + 'q_auto,f_auto/v1790098937/Nemzzz_-_Killin_Em.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790098937/Nemzzz_-_Killin_Em.jpg',
+        thumb: 'assets/img/thumb-killin-em.jpg' },
+      { id: 'chanel',    title: 'Tyla - CHANEL',                  channel: '', duration: '1:47',
+        src:   CLD + 'v1790104743/Tyla_-_chhanell.m4a',
+        video: CLD + 'q_auto,f_auto/v1790104707/Tyla_-_CHANEL.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790104707/Tyla_-_CHANEL.jpg',
+        thumb: 'assets/img/thumb-tyla-chanel.jpg' },
+      { id: 'paradise',  title: 'Sade - Paradise',                 channel: '', duration: '4:02',
+        src:   CLD + 'v1790162082/Sade_Paradise_.m4a',
+        video: CLD + 'q_auto,f_auto/v1790162088/Sade_-_Paradise.mp4', poster: 'assets/img/thumb-sade-paradise.jpg',
+        thumb: 'assets/img/thumb-sade-paradise.jpg' },
+      { id: 'weeknd-earned-it', title: 'The Weeknd - Earned It',   channel: '', duration: '',
+        src:   CLD + 'v1790321199/The_Weeknd_-_Earned_itt.m4a',
+        video: CLD + 'q_auto,f_auto/v1790321215/The_Weeknd_-_Earned_It_Fifty_Shades_Of_Grey.mp4',
+        poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321215/The_Weeknd_-_Earned_It_Fifty_Shades_Of_Grey.jpg',
+        thumb: 'assets/img/thumb-weeknd-earned-it.jpg' },
+      { id: 'goosebumps', title: 'Travis Scott - Goosebumps',      channel: '', duration: '',
+        src:   CLD + 'v1790322008/Travis_Scott_-_Goosebumps.mp4',
+        video: CLD + 'q_auto,f_auto/v1790321227/Travis_Scott_-_goosebumps_Official_Video_ft._Kendrick_Lamar.mp4',
+        poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321227/Travis_Scott_-_goosebumps_Official_Video_ft._Kendrick_Lamar.jpg',
+        thumb: 'assets/img/thumb-goosebumps.jpg' },
+      { id: 'miley-flowers', title: 'Miley Cyrus - Flowers',       channel: '', duration: '',
+        src:   CLD + 'v1790321201/Miley_Cyrus_-_Flowerss.m4a',
+        video: CLD + 'q_auto,f_auto/v1790321227/Miley_Cyrus_-_Flowers_Official_Video.mp4',
+        poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321227/Miley_Cyrus_-_Flowers_Official_Video.jpg',
+        thumb: 'assets/img/thumb-miley-flowers.jpg' },
+      { id: 'carbonne-imagine', title: 'Carbonne - Imagine',       channel: '', duration: '',
+        src:   CLD + 'v1790321282/Carbonne_Imagine.m4a',
+        video: CLD + 'q_auto,f_auto/v1790321296/Carbonne_-_Imagine_Clip_Officiel.mp4',
+        poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321296/Carbonne_-_Imagine_Clip_Officiel.jpg',
+        thumb: 'assets/img/thumb-carbonne-imagine.jpg' },
+      { id: 'mj-heal-the-world', title: 'Michael Jackson - Heal the World', channel: '', duration: '',
+        src:   CLD + 'v1790321282/Michael_Jackson_Heal_The_World_44s-346s.m4a',
+        thumb: 'assets/img/thumb-mj-heal-the-world.jpg' }
+        /* no `video` on purpose — track 9 is music-only, per instructions */
+    ];
+    window.BYMARCCC_PLAYLIST = SEED;
+  })();
+</script>
+<script>
+
+(() => {
+  'use strict';
+  /* ================================================================
+     >>> PASTE YOUR THREE CLOUDINARY MP4 URLS HERE (public, https) <<<
+     The MP4 files are NOT part of this site — only these links are used.
+     poster: leave '' to auto-derive the poster from Cloudinary
+             (…/video/upload/…/name.mp4 → …/video/upload/…/name.jpg),
+             or paste your own image URL.
+     ================================================================ */
+  // The videos are the GOOD VIBES ONLY playlist items that have a Cloudinary `video` URL (see SEED in the music script)
+  const VIDEOS = (window.BYMARCCC_PLAYLIST || []).filter(t => t.video).map(t => ({ src: t.video, poster: t.poster || '', title: t.title }));
+  const KEY_POS = 'bymarccc:vp:pos', KEY_OPEN = 'bymarccc:vp:open', KEY_NOW = 'bym.play.now';
+  const $ = id => document.getElementById(id);
+  const vp = $('vp'), handle = $('vpHandle'), video = $('vpVideo'), big = $('vpBig'), tab = $('vpTab');
+  const btnPlay = $('vpPlay'), icon = $('vpPlayIcon'), btnPrev = $('vpPrev'), btnNext = $('vpNext'),
+        btnMute = $('vpMute'), muteIcon = $('vpMuteIcon'), btnFull = $('vpFull'), btnClose = $('vpClose'),
+        btnReset = $('vpReset'), title = $('vpTitle'), count = $('vpCount'), status = $('vpStatus');
+  if (!vp || !video) return;
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+  // Cross-page "now playing" persistence — a single shared record so the widget can
+  // reappear already loaded on the next page. Cleared only by pause->never (pause keeps
+  // it resumable) and by an explicit close (X), per spec: playback should only ever stop
+  // on pause or close, never on plain navigation.
+  function saveNow(mode, data) { store.set(KEY_NOW, Object.assign({ mode, ts: Date.now() }, data)); }
+  function clearNow() { store.del(KEY_NOW); }
+  function loadNow() { const st = store.get(KEY_NOW, null); if (!st || !st.src) return null; if (Date.now() - (st.ts || 0) > 1000 * 60 * 60 * 12) return null; return st; }
+  const posterOf = v => v.poster || (/\.mp4(\?.*)?$/i.test(v.src) ? v.src.replace(/\.mp4(\?.*)?$/i, '.jpg') : '');
+  const configured = VIDEOS.filter(v => v.src && !/^VIDEO_URL_/.test(v.src));
+  const list = configured.length ? configured : VIDEOS;   // placeholders still render the UI so you can see the layout
+
+  /* ---------- playlist ---------- */
+  let idx = 0, userStarted = false;
+  const ICON_PLAY = 'M8 5v14l11-7z', ICON_PAUSE = 'M7 5h4v14H7zM13 5h4v14h-4z';
+  const ICON_SOUND = 'M4 9v6h4l5 5V4L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z';
+  const ICON_MUTED = 'M4 9v6h4l5 5V4L8 9H4zm13.3 3l2.2-2.2-1.4-1.4-2.2 2.2-2.2-2.2-1.4 1.4 2.2 2.2-2.2 2.2 1.4 1.4 2.2-2.2 2.2 2.2 1.4-1.4z';
+  const setPlayIcon = playing => { icon.querySelector('path').setAttribute('d', playing ? ICON_PAUSE : ICON_PLAY); btnPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play'); big.hidden = playing; };
+  const setMuteIcon = () => { muteIcon.querySelector('path').setAttribute('d', video.muted ? ICON_MUTED : ICON_SOUND); btnMute.setAttribute('aria-label', video.muted ? 'Unmute' : 'Mute'); const ov = $('vpMuteOvIcon'); if (ov) ov.setAttribute('d', video.muted ? ICON_MUTED : ICON_SOUND); $('vpMuteOv')?.setAttribute('aria-label', video.muted ? 'Unmute' : 'Mute'); };
+  function load(i, { autoplay = false } = {}) {
+    idx = (i + list.length) % list.length;
+    const v = list[idx];
+    video.pause();
+    // lazy: only the ACTIVE video has a src; preload="metadata" keeps the download tiny until play.
+    // Setting .src already (re)loads the element on its own — an explicit removeAttribute+load()
+    // right before reassigning .src double-triggers the load pipeline and, on Safari/iOS
+    // especially, can leave the element stuck (never past readyState 0) after a quick track
+    // switch, since the immediately-following tryPlay() races the first load's teardown.
+    video.poster = posterOf(v) || '';
+    video.preload = 'metadata';
+    video.src = v.src;
+    title.textContent = v.title || `MUSIC VIDEO ${String(idx + 1).padStart(2, '0')}`;
+    count.textContent = `${idx + 1} / ${list.length}`;
+    status.textContent = `Video ${idx + 1} of ${list.length}: ${title.textContent}`;
+    setPlayIcon(false);
+    if (autoplay) tryPlay();
+  }
+  async function tryPlay() {
+    // Always the small mini player. Fullscreen ONLY when the fullscreen button is tapped.
+    vp.classList.remove('is-ended');
+    try { await video.play(); userStarted = true; }
+    catch {
+      // unmuted autoplay blocked → the browser may still allow MUTED autoplay; otherwise wait for a tap
+      if (!video.muted) { video.muted = true; setMuteIcon(); try { await video.play(); return; } catch {} }
+      setPlayIcon(false);
+    }
+  }
+  // Leaving native fullscreen (iPhone) → back to the mini player; resume if it was playing
+  let fsWasPlaying = false;
+  video.addEventListener('webkitbeginfullscreen', () => { fsWasPlaying = !video.paused; });
+  video.addEventListener('webkitendfullscreen', () => { if (fsWasPlaying && !video.ended) video.play().catch(() => {}); });
+  const toggle = () => { if (video.paused) tryPlay(); else video.pause(); };
+  /* --- YouTube-style controls: visible while paused; after a tap while playing, for 2.5s --- */
+  const ppIcon = $('vpPPIcon'), btnPP = $('vpPP'), prog = $('vpProg');
+  let ctrlTimer = 0;
+  const setPP = playing => { ppIcon.setAttribute('d', playing ? ICON_PAUSE : ICON_PLAY); btnPP.setAttribute('aria-label', playing ? 'Pause' : 'Play'); };
+  const showCtrls = () => {
+    vp.classList.add('is-ctrls'); clearTimeout(ctrlTimer);
+    if (!video.paused) ctrlTimer = setTimeout(() => vp.classList.remove('is-ctrls'), 2500);
+  };
+  const hideCtrls = () => { clearTimeout(ctrlTimer); vp.classList.remove('is-ctrls'); };
+  const toggleCtrls = () => vp.classList.contains('is-ctrls') && !video.paused ? hideCtrls() : showCtrls();
+  btnPP.addEventListener('click', () => { toggle(); showCtrls(); });
+  const skip = d => { if (!video.duration) return; video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + d)); vp.classList.remove('is-ended'); showCtrls(); };
+  $('vpBack').addEventListener('click', () => skip(-10));
+  $('vpFwd').addEventListener('click', () => skip(10));
+  // Drag-to-seek on the red progress bar — same press-and-hold behaviour as the MUSIC tab's scrubber.
+  const progBar = $('vpProgBar');
+  const seekVideoAt = cx => {
+    const r = progBar.getBoundingClientRect();
+    const p = Math.min(1, Math.max(0, (cx - r.left) / r.width));
+    prog.style.width = (p * 100) + '%';
+    if (video.duration) video.currentTime = p * video.duration;
+    return p;
+  };
+  progBar.addEventListener('pointerdown', e => { vSeeking = true; progBar.classList.add('is-seeking'); progBar.setPointerCapture?.(e.pointerId); seekVideoAt(e.clientX); vp.classList.remove('is-ended'); showCtrls(); e.stopPropagation(); e.preventDefault(); });
+  progBar.addEventListener('pointermove', e => { if (vSeeking) seekVideoAt(e.clientX); });
+  const vSeekEnd = e => { if (!vSeeking) return; vSeeking = false; progBar.classList.remove('is-seeking'); seekVideoAt(e.clientX); };
+  progBar.addEventListener('pointerup', vSeekEnd); progBar.addEventListener('pointercancel', vSeekEnd);
+  let vSeeking = false;
+  let lastVSaveT = 0;
+  video.addEventListener('timeupdate', () => {
+    if (video.duration && !vSeeking) prog.style.width = (video.currentTime / video.duration * 100) + '%';
+    if (!video.paused) { const now = Date.now(); if (now - lastVSaveT > 3000) { lastVSaveT = now; saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: false }); } }
+  });
+  video.addEventListener('play', () => { setPlayIcon(true); setPP(true); vp.classList.remove('is-ended'); showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: false }); });
+  video.addEventListener('pause', () => { setPlayIcon(false); setPP(false); if (!video.ended) showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: true }); });
+  // end of the song: black card with Replay / Next — nothing auto-plays
+  video.addEventListener('ended', () => { hideCtrls(); vp.classList.add('is-ended'); if (docked) undock(); clearNow(); });
+  $('vpReplay').addEventListener('click', () => { video.currentTime = 0; tryPlay(); });
+  $('vpNextEnd').addEventListener('click', () => load(idx + 1, { autoplay: true }));
+  video.addEventListener('loadedmetadata', () => {
+    if (video.videoWidth && video.videoHeight) vp.style.setProperty('--ar', `${video.videoWidth} / ${video.videoHeight}`);   // never stretched or cropped
+    const portrait = video.videoHeight > video.videoWidth;
+    if ((vp.dataset.orient === 'portrait') !== portrait) vp.dataset.orient = portrait ? 'portrait' : 'landscape';
+    clampToViewport();
+  });
+  video.addEventListener('error', () => { status.textContent = 'This video could not be loaded.'; setPlayIcon(false); });
+  // big play button: handled as a "tap" on the drag surface (see endDrag) so a drag started on it still works
+  btnPlay.addEventListener('click', toggle);
+  // tap on the video surface toggles play (handled at pointerup so it does not fight the drag)
+  btnPrev.addEventListener('click', () => load(idx - 1, { autoplay: userStarted }));
+  btnNext.addEventListener('click', () => load(idx + 1, { autoplay: userStarted }));
+  btnMute.addEventListener('click', () => { video.muted = !video.muted; setMuteIcon(); });
+  btnFull.addEventListener('click', () => {
+    if (document.fullscreenElement) { document.exitFullscreen?.(); return; }
+    if (video.requestFullscreen) video.requestFullscreen().catch(() => {});
+    else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();   // iPhone Safari
+  });
+
+  /* ---------- open / close ---------- */
+  function open() { vp.hidden = false; tab.hidden = true; store.set(KEY_OPEN, true); if (docked) undock(); clampToViewport(); showCtrls(); }
+  function close() { video.pause(); vp.hidden = true; vp.classList.remove('is-ended', 'is-docked'); docked = false; setTab('reopen'); tab.hidden = false; store.set(KEY_OPEN, false); clearNow(); }
+  /* --- dock: dragged off the LEFT edge → keeps playing, only a small arrow tab stays --- */
+  let docked = false;
+  const setTab = mode => { tab.classList.toggle('is-dock', mode === 'dock'); tab.querySelector('.vp-tab__i').toggleAttribute('hidden', mode === 'dock'); tab.querySelector('.vp-tab__c').toggleAttribute('hidden', mode !== 'dock');   /* SVG has no .hidden property */ tab.setAttribute('aria-label', mode === 'dock' ? 'Show video' : 'Show music videos'); };
+  let dockSide = 'left';
+  function dock(side = 'left') {
+    docked = true; dockSide = side; vp.classList.add('is-docked', 'is-snapping');
+    const h = vp.offsetHeight; tab.style.setProperty('--ty', Math.round(y + h / 2) + 'px');
+    x = side === 'right' ? document.documentElement.clientWidth + 4 : -vp.offsetWidth - 4; apply();   // fully off-screen; media stays live so the music keeps going
+    setTab('dock'); tab.classList.toggle('is-right', side === 'right'); tab.hidden = false;
+    setTimeout(() => vp.classList.remove('is-snapping'), 480);
+  }
+  function undock(animate = true) {
+    docked = false; tab.hidden = true; vp.classList.remove('is-docked'); if (animate) vp.classList.add('is-snapping');
+    x = dockSide === 'right' ? document.documentElement.clientWidth - vp.offsetWidth - 12 : 12; clampToViewport(); showCtrls();
+    setTimeout(() => vp.classList.remove('is-snapping'), 480);
+  }
+  btnClose.addEventListener('click', close);
+  $('vpCloseOv').addEventListener('click', close);
+  $('vpFullOv').addEventListener('click', () => btnFull.click());
+  tab.addEventListener('click', () => { if (!docked) open(); });   // docked: handled by the drag/tap logic above
+
+  /* ---------- position: default, clamp, persist, drag ---------- */
+  let x = 0, y = 0;
+  const apply = () => { vp.style.setProperty('--vx', Math.round(x) + 'px'); vp.style.setProperty('--vy', Math.round(y) + 'px'); };
+  const bounds = () => {
+    const w = vp.offsetWidth, h = vp.offsetHeight, vw = document.documentElement.clientWidth, vh = innerHeight;
+    return { minX: 0, minY: 0, maxX: Math.max(0, vw - w), maxY: Math.max(0, vh - h) };   // stays fully inside the viewport, can reach the right edge
+  };
+  function defaultPos() {
+    const b = bounds(), mobile = matchMedia('(max-width: 640px)').matches;
+    const safeTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
+    return mobile ? { x: 12, y: Math.max(0, b.maxY - 12) }                            // bottom-left on phones (like the YouTube mini player)
+                  : { x: 16, y: Math.max(0, b.maxY - 16) };                            // bottom-left on desktop, away from the stylist button
+  }
+  function clampToViewport() {
+    if (vp.hidden || docked) return;
+    const b = bounds();
+    x = Math.min(b.maxX, Math.max(b.minX, x)); y = Math.min(b.maxY, Math.max(b.minY, y)); apply();
+  }
+  function restore() {
+    const saved = store.get(KEY_POS, null);
+    const p = saved && Number.isFinite(saved.x) && Number.isFinite(saved.y) ? saved : defaultPos();
+    x = p.x; y = p.y; clampToViewport();
+  }
+  function reset() { store.del(KEY_POS); const p = defaultPos(); x = p.x; y = p.y; clampToViewport(); status.textContent = 'Player position reset.'; }
+  btnReset.addEventListener('click', reset);
+
+  let drag = null;
+  const vw = () => document.documentElement.clientWidth;
+  function dragStart(e, surface, fromTab) {
+    if (e.target.closest('.vp__ov, .vp__head, .vp__foot, .vp__ctr, .vp__end, .vp__ax, .vp__abtn, .vp__scrub, .vp__prog')) return;   // buttons stay buttons
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (fromTab) {   // drag the docked player back in from its tab: it stays where it is (off-screen) and follows the finger 1:1 — no jump
+      docked = false; tab.hidden = true; vp.classList.remove('is-docked', 'is-snapping');
+      y = Math.min(bounds().maxY, Math.max(0, e.clientY - vp.offsetHeight / 2)); apply();
+    }
+    drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: x, oy: y, moved: false, tab: !!fromTab, surface };
+    vp.classList.add('is-dragging'); document.documentElement.classList.add('is-vp-drag');
+    if (typeof e.pointerId === 'number') surface.setPointerCapture?.(e.pointerId);   // real Pointer Events only — the touch-sentinel id below has no pointer capture
+    e.preventDefault();
+  }
+  function dragMove(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    const b = bounds();
+    if (Math.abs(e.clientX - drag.sx) > 6 || Math.abs(e.clientY - drag.sy) > 6) drag.moved = true;
+    if (!drag.moved) return;
+    x = Math.min(vw(), Math.max(-vp.offsetWidth, drag.ox + (e.clientX - drag.sx)));   // may go past either edge → dock there
+    y = Math.min(b.maxY, Math.max(b.minY, drag.oy + (e.clientY - drag.sy)));
+    apply();
+  }
+  const endDrag = e => {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    const wasTap = !drag.moved, fromTab = drag.tab, surface = drag.surface; drag = null; vp.classList.remove('is-dragging'); document.documentElement.classList.remove('is-vp-drag');
+    if (wasTap) { if (fromTab) { undock(true); } else if (e && e.type === 'pointerup' && surface === handle) toggleCtrls(); return; }
+    const w = vp.offsetWidth, W = vw();
+    // release: how much of the player is still on screen decides — less than 40% → glide out and dock; otherwise glide back fully inside
+    const visible = Math.min(x + w, W) - Math.max(x, 0);
+    if (x < 0 && visible < w * 0.4) { dock('left'); return; }
+    if (x + w > W && visible < w * 0.4) { dock('right'); return; }
+    const b = bounds();
+    if (x < 0 || x > b.maxX) { vp.classList.add('is-snapping'); x = Math.min(b.maxX, Math.max(0, x)); apply(); setTimeout(() => vp.classList.remove('is-snapping'), 480); }
+    store.set(KEY_POS, { x, y });                             // remembered across refreshes
+  };
+  const audioCard = $('vpAudio');
+  for (const el of [handle, audioCard]) {
+    el.addEventListener('pointerdown', e => dragStart(e, el, false));
+    el.addEventListener('pointermove', dragMove);
+    el.addEventListener('pointerup', endDrag); el.addEventListener('pointercancel', endDrag); el.addEventListener('lostpointercapture', endDrag);
+  }
+  // mouse only here — real touch is handled below with native Touch Events, because Safari's system
+  // "swipe from screen edge = go back" gesture only backs off when touchstart/touchmove are preventDefault()'d
+  // directly; the docked tab sits flush against the edge, so it's exactly where that system gesture fires,
+  // and cancelling a Pointer Event there does not reliably suppress it.
+  tab.addEventListener('pointerdown', e => { if (docked && e.pointerType === 'mouse') dragStart(e, tab, true); });
+  tab.addEventListener('pointermove', dragMove);
+  tab.addEventListener('pointerup', endDrag); tab.addEventListener('pointercancel', endDrag); tab.addEventListener('lostpointercapture', endDrag);
+  const TAB_TOUCH_ID = 'tab-touch';
+  tab.addEventListener('touchstart', e => {
+    if (!docked) return;
+    e.preventDefault();   // kill the system edge-swipe-back gesture before it can start
+    const t = e.touches[0];
+    dragStart({ pointerId: TAB_TOUCH_ID, pointerType: 'touch', clientX: t.clientX, clientY: t.clientY, target: e.target, preventDefault(){} }, tab, true);
+  }, { passive: false });
+  tab.addEventListener('touchmove', e => {
+    if (!drag || drag.id !== TAB_TOUCH_ID) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    dragMove({ pointerId: TAB_TOUCH_ID, clientX: t.clientX, clientY: t.clientY });
+  }, { passive: false });
+  const tabTouchEnd = e => {
+    if (!drag || drag.id !== TAB_TOUCH_ID) return;
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    endDrag({ pointerId: TAB_TOUCH_ID, clientX: t.clientX, clientY: t.clientY, type: 'touchend' });
+  };
+  tab.addEventListener('touchend', tabTouchEnd, { passive: false });
+  tab.addEventListener('touchcancel', tabTouchEnd, { passive: false });
+  addEventListener('resize', clampToViewport, { passive: true });
+  addEventListener('orientationchange', () => setTimeout(clampToViewport, 250), { passive: true });
+
+  /* ---------- boot ---------- */
+  if (list.length < 2) { btnPrev.hidden = true; btnNext.hidden = true; count.hidden = true; }
+  setMuteIcon();
+  if (list.length) load(0);                                   // first video waits for the user's tap (no autoplay)
+  // closed by default: the MUSIC VIDEO tab in GOOD VIBES ONLY opens it; re-open tab shows only after a close
+  vp.hidden = true; tab.hidden = true;
+  restore();
+  // pause the audio playlist when a video starts (one thing at a time)
+  video.addEventListener('play', () => document.getElementById('miniAudio')?.pause());
+  /* ---------- audio mode: the same floating card shows the music playing on the CD / vinyl / playlist ---------- */
+  const A = document.getElementById('miniAudio');
+  const aTitle = $('vpATitle'), aArtist = $('vpAArtist'), aCur = $('vpACur'), aRem = $('vpARem'), scrub = $('vpScrub'), scrubFill = $('vpScrubFill'), aPlayIcon = $('vpAPlayIcon'), aPlay = $('vpAPlay');
+  const fmtT = t => { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  let scrubbing = false;
+  const setMode = m => { vp.dataset.mode = m; clampToViewport(); };
+  const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const aMetaSet = (t, a) => { aTitle.innerHTML = a ? `<b>${esc(a)}</b> - ${esc(t)}` : esc(t || 'BYMARCCC'); aArtist.textContent = ''; };
+  const aMeta = () => { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || 'BYMARCCC', a = (document.getElementById('miniArtist')?.textContent || '').trim(); aMetaSet(t, a); };
+  const aUI = () => { const on = A && !A.paused && !A.ended; aPlayIcon.setAttribute('d', on ? ICON_PAUSE : ICON_PLAY); aPlay.setAttribute('aria-label', on ? 'Pause' : 'Play'); };
+  const aTime = () => { if (!A || !A.duration) return; const p = A.currentTime / A.duration; if (!scrubbing) scrubFill.style.width = (p * 100) + '%'; aCur.textContent = fmtT(A.currentTime); aRem.textContent = '-' + fmtT(A.duration - A.currentTime); };
+  if (A) {
+    const saveAudioState = paused => { const src = A.currentSrc || A.src; if (!src) return; const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle.textContent || '').replace(/^.*? - /, ''), ar = (document.getElementById('miniArtist')?.textContent || '').trim(); saveNow('audio', { src, title: t, artist: ar, time: A.currentTime || 0, paused }); };
+    let lastASaveT = 0;
+    A.addEventListener('play', () => { if (!video.paused) video.pause(); aMeta(); setMode('audio'); if (vp.hidden) { vp.hidden = false; tab.hidden = true; restore(); } aUI(); saveAudioState(false); });
+    A.addEventListener('pause', () => { aUI(); saveAudioState(true); }); A.addEventListener('ended', () => { aUI(); clearNow(); });
+    A.addEventListener('loadedmetadata', () => { aMeta(); aTime(); }); A.addEventListener('timeupdate', () => { aTime(); if (!A.paused) { const now = Date.now(); if (now - lastASaveT > 3000) { lastASaveT = now; saveAudioState(false); } } });
+    A.addEventListener('emptied', () => { if (vp.dataset.mode === 'audio') { vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; } });
+    aPlay.addEventListener('click', () => { A.paused ? A.play().catch(() => {}) : A.pause(); });
+    // ±10s seek within the current song, mirroring the video widget's vpBack/vpFwd — these
+    // buttons no longer jump to the previous/next track (still reachable from the track list).
+    const skipA = d => { if (!A.duration) return; A.currentTime = Math.max(0, Math.min(A.duration, A.currentTime + d)); aTime(); };
+    $('vpAPrev').addEventListener('click', () => skipA(-10));
+    $('vpANext').addEventListener('click', () => skipA(10));
+    $('vpAClose').addEventListener('click', () => { A.pause(); try { A.removeAttribute('src'); A.load(); } catch {} document.getElementById('miniClose')?.click(); clearNow(); vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; });
+    // Apple-Music-style scrubber: drag anywhere on the bar
+    const seekAt = cx => { const r = scrub.getBoundingClientRect(); const p = Math.min(1, Math.max(0, (cx - r.left) / r.width)); scrubFill.style.width = (p * 100) + '%'; if (A.duration) { aCur.textContent = fmtT(p * A.duration); aRem.textContent = '-' + fmtT(A.duration - p * A.duration); } return p; };
+    scrub.addEventListener('pointerdown', e => { scrubbing = true; scrub.classList.add('is-seeking'); scrub.setPointerCapture?.(e.pointerId); seekAt(e.clientX); e.stopPropagation(); e.preventDefault(); });
+    scrub.addEventListener('pointermove', e => { if (scrubbing) seekAt(e.clientX); });
+    const scrubEnd = e => { if (!scrubbing) return; scrubbing = false; scrub.classList.remove('is-seeking'); const p = seekAt(e.clientX); if (A.duration) A.currentTime = p * A.duration; };
+    scrub.addEventListener('pointerup', scrubEnd); scrub.addEventListener('pointercancel', scrubEnd);
+  }
+  video.addEventListener('play', () => { if (vp.dataset.mode !== 'video') setMode('video'); });
+
+  /* ---------- lock screen / CarPlay for the music video's audio ---------- */
+  if ('mediaSession' in navigator) {
+    const ART = [{ src: new URL('assets/img/lockscreen-alien-512.jpg', location.href).href, sizes: '512x512', type: 'image/jpeg' }, { src: new URL('assets/img/lockscreen-alien.jpg', location.href).href, sizes: '1024x1024', type: 'image/jpeg' }];
+    const vMeta = () => { try { navigator.mediaSession.metadata = new MediaMetadata({ title: title.textContent || 'BYMARCCC', artist: 'BYMARCCC', album: 'BYMARCCC', artwork: ART }); } catch {} };
+    const vHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
+      set('play', () => video.play().catch(() => {})); set('pause', () => video.pause());
+      set('seekbackward', d => { video.currentTime = Math.max(0, video.currentTime - (d.seekOffset || 10)); });
+      set('seekforward', d => { video.currentTime = Math.min(video.duration || 0, video.currentTime + (d.seekOffset || 10)); });
+      set('seekto', d => { if (typeof d.seekTime === 'number') video.currentTime = d.seekTime; });
+      set('nexttrack', () => load(idx + 1, { autoplay: true })); set('previoustrack', () => load(idx - 1, { autoplay: true })); };
+    video.addEventListener('play', () => { vMeta(); vHandlers(); navigator.mediaSession.playbackState = 'playing'; });
+    video.addEventListener('pause', () => { if (vp.dataset.mode === 'video') navigator.mediaSession.playbackState = 'paused'; });
+    // ...and the same for plain music, so lock-screen / CarPlay controls and background
+    // playback work for audio too, not just music videos.
+    const aMediaMeta = () => { try { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle?.textContent || '').replace(/^.*? - /, '') || 'BYMARCCC'; navigator.mediaSession.metadata = new MediaMetadata({ title: t, artist: 'BYMARCCC', album: 'BYMARCCC', artwork: ART }); } catch {} };
+    const aHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
+      set('play', () => A.play().catch(() => {})); set('pause', () => A.pause());
+      set('seekbackward', d => { A.currentTime = Math.max(0, A.currentTime - (d.seekOffset || 10)); });
+      set('seekforward', d => { A.currentTime = Math.min(A.duration || 0, A.currentTime + (d.seekOffset || 10)); });
+      set('seekto', d => { if (typeof d.seekTime === 'number') A.currentTime = d.seekTime; });
+      set('nexttrack', () => $('vpANext')?.click()); set('previoustrack', () => $('vpAPrev')?.click()); };
+    if (A) {
+      A.addEventListener('play', () => { aMediaMeta(); aHandlers(); navigator.mediaSession.playbackState = 'playing'; });
+      A.addEventListener('pause', () => { if (vp.dataset.mode === 'audio') navigator.mediaSession.playbackState = 'paused'; });
+    }
+  }
+
+  let handedOff = null;
+  document.addEventListener('visibilitychange', () => {
+    const cur = list[idx] && (window.BYMARCCC_PLAYLIST || []).find(t => t.video === list[idx].src);
+    if (document.hidden) {
+      if (!video.paused && !video.ended && cur && cur.src && window.BYMARCCC?.audioTrack) { const at = video.currentTime; video.pause(); if (window.BYMARCCC.audioTrack.play(cur, at)) handedOff = cur; }
+    } else if (handedOff && A) {
+      const at = A.currentTime, wasPlaying = !A.paused; handedOff = null; A.pause();
+      setMode('video'); video.currentTime = at; if (wasPlaying) video.play().catch(() => {});
+    }
+  });
+
+  window.BYMARCCC_VP = {
+    play(t) { const i = list.findIndex(v => v.src === t.video); if (i < 0) return; setMode('video'); open(); restore(); if (idx !== i || !video.getAttribute('src')) load(i); tryPlay(); },
+    // resume a video left playing/paused on another page: loads it at the saved time and,
+    // when it was actively playing, tries to continue (may need one tap under autoplay rules).
+    resume(t, time, autoplay) {
+      const i = list.findIndex(v => v.src === t.video);
+      if (i < 0) return false;
+      setMode('video'); open(); restore(); load(i);
+      const seek = () => { if (time) video.currentTime = time; if (autoplay) tryPlay(); };
+      if (video.readyState >= 1) seek(); else video.addEventListener('loadedmetadata', seek, { once: true });
+      return true;
+    },
+    isPlaying() { return !video.paused && !video.ended; },
+    select(t) { const i = list.findIndex(v => v.src === t.video); if (i < 0) return; setMode('video'); open(); restore(); if (idx !== i || !video.getAttribute('src')) load(i); },
+    current() { const v = list[idx]; return v && (window.BYMARCCC_PLAYLIST || []).find(t => t.video === v.src) || null; },
+    isOpen() { return !vp.hidden; },
+    pause() { if (!video.paused) video.pause(); },
+    close,
+  };
+
+  /* ---------- cross-page resume: reopen the widget already loaded, where it left off ----------
+     Real gapless playback across a full page navigation isn't possible on the web (the previous
+     page's audio/video context is destroyed the instant navigation happens) — this restores
+     position + track on the new page and tries to continue; mobile Safari's autoplay rules can
+     still require one tap to actually resume sound, which is expected, not a bug. */
+  (function restoreNow() {
+    const st = loadNow();
+    if (!st) return;
+    if (st.mode === 'video') {
+      const t = (window.BYMARCCC_PLAYLIST || []).find(tr => tr.video === st.src);
+      if (t) window.BYMARCCC_VP.resume(t, st.time || 0, !st.paused);
+      return;
+    }
+    if (st.mode === 'audio' && A) {
+      const item = (window.BYMARCCC_PLAYLIST || []).find(tr => tr.src === st.src);
+      // open the widget right away (matches the video branch above) — only the seek/resume
+      // itself needs to wait for the audio's metadata, so the UI doesn't sit blank meanwhile.
+      aMetaSet(st.title || (item && item.title) || 'BYMARCCC', st.artist || '');
+      setMode('audio');
+      vp.hidden = false; tab.hidden = true; restore();
+      aUI();
+      A.src = st.src;
+      const seek = () => {
+        if (st.time) A.currentTime = st.time;
+        if (!st.paused) A.play().catch(() => { /* autoplay blocked: stays paused, ready — one tap continues */ });
+      };
+      if (A.readyState >= 1) seek(); else A.addEventListener('loadedmetadata', seek, { once: true });
+    }
+  })();
+})();
+
+</script>
 </body>
 </html>

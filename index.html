@@ -3720,7 +3720,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
      ================================================================ */
   // The videos are the GOOD VIBES ONLY playlist items that have a Cloudinary `video` URL (see SEED in the music script)
   const VIDEOS = (window.BYMARCCC_PLAYLIST || []).filter(t => t.video).map(t => ({ src: t.video, poster: t.poster || '', title: t.title }));
-  const KEY_POS = 'bymarccc:vp:pos', KEY_OPEN = 'bymarccc:vp:open';
+  const KEY_POS = 'bymarccc:vp:pos', KEY_OPEN = 'bymarccc:vp:open', KEY_NOW = 'bym.play.now';
   const $ = id => document.getElementById(id);
   const vp = $('vp'), handle = $('vpHandle'), video = $('vpVideo'), big = $('vpBig'), tab = $('vpTab');
   const btnPlay = $('vpPlay'), icon = $('vpPlayIcon'), btnPrev = $('vpPrev'), btnNext = $('vpNext'),
@@ -3732,6 +3732,13 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
     del(k) { try { localStorage.removeItem(k); } catch {} },
   };
+  // Cross-page "now playing" persistence — a single shared record so the widget can
+  // reappear already loaded on the next page. Cleared only by pause->never (pause keeps
+  // it resumable) and by an explicit close (X), per spec: playback should only ever stop
+  // on pause or close, never on plain navigation.
+  function saveNow(mode, data) { store.set(KEY_NOW, Object.assign({ mode, ts: Date.now() }, data)); }
+  function clearNow() { store.del(KEY_NOW); }
+  function loadNow() { const st = store.get(KEY_NOW, null); if (!st || !st.src) return null; if (Date.now() - (st.ts || 0) > 1000 * 60 * 60 * 12) return null; return st; }
   const posterOf = v => v.poster || (/\.mp4(\?.*)?$/i.test(v.src) ? v.src.replace(/\.mp4(\?.*)?$/i, '.jpg') : '');
   const configured = VIDEOS.filter(v => v.src && !/^VIDEO_URL_/.test(v.src));
   const list = configured.length ? configured : VIDEOS;   // placeholders still render the UI so you can see the layout
@@ -3804,11 +3811,15 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const vSeekEnd = e => { if (!vSeeking) return; vSeeking = false; progBar.classList.remove('is-seeking'); seekVideoAt(e.clientX); };
   progBar.addEventListener('pointerup', vSeekEnd); progBar.addEventListener('pointercancel', vSeekEnd);
   let vSeeking = false;
-  video.addEventListener('timeupdate', () => { if (video.duration && !vSeeking) prog.style.width = (video.currentTime / video.duration * 100) + '%'; });
-  video.addEventListener('play', () => { setPlayIcon(true); setPP(true); vp.classList.remove('is-ended'); showCtrls(); });
-  video.addEventListener('pause', () => { setPlayIcon(false); setPP(false); if (!video.ended) showCtrls(); });
+  let lastVSaveT = 0;
+  video.addEventListener('timeupdate', () => {
+    if (video.duration && !vSeeking) prog.style.width = (video.currentTime / video.duration * 100) + '%';
+    if (!video.paused) { const now = Date.now(); if (now - lastVSaveT > 3000) { lastVSaveT = now; saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: false }); } }
+  });
+  video.addEventListener('play', () => { setPlayIcon(true); setPP(true); vp.classList.remove('is-ended'); showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: false }); });
+  video.addEventListener('pause', () => { setPlayIcon(false); setPP(false); if (!video.ended) showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: true }); });
   // end of the song: black card with Replay / Next — nothing auto-plays
-  video.addEventListener('ended', () => { hideCtrls(); vp.classList.add('is-ended'); if (docked) undock(); });
+  video.addEventListener('ended', () => { hideCtrls(); vp.classList.add('is-ended'); if (docked) undock(); clearNow(); });
   $('vpReplay').addEventListener('click', () => { video.currentTime = 0; tryPlay(); });
   $('vpNextEnd').addEventListener('click', () => load(idx + 1, { autoplay: true }));
   video.addEventListener('loadedmetadata', () => {
@@ -3832,7 +3843,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   /* ---------- open / close ---------- */
   function open() { vp.hidden = false; tab.hidden = true; store.set(KEY_OPEN, true); if (docked) undock(); clampToViewport(); showCtrls(); }
-  function close() { video.pause(); vp.hidden = true; vp.classList.remove('is-ended', 'is-docked'); docked = false; setTab('reopen'); tab.hidden = false; store.set(KEY_OPEN, false); }
+  function close() { video.pause(); vp.hidden = true; vp.classList.remove('is-ended', 'is-docked'); docked = false; setTab('reopen'); tab.hidden = false; store.set(KEY_OPEN, false); clearNow(); }
   /* --- dock: dragged off the LEFT edge → keeps playing, only a small arrow tab stays --- */
   let docked = false;
   const setTab = mode => { tab.classList.toggle('is-dock', mode === 'dock'); tab.querySelector('.vp-tab__i').toggleAttribute('hidden', mode === 'dock'); tab.querySelector('.vp-tab__c').toggleAttribute('hidden', mode !== 'dock');   /* SVG has no .hidden property */ tab.setAttribute('aria-label', mode === 'dock' ? 'Show video' : 'Show music videos'); };
@@ -3969,13 +3980,16 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   let scrubbing = false;
   const setMode = m => { vp.dataset.mode = m; clampToViewport(); };
   const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-  const aMeta = () => { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || 'BYMARCCC', a = (document.getElementById('miniArtist')?.textContent || '').trim(); aTitle.innerHTML = a ? `<b>${esc(a)}</b> - ${esc(t)}` : esc(t); aArtist.textContent = ''; };
+  const aMetaSet = (t, a) => { aTitle.innerHTML = a ? `<b>${esc(a)}</b> - ${esc(t)}` : esc(t || 'BYMARCCC'); aArtist.textContent = ''; };
+  const aMeta = () => { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || 'BYMARCCC', a = (document.getElementById('miniArtist')?.textContent || '').trim(); aMetaSet(t, a); };
   const aUI = () => { const on = A && !A.paused && !A.ended; aPlayIcon.setAttribute('d', on ? ICON_PAUSE : ICON_PLAY); aPlay.setAttribute('aria-label', on ? 'Pause' : 'Play'); };
   const aTime = () => { if (!A || !A.duration) return; const p = A.currentTime / A.duration; if (!scrubbing) scrubFill.style.width = (p * 100) + '%'; aCur.textContent = fmtT(A.currentTime); aRem.textContent = '-' + fmtT(A.duration - A.currentTime); };
   if (A) {
-    A.addEventListener('play', () => { if (!video.paused) video.pause(); aMeta(); setMode('audio'); if (vp.hidden) { vp.hidden = false; tab.hidden = true; restore(); } aUI(); });
-    A.addEventListener('pause', aUI); A.addEventListener('ended', aUI);
-    A.addEventListener('loadedmetadata', () => { aMeta(); aTime(); }); A.addEventListener('timeupdate', aTime);
+    const saveAudioState = paused => { const src = A.currentSrc || A.src; if (!src) return; const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle.textContent || '').replace(/^.*? - /, ''), ar = (document.getElementById('miniArtist')?.textContent || '').trim(); saveNow('audio', { src, title: t, artist: ar, time: A.currentTime || 0, paused }); };
+    let lastASaveT = 0;
+    A.addEventListener('play', () => { if (!video.paused) video.pause(); aMeta(); setMode('audio'); if (vp.hidden) { vp.hidden = false; tab.hidden = true; restore(); } aUI(); saveAudioState(false); });
+    A.addEventListener('pause', () => { aUI(); saveAudioState(true); }); A.addEventListener('ended', () => { aUI(); clearNow(); });
+    A.addEventListener('loadedmetadata', () => { aMeta(); aTime(); }); A.addEventListener('timeupdate', () => { aTime(); if (!A.paused) { const now = Date.now(); if (now - lastASaveT > 3000) { lastASaveT = now; saveAudioState(false); } } });
     A.addEventListener('emptied', () => { if (vp.dataset.mode === 'audio') { vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; } });
     aPlay.addEventListener('click', () => { A.paused ? A.play().catch(() => {}) : A.pause(); });
     // ±10s seek within the current song, mirroring the video widget's vpBack/vpFwd — these
@@ -3983,7 +3997,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const skipA = d => { if (!A.duration) return; A.currentTime = Math.max(0, Math.min(A.duration, A.currentTime + d)); aTime(); };
     $('vpAPrev').addEventListener('click', () => skipA(-10));
     $('vpANext').addEventListener('click', () => skipA(10));
-    $('vpAClose').addEventListener('click', () => { document.getElementById('miniClose')?.click(); vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; });
+    $('vpAClose').addEventListener('click', () => { A.pause(); try { A.removeAttribute('src'); A.load(); } catch {} document.getElementById('miniClose')?.click(); clearNow(); vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; });
     // Apple-Music-style scrubber: drag anywhere on the bar
     const seekAt = cx => { const r = scrub.getBoundingClientRect(); const p = Math.min(1, Math.max(0, (cx - r.left) / r.width)); scrubFill.style.width = (p * 100) + '%'; if (A.duration) { aCur.textContent = fmtT(p * A.duration); aRem.textContent = '-' + fmtT(A.duration - p * A.duration); } return p; };
     scrub.addEventListener('pointerdown', e => { scrubbing = true; scrub.classList.add('is-seeking'); scrub.setPointerCapture?.(e.pointerId); seekAt(e.clientX); e.stopPropagation(); e.preventDefault(); });
@@ -4005,6 +4019,19 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       set('nexttrack', () => load(idx + 1, { autoplay: true })); set('previoustrack', () => load(idx - 1, { autoplay: true })); };
     video.addEventListener('play', () => { vMeta(); vHandlers(); navigator.mediaSession.playbackState = 'playing'; });
     video.addEventListener('pause', () => { if (vp.dataset.mode === 'video') navigator.mediaSession.playbackState = 'paused'; });
+    // ...and the same for plain music, so lock-screen / CarPlay controls and background
+    // playback work for audio too, not just music videos.
+    const aMediaMeta = () => { try { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle?.textContent || '').replace(/^.*? - /, '') || 'BYMARCCC'; navigator.mediaSession.metadata = new MediaMetadata({ title: t, artist: 'BYMARCCC', album: 'BYMARCCC', artwork: ART }); } catch {} };
+    const aHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
+      set('play', () => A.play().catch(() => {})); set('pause', () => A.pause());
+      set('seekbackward', d => { A.currentTime = Math.max(0, A.currentTime - (d.seekOffset || 10)); });
+      set('seekforward', d => { A.currentTime = Math.min(A.duration || 0, A.currentTime + (d.seekOffset || 10)); });
+      set('seekto', d => { if (typeof d.seekTime === 'number') A.currentTime = d.seekTime; });
+      set('nexttrack', () => $('vpANext')?.click()); set('previoustrack', () => $('vpAPrev')?.click()); };
+    if (A) {
+      A.addEventListener('play', () => { aMediaMeta(); aHandlers(); navigator.mediaSession.playbackState = 'playing'; });
+      A.addEventListener('pause', () => { if (vp.dataset.mode === 'audio') navigator.mediaSession.playbackState = 'paused'; });
+    }
   }
 
   let handedOff = null;
@@ -4020,6 +4047,16 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   window.BYMARCCC_VP = {
     play(t) { const i = list.findIndex(v => v.src === t.video); if (i < 0) return; setMode('video'); open(); restore(); if (idx !== i || !video.getAttribute('src')) load(i); tryPlay(); },
+    // resume a video left playing/paused on another page: loads it at the saved time and,
+    // when it was actively playing, tries to continue (may need one tap under autoplay rules).
+    resume(t, time, autoplay) {
+      const i = list.findIndex(v => v.src === t.video);
+      if (i < 0) return false;
+      setMode('video'); open(); restore(); load(i);
+      const seek = () => { if (time) video.currentTime = time; if (autoplay) tryPlay(); };
+      if (video.readyState >= 1) seek(); else video.addEventListener('loadedmetadata', seek, { once: true });
+      return true;
+    },
     isPlaying() { return !video.paused && !video.ended; },
     select(t) { const i = list.findIndex(v => v.src === t.video); if (i < 0) return; setMode('video'); open(); restore(); if (idx !== i || !video.getAttribute('src')) load(i); },
     current() { const v = list[idx]; return v && (window.BYMARCCC_PLAYLIST || []).find(t => t.video === v.src) || null; },
@@ -4027,6 +4064,36 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     pause() { if (!video.paused) video.pause(); },
     close,
   };
+
+  /* ---------- cross-page resume: reopen the widget already loaded, where it left off ----------
+     Real gapless playback across a full page navigation isn't possible on the web (the previous
+     page's audio/video context is destroyed the instant navigation happens) — this restores
+     position + track on the new page and tries to continue; mobile Safari's autoplay rules can
+     still require one tap to actually resume sound, which is expected, not a bug. */
+  (function restoreNow() {
+    const st = loadNow();
+    if (!st) return;
+    if (st.mode === 'video') {
+      const t = (window.BYMARCCC_PLAYLIST || []).find(tr => tr.video === st.src);
+      if (t) window.BYMARCCC_VP.resume(t, st.time || 0, !st.paused);
+      return;
+    }
+    if (st.mode === 'audio' && A) {
+      const item = (window.BYMARCCC_PLAYLIST || []).find(tr => tr.src === st.src);
+      // open the widget right away (matches the video branch above) — only the seek/resume
+      // itself needs to wait for the audio's metadata, so the UI doesn't sit blank meanwhile.
+      aMetaSet(st.title || (item && item.title) || 'BYMARCCC', st.artist || '');
+      setMode('audio');
+      vp.hidden = false; tab.hidden = true; restore();
+      aUI();
+      A.src = st.src;
+      const seek = () => {
+        if (st.time) A.currentTime = st.time;
+        if (!st.paused) A.play().catch(() => { /* autoplay blocked: stays paused, ready — one tap continues */ });
+      };
+      if (A.readyState >= 1) seek(); else A.addEventListener('loadedmetadata', seek, { once: true });
+    }
+  })();
 })();
 </script>
 
