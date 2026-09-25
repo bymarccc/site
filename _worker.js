@@ -268,9 +268,42 @@ function recommendSize({ chart, heightCm, weightKg, waistCm, hipsCm, abdomen = "
   return { ok: true, size: scored[0].s.size, alternative: scored[1]?.s.size || null, confidence, basis, estWaistCm: Math.round(waist), estHipsCm: Math.round(hip) };
 }
 __name(recommendSize, "recommendSize");
+var KNOWN_COLLECTIONS = ["sales", "tops", "jeans", "jackets", "hoodie", "bag", "accessories", "bottoms"];
+function collectionOf(p) {
+  const t = p.tags || [];
+  if (t.includes("sales") || t.includes("sale")) return "sales";
+  if (t.includes("tops") || t.includes("top")) return "tops";
+  if (t.includes("jeans")) return "jeans";
+  if (t.includes("jackets") || t.includes("jacket")) return "jackets";
+  if (t.includes("hoodie")) return "hoodie";
+  if (t.includes("bag")) return "bag";
+  if (t.includes("accessories") || t.includes("accessory")) return "accessories";
+  if (t.includes("bottoms")) return "bottoms";
+  return p.productType || "other";
+}
+__name(collectionOf, "collectionOf");
+var CATALOG_SYNONYMS = { blugi: "jeans", blug: "jeans", jean: "jeans", rochie: "dress", tricou: "t-shirt", tricouri: "t-shirt", tshirt: "t-shirt", tee: "t-shirt", tees: "t-shirt", hanorac: "hoodie", hanorace: "hoodie", sapca: "cap", șapcă: "cap", geaca: "jacket", geacă: "jacket", jacheta: "jacket", jachetă: "jacket", pantaloni: "bottoms", geanta: "bag", geantă: "bag", top: "top", topuri: "top", bluza: "top", bluză: "top", barbati: "men", bărbați: "men", barbat: "men", mens: "men", man: "men", femei: "women", femeie: "women", womens: "women", woman: "women", reduceri: "sale", reducere: "sale", oferte: "sale" };
+var STOPWORDS = ["men", "women", "for", "de", "pentru", "a", "an", "the", "un", "o", "niste", "niște", "vreau", "want", "show", "me", "arata", "arată", "cauta", "caută", "toate", "toti", "toți", "produsele"];
+function specSummarize(p) {
+  return {
+    product_id: p.id,
+    product_name: p.title,
+    category: p.productType || null,
+    gender: (p.gender || []).length > 1 ? "unisex" : (p.gender || ["men"])[0],
+    collection: collectionOf(p),
+    price: typeof p.price === "number" ? p.price : null,
+    currency: p.currency || "RON",
+    stock_status: p.variants.some((v) => v.available) ? "in_stock" : "out_of_stock",
+    sizes: [...new Set(p.variants.filter((v) => v.available && v.size).map((v) => v.size))],
+    image_urls: p.images || [],
+    product_url: p.url
+  };
+}
+__name(specSummarize, "specSummarize");
 var TOOL_DEFS = [
-  { type: "function", name: "searchProducts", description: "Search the real BYMARCCC catalogue by text, category, size or max price. Returns products with real prices, sizes and stock. Pass gender (men|women) when the customer said which collection.", parameters: { type: "object", properties: { gender: { type: "string", enum: ["men", "women"] }, query: { type: "string" }, maxPrice: { type: "number" }, size: { type: "string" }, limit: { type: "number" } } } },
-  { type: "function", name: "getProductDetails", description: "Full details for one product (by id or handle).", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
+  { type: "function", name: "search_products", description: "Search the real BYMARCCC catalogue — the ONLY source of truth for products, prices, stock and sizes. Never invent or recall products from anywhere else. Pass gender/collection/category to narrow, in_stock to only return available items, and set a high limit (e.g. 50) when the customer asks for ALL products in a collection.", parameters: { type: "object", properties: { query: { type: "string", description: "Free text search terms (Romanian or English)." }, gender: { type: "string", enum: ["women", "men", "unisex"] }, collection: { type: "string", description: "e.g. tops, jeans, jackets, hoodie, bag, accessories, bottoms, sales" }, category: { type: "string", description: "Product type, e.g. jeans, top, jacket, accessory, bottoms" }, in_stock: { type: "boolean" }, max_price: { type: "number" }, limit: { type: "number" } } } },
+  { type: "function", name: "get_product", description: "Full details for exactly one BYMARCCC product by its product_id.", parameters: { type: "object", properties: { product_id: { type: "string" } }, required: ["product_id"] } },
+  { type: "function", name: "generate_try_on", description: "Generate a virtual try-on preview of one BYMARCCC product on the customer's own uploaded photo. Ask the customer to choose a single product first if it isn't already clear.", parameters: { type: "object", properties: { product_id: { type: "string" }, user_image_file_id: { type: "string", description: "Reference to the customer's uploaded photo already held by the browser session." }, language: { type: "string", enum: ["ro", "en"] } }, required: ["product_id"] } },
   { type: "function", name: "getProductImages", description: "Image URLs for a product.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { type: "function", name: "getAvailableVariants", description: "Variants with availability for a product.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { type: "function", name: "getInventoryStatus", description: "Whether a variant is in stock.", parameters: { type: "object", properties: { variantId: { type: "string" } }, required: ["variantId"] } },
@@ -285,19 +318,24 @@ var TOOL_DEFS = [
   { type: "function", name: "startTryOn", description: "Start the photo try-on flow in the browser for up to 3 product ids.", parameters: { type: "object", properties: { productIds: { type: "array", items: { type: "string" } } }, required: ["productIds"] } },
   { type: "function", name: "askGenderChoice", description: "Ask the customer whether to shop the Women or Men collection, when it is not already clear from the conversation or a photo. Call this BEFORE recommending products (styling requests, photo analysis) whenever the collection is ambiguous \u2014 never guess gender from appearance, name or writing style.", parameters: { type: "object", properties: {} } }
 ];
-var CLIENT_TOOLS = /* @__PURE__ */ new Set(["addVariantToCart", "openProductPage", "openSizeGuide", "startTryOn", "askGenderChoice"]);
+var CLIENT_TOOLS = /* @__PURE__ */ new Set(["addVariantToCart", "openProductPage", "openSizeGuide", "startTryOn", "askGenderChoice", "generate_try_on"]);
 async function runTool(name, args = {}) {
   const items = await loadCatalog();
   const find = /* @__PURE__ */ __name((id) => items.find((p) => p.id === String(id) || p.handle === String(id) || p.title.toLowerCase() === String(id).toLowerCase()), "find");
   switch (name) {
-    case "searchProducts": {
+    case "search_products": {
       const raw = (args.query || "").toLowerCase();
-      const syn = { blugi: "jeans", blug: "jeans", jean: "jeans", rochie: "dress", tricou: "t-shirt", tricouri: "t-shirt", tshirt: "t-shirt", tee: "t-shirt", tees: "t-shirt", hanorac: "hoodie", hanorace: "hoodie", sapca: "cap", \u0219apc\u0103: "cap", geaca: "jacket", geac\u0103: "jacket", jacheta: "jacket", jachet\u0103: "jacket", pantaloni: "bottoms", geanta: "bag", geant\u0103: "bag", top: "top", topuri: "top", bluza: "top", bluz\u0103: "top", barbati: "men", b\u0103rba\u021bi: "men", barbat: "men", mens: "men", man: "men", femei: "women", femeie: "women", womens: "women", woman: "women", reduceri: "sale", reducere: "sale", oferte: "sale" };
-      const terms = raw.split(/[^\p{L}\p{N}-]+/u).filter(Boolean).map((t) => syn[t] || t);
+      const terms = raw.split(/[^\p{L}\p{N}-]+/u).filter(Boolean).map((t) => CATALOG_SYNONYMS[t] || t);
       let gender = (args.gender || "").toLowerCase();
       if (!gender) gender = terms.includes("men") ? "men" : terms.includes("women") ? "women" : "";
-      const words = terms.filter((t) => !["men", "women", "for", "de", "pentru", "a", "an", "the", "un", "o", "niste", "ni\u0219te", "vreau", "want", "show", "me", "arata", "arat\u0103", "cauta", "caut\u0103"].includes(t));
-      let res = items.filter((p) => !gender || (p.gender || ["men"]).includes(gender));
+      const words = terms.filter((t) => !STOPWORDS.includes(t));
+      let res = items.slice();
+      if (gender) res = res.filter((p) => gender === "unisex" ? (p.gender || []).length > 1 : (p.gender || ["men"]).includes(gender));
+      const collectionArg = (args.collection || args.category || "").toLowerCase();
+      if (collectionArg) {
+        const norm = CATALOG_SYNONYMS[collectionArg] || collectionArg;
+        res = res.filter((p) => collectionOf(p) === norm || (p.tags || []).includes(norm) || (p.productType || "").toLowerCase() === norm);
+      }
       if (words.length) {
         res = res.map((p) => {
           const title = p.title.toLowerCase(), tags = p.tags.join(" ").toLowerCase(), type = (p.productType || "").toLowerCase(), desc = (p.description || "").toLowerCase();
@@ -306,13 +344,16 @@ async function runTool(name, args = {}) {
           return [score, p];
         }).filter(([s]) => s > 0).sort((a, b) => b[0] - a[0]).map(([, p]) => p);
       }
-      if (args.maxPrice) res = res.filter((p) => typeof p.price === "number" && p.price <= args.maxPrice);
-      if (args.size) res = res.filter((p) => p.variants.some((v) => v.available && v.size && v.size.toLowerCase().includes(String(args.size).toLowerCase())));
-      return { products: res.slice(0, args.limit || 8).map(summarize), total: res.length, gender: gender || "any" };
+      if (typeof args.max_price === "number") res = res.filter((p) => typeof p.price === "number" && p.price <= args.max_price);
+      if (args.in_stock === true) res = res.filter((p) => p.variants.some((v) => v.available));
+      const total = res.length;
+      const limited = res.slice(0, Math.min(Math.max(Number(args.limit) || 10, 1), 50));
+      return { modelResult: { products: limited.map(specSummarize), total, gender: gender || "any" }, uiProducts: limited.map(summarize) };
     }
-    case "getProductDetails": {
-      const p = find(args.id);
-      return p ? { ...summarize(p), description: p.description, options: p.options, sizeChart: p.sizeChart } : { error: "NOT_FOUND" };
+    case "get_product": {
+      const p = find(args.product_id);
+      if (!p) return { modelResult: { error: "NOT_FOUND" } };
+      return { modelResult: { ...specSummarize(p), description: p.description }, uiProducts: [summarize(p)] };
     }
     case "getProductImages": {
       const p = find(args.id);
@@ -370,11 +411,30 @@ async function runTool(name, args = {}) {
   }
 }
 __name(runTool, "runTool");
-var SYSTEM_PROMPT = `You are the BYMARCCC AI stylist for bymarccc.com, a Romanian fashion brand. ALWAYS reply in the same language the customer writes in - Romanian, English, Arabic, any language - short and warm, luxury-fashion tone. When the customer asks for a garment type (t-shirt, jeans, jacket...), only show that type; never substitute another type. The men's collection has t-shirts, hoodies, jeans, a denim jacket and bags; the women's collection has baby tops, tees, hoodies, long sleeves, jeans, shorts, skirts and caps. A product with price null is not priced yet - say the price is on request.
-RULES: Never invent products, prices, stock, sizes, reviews or bestsellers \u2014 always use tools. If a tool says data is unavailable, say so plainly. For sizes: height/weight are only guidance; ask for waist/hips when the product has a size table; always add "Size recommendations are estimates. Fit may vary by cut and preference." and offer openSizeGuide. Never add to cart without the customer confirming the exact size/variant. Never comment negatively on bodies; never infer sensitive traits (health, ethnicity, gender identity, age) from photos or text; keep styling neutral and supportive; treat possible minors conservatively (no sexualised styling). When you recommend products, call searchProducts and the UI renders cards from the tool result \u2014 do not repeat prices from memory. For try-on requests call startTryOn with the chosen product ids.
-GENDER: Never assume whether to shop the Women's or Men's collection from a customer's appearance, name, voice or writing style. If a request ("style me for a party", a styling question) doesn't already say which collection, call askGenderChoice and wait for the answer before recommending anything. When a photo is supplied: analyze the visible outfit, silhouette, colors and style cues in the photo to judge which BYMARCCC pieces would look visually consistent with it, then call searchProducts filtered to the collection implied by the conversation so far \u2014 if that is still unclear after considering the outfit style itself (not the person), call askGenderChoice first. Keep recommendations visually consistent with the uploaded outfit (similar palette, formality and silhouette).`;
+var LANGUAGE_REFUSAL = "I can help only in Romanian or English with BYMARCCC products, styling, sizes and orders.";
+var NON_LATIN_SCRIPT = /[\u0600-\u06ff\u0750-\u077f\u0400-\u04ff\u0500-\u052f\u4e00-\u9fff\u3040-\u30ff\u31f0-\u31ff\uac00-\ud7af\u0590-\u05ff\u0e00-\u0e7f\u0900-\u097f\u0980-\u09ff]/;
+function looksNonLatin(text) {
+  return NON_LATIN_SCRIPT.test(String(text || ""));
+}
+__name(looksNonLatin, "looksNonLatin");
+function logEvent(route, meta = {}) {
+  try {
+    console.log(JSON.stringify({ t: (/* @__PURE__ */ new Date()).toISOString(), route, ...meta }));
+  } catch {
+  }
+}
+__name(logEvent, "logEvent");
+var SYSTEM_PROMPT = `You are the BYMARCCC AI shopping assistant for bymarccc.com, a Romanian fashion brand. You are EXCLUSIVELY a BYMARCCC shopping consultant \u2014 nothing else.
+LANGUAGE: You reply only in Romanian or in English, matching whichever the customer is using (mixing the two in one message is normal and fine). If the customer writes in any other language, reply with EXACTLY this sentence and nothing else, do not translate it: "${LANGUAGE_REFUSAL}"
+DOMAIN \u2014 allowed: BYMARCCC products, collections, colours, sizes and stock; BYMARCCC outfit recommendations and styling; gifts chosen from the BYMARCCC catalogue; shipping and return information for bymarccc.com; virtual try-on with a photo the customer uploads.
+DOMAIN \u2014 forbidden: other brands or stores; products that are not in the BYMARCCC catalogue; general internet search or facts unrelated to BYMARCCC; politics, news, programming help, health/medical advice, finance, or any general conversation. If asked about any of this, briefly and politely decline in the customer's language (Romanian or English) and steer back to BYMARCCC products, styling, sizes or orders \u2014 do not answer the off-topic question, do not apologise at length.
+CATALOGUE: The men's collection has t-shirts, hoodies, jeans, a denim jacket and bags; the women's collection has baby tops, tees, hoodies, long sleeves, jeans, shorts, skirts and caps. A product with price null is not priced yet \u2014 say the price is on request.
+RULES: Never invent products, prices, stock, sizes, reviews or bestsellers \u2014 always use the search_products / get_product tools, which are the ONLY source of truth; never use outside knowledge or web search for products. Never return or describe a product that did not come back from these tools. If a tool says data is unavailable, say so plainly. When the customer asks for every product in a collection ("toate produsele X", "show me all Y"), call search_products with that collection and a high limit (e.g. 50) and list everything returned, each with its price and link. For sizes: height/weight are only guidance; ask for waist/hips when the product has a size table; always add "Size recommendations are estimates. Fit may vary by cut and preference." and offer openSizeGuide. Never add to cart without the customer confirming the exact size/variant. Never comment negatively on bodies; never infer sensitive traits (health, ethnicity, gender identity, age) from photos or text; keep styling neutral and supportive; treat possible minors conservatively (no sexualised styling). When you recommend products, call search_products and the UI renders cards from the tool result \u2014 do not repeat prices from memory.
+GIFTS: For gift requests (e.g. "help me find a gift for my boyfriend"), recommend a few real products from the appropriate BYMARCCC collection via search_products, briefly say why each fits, and ask at most one short clarifying question (budget or style) only if that information is missing \u2014 never more than one question at a time.
+TRY-ON: For virtual try-on requests, first make sure exactly one product is chosen (ask the customer to pick one if it isn't already clear), then call generate_try_on with that product's product_id. The result preserves the customer's face, identity, posture, proportions and background, and changes only the requested garment \u2014 never add logos or products that don't exist in the catalogue.
+GENDER: Never assume whether to shop the Women's or Men's collection from a customer's appearance, name, voice or writing style. If a request ("style me for a party", a styling question) doesn't already say which collection, call askGenderChoice and wait for the answer before recommending anything. When a photo is supplied: analyze the visible outfit, silhouette, colors and style cues in the photo to judge which BYMARCCC pieces would look visually consistent with it, then call search_products filtered to the collection implied by the conversation so far \u2014 if that is still unclear after considering the outfit style itself (not the person), call askGenderChoice first. Keep recommendations visually consistent with the uploaded outfit (similar palette, formality and silhouette).`;
 var VOICE_LANGUAGE_RULES = `
-VOICE LANGUAGE: The customer speaks only English or Romanian \u2014 never any other language. Decide, per utterance, whether the customer is speaking English or Romanian and reply in that same language; never reply in Spanish, French, Italian, German, Portuguese or any other language, and never treat Romanian speech as if it were Spanish or another Romance language. Utterances can naturally mix English and Romanian in one sentence (e.g. "Arat\u0103-mi ni\u0219te black jeans", "Vreau un oversized T-shirt negru", "Show me blugii de la men") \u2014 this is normal bilingual speech, not a third language: understand the intent, keep product names, fashion terms, brand names and English words exactly as said rather than force-translating them, and reply in whichever of English/Romanian is the dominant language of that utterance. Keep your reply language consistent with what the customer just said \u2014 do not switch languages between turns on your own.`;
+VOICE LANGUAGE: The customer speaks only English or Romanian \u2014 never any other language. Decide, per utterance, whether the customer is speaking English or Romanian and reply in that same language; never reply in Spanish, French, Italian, German, Portuguese or any other language, and never treat Romanian speech as if it were Spanish or another Romance language. Utterances can naturally mix English and Romanian in one sentence (e.g. "Arat\u0103-mi ni\u0219te black jeans", "Vreau un oversized T-shirt negru", "Show me blugii de la men") \u2014 this is normal bilingual speech, not a third language: understand the intent, keep product names, fashion terms, brand names and English words exactly as said rather than force-translating them, and reply in whichever of English/Romanian is the dominant language of that utterance. Keep your reply language consistent with what the customer just said \u2014 do not switch languages between turns on your own. If the customer is clearly speaking a third language, say the following in English: "${LANGUAGE_REFUSAL}"`;
 var VOICE_SYSTEM_PROMPT = SYSTEM_PROMPT + VOICE_LANGUAGE_RULES;
 
 // lib/handlers.js
@@ -387,7 +447,13 @@ async function assistantChat(request) {
   if (!messages.length) return json(400, { error: "No messages" });
   for (const m of messages) {
     const s = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+    if (!s || !s.trim()) return json(400, { error: "Empty message" });
     if (s.length > 6e3) return json(413, { error: "Message too long" });
+  }
+  const lastUserText = [...messages].reverse().map((m) => typeof m.content === "string" ? m.content : (Array.isArray(m.content) ? m.content.filter((c) => c.type === "text").map((c) => c.text).join(" ") : "")).find((s) => s && s.trim());
+  logEvent("assistant-chat", { ip: (request.headers.get("cf-connecting-ip") || "").split(".").slice(0, 2).join(".") + ".x.x", msgCount: messages.length });
+  if (lastUserText && looksNonLatin(lastUserText)) {
+    return json(200, { text: LANGUAGE_REFUSAL, products: [], actions: [] });
   }
   const model = env("OPENAI_TEXT_MODEL", "gpt-6-luna");
   let input = messages.map((m) => ({ role: m.role, content: typeof m.content === "string" ? m.content : m.content.map((c) => c.type === "image" ? { type: "input_image", image_url: c.image_url } : { type: "input_text", text: c.text || "" }) }));
@@ -408,13 +474,19 @@ async function assistantChat(request) {
         }
         let out;
         if (CLIENT_TOOLS.has(c.name)) {
-          actions.push({ tool: c.name, args });
+          if (c.name === "generate_try_on") {
+            actions.push({ tool: "startTryOn", args: { productIds: args.product_id ? [String(args.product_id)] : [] } });
+          } else {
+            actions.push({ tool: c.name, args });
+          }
           out = { ok: true, note: "Forwarded to the browser." };
         } else {
           out = await runTool(c.name, args);
-          if (out.products) products.push(...out.products);
+          if (out.uiProducts) products.push(...out.uiProducts);
+          else if (out.products) products.push(...out.products);
         }
-        input.push({ type: "function_call_output", call_id: c.call_id, output: JSON.stringify(out) });
+        const payload = out.modelResult !== void 0 ? out.modelResult : out;
+        input.push({ type: "function_call_output", call_id: c.call_id, output: JSON.stringify(payload) });
       }
     }
   } catch (e) {
@@ -481,10 +553,11 @@ __name(dataUrlToBlob, "dataUrlToBlob");
 async function assistantTryon(request, siteOrigin) {
   const g = guard(request);
   if (g) return g;
+  if (!rateLimit(request, Number(env("ASSISTANT_TRYON_RATE_LIMIT_PER_MIN", "6")))) return json(429, { error: "Too many try-on requests. Please wait a moment." });
   const b = await readJson(request);
   if (!b) return json(400, { error: "Bad JSON" });
   if (b.consent !== true) return json(400, { error: "CONSENT_REQUIRED" });
-  const ids = Array.isArray(b.productIds) ? b.productIds.slice(0, 3) : [];
+  const ids = Array.isArray(b.productIds) ? b.productIds.filter((x) => typeof x === "string" && x.trim()).slice(0, 3) : [];
   if (!ids.length) return json(400, { error: "Select at least one product." });
   const photo = dataUrlToBlob(b.photo);
   if (photo === "TOO_LARGE") return json(413, { error: "Photo too large (max 6 MB)." });
@@ -492,6 +565,7 @@ async function assistantTryon(request, siteOrigin) {
   const items = await loadCatalog();
   const products = ids.map((id) => items.find((p) => p.id === String(id) || p.handle === String(id))).filter(Boolean);
   if (!products.length) return json(404, { error: "Products not found." });
+  logEvent("assistant-tryon", { ip: (request.headers.get("cf-connecting-ip") || "").split(".").slice(0, 2).join(".") + ".x.x", products: products.map((p) => p.id) });
   try {
     const mod = await openai("moderations", { model: "omni-moderation-latest", input: [{ type: "image_url", image_url: { url: b.photo } }] }, { timeoutMs: 15e3 });
     if (mod.results?.[0]?.flagged) return json(422, { error: "This photo can\u2019t be used for a try-on preview." });
