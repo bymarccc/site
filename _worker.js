@@ -538,7 +538,7 @@ __name(specSummarize, "specSummarize");
 var TOOL_DEFS = [
   { type: "function", name: "search_products", description: "Search the real BYMARCCC catalogue — the ONLY source of truth for products, prices, stock and sizes. Never invent or recall products from anywhere else. Pass gender/collection/category to narrow, in_stock to only return available items, and set a high limit (e.g. 50) when the customer asks for ALL products in a collection.", parameters: { type: "object", properties: { query: { type: "string", description: "Free text search terms (Romanian or English)." }, gender: { type: "string", enum: ["women", "men", "unisex"] }, collection: { type: "string", description: "e.g. tops, jeans, jackets, hoodie, bag, accessories, bottoms, sales" }, category: { type: "string", description: "Product type, e.g. jeans, top, jacket, accessory, bottoms" }, in_stock: { type: "boolean" }, max_price: { type: "number" }, limit: { type: "number" } } } },
   { type: "function", name: "get_product", description: "Full details for exactly one BYMARCCC product by its product_id.", parameters: { type: "object", properties: { product_id: { type: "string" } }, required: ["product_id"] } },
-  { type: "function", name: "generate_try_on", description: "Generate a virtual try-on preview of one BYMARCCC product on the customer's own uploaded photo. Ask the customer to choose a single product first if it isn't already clear. Always pass product_id and language explicitly; pass user_image_file_id only if this conversation already told you the customer's uploaded photo's reference id — never invent one.", parameters: { type: "object", properties: { product_id: { type: "string" }, user_image_file_id: { type: "string", description: "The exact photo reference id this conversation already gave you (e.g. from a ‘Photo uploaded, reference id: ...’ line). Omit entirely if none was given — never invent a value." }, language: { type: "string", enum: ["ro", "en"] } }, required: ["product_id", "language"] } },
+  { type: "function", name: "generate_try_on", description: "Generate a virtual try-on preview of one BYMARCCC product on the customer's own uploaded photo. Ask the customer to choose a single product first if it isn't already clear. Always pass product_id and language explicitly; pass user_image_file_id only if this conversation already told you the customer's uploaded photo's reference id — never invent one. If the customer named a specific print/embroidery design of that product (from get_product's data) and it is available, pass its exact design slug (lowercase, hyphenated, e.g. 'boys-lie') as design — this lets the app use that design's own reference artwork instead of the product's default photo; never invent a slug that wasn't given to you by the product data.", parameters: { type: "object", properties: { product_id: { type: "string" }, design: { type: "string", description: "Optional design/print slug (lowercase, hyphenated) taken only from this product's own known designs — omit if the customer didn't name one or it isn't in the data." }, user_image_file_id: { type: "string", description: "The exact photo reference id this conversation already gave you (e.g. from a ‘Photo uploaded, reference id: ...’ line). Omit entirely if none was given — never invent a value." }, language: { type: "string", enum: ["ro", "en"] } }, required: ["product_id", "language"] } },
   { type: "function", name: "getProductImages", description: "Image URLs for a product.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { type: "function", name: "getAvailableVariants", description: "Variants with availability for a product.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { type: "function", name: "getInventoryStatus", description: "Whether a variant is in stock.", parameters: { type: "object", properties: { variantId: { type: "string" } }, required: ["variantId"] } },
@@ -710,7 +710,9 @@ async function assistantChat(request) {
         let out;
         if (CLIENT_TOOLS.has(c.name)) {
           if (c.name === "generate_try_on") {
-            actions.push({ tool: "startTryOn", args: { productIds: args.product_id ? [String(args.product_id)] : [], userImageFileId: typeof args.user_image_file_id === "string" ? args.user_image_file_id : null, language: args.language === "ro" || args.language === "en" ? args.language : null } });
+            const __design = typeof args.design === "string" && args.design.trim() ? args.design.trim().toLowerCase() : null;
+            const __pid = args.product_id ? String(args.product_id) : null;
+            actions.push({ tool: "startTryOn", args: { productIds: __pid ? [__design ? `${__pid}::${__design}` : __pid] : [], userImageFileId: typeof args.user_image_file_id === "string" ? args.user_image_file_id : null, language: args.language === "ro" || args.language === "en" ? args.language : null } });
           } else {
             actions.push({ tool: c.name, args });
           }
@@ -774,7 +776,11 @@ async function assistantRealtimeToken(request) {
 }
 __name(assistantRealtimeToken, "assistantRealtimeToken");
 var MAX_BYTES = 6 * 1024 * 1024;
-var PROMPT = /* @__PURE__ */ __name((names) => `Edit the supplied customer photograph. Preserve the original person's recognizable identity, facial features, body proportions, skin tone, hair, pose, hands, lighting, camera angle, composition and background as closely as possible. Change only the clothing requested by the customer. Dress the person in the supplied BYMARCCC product reference images (${names.join("; ")}), preserving each product's recognizable color, material, print, logo placement, silhouette and key design details. Make the clothing follow the person's pose naturally, with realistic fabric folds, shadows and occlusion. Do not beautify, reshape, slim, enlarge or otherwise modify the person's face or body. Do not add unrelated garments, accessories, text or logos. Produce a realistic fashion visualization, not an exact sizing or fit guarantee.`, "PROMPT");
+var PROMPT = /* @__PURE__ */ __name((products) => {
+  const list = products.map((p) => p.design ? `${p.title} (${p.design} design)` : p.title).join("; ");
+  const authoritativeNote = products.some((p) => p.isDesignAuthoritative) ? " Where a product reference image is a plain product photo (no person in it), it is the single, authoritative source for that garment's exact color, silhouette, neckline, sleeves, proportions, seams and any printed or embroidered graphic together with its exact placement on the garment \u2014 reproduce that graphic exactly as shown, and never invent, rewrite, resize, reposition or reinterpret it." : "";
+  return `You are editing a real photograph, not generating a new image from scratch. The FIRST supplied image is the customer's own photograph \u2014 this is the base image and the sole source of identity: keep the customer's exact face, facial features, skin tone, hair, body shape and proportions, pose, hands, background, camera angle, framing and lighting unchanged. Do not beautify, reshape, slim, enlarge or otherwise modify the person's face or body, and do not alter the background or add unrelated garments, accessories, text or logos. Change ONLY the clothing being tried on. The remaining supplied image(s) are product reference image(s) for: ${list}.${authoritativeNote} If any product reference image instead shows the garment worn by another model, use it only to understand fit, cropped length, sleeve length, neckline and how the garment drapes on a body \u2014 never copy that model's face, body, skin tone or identity into the result. Fit the garment naturally to the customer's pose, with realistic fabric drape, folds, perspective, occlusion, lighting and shadows. Produce a realistic fashion visualization, not an exact sizing or fit guarantee.`;
+}, "PROMPT");
 function dataUrlToBlob(u) {
   const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(u || "");
   if (!m) return null;
@@ -843,7 +849,17 @@ async function assistantTryon(request, siteOrigin) {
   if (photo === "TOO_LARGE") return json(413, { error: "Photo too large (max 6 MB)." });
   if (!photo) return json(400, { error: "Unsupported photo format. Use JPG, PNG or WEBP." });
   const items = await loadCatalog();
-  const products = ids.map((id) => items.find((p) => p.id === String(id) || p.handle === String(id))).filter(Boolean);
+  const requested = ids.map((raw) => {
+    const str = String(raw);
+    const sep = str.indexOf("::");
+    return sep === -1 ? { pid: str, design: null } : { pid: str.slice(0, sep), design: str.slice(sep + 2) || null };
+  });
+  const products = requested.map(({ pid, design }) => {
+    const p = items.find((it) => it.id === pid || it.handle === pid);
+    if (!p) return null;
+    const refImage = (design && p.tryOnAssets && p.tryOnAssets[design]) || p.images[0];
+    return { ...p, __design: design, __refImage: refImage };
+  }).filter(Boolean);
   if (!products.length) return json(404, { error: "Products not found." });
   logEvent("assistant-tryon", { ip: (request.headers.get("cf-connecting-ip") || "").split(".").slice(0, 2).join(".") + ".x.x", products: products.map((p) => p.id) });
   try {
@@ -853,13 +869,13 @@ async function assistantTryon(request, siteOrigin) {
   }
   const form = new FormData();
   form.append("model", env("OPENAI_IMAGE_MODEL", "gpt-image-1"));
-  form.append("prompt", PROMPT(products.map((p) => p.title)));
+  form.append("prompt", PROMPT(products.map((p) => ({ title: p.title, design: p.__design, isDesignAuthoritative: !!(p.__design && p.tryOnAssets && p.tryOnAssets[p.__design]) }))));
   form.append("size", "1024x1536");
   form.append("quality", "medium");
   form.append("image[]", photo, "customer.jpg");
   const base = env("BYMARCCC_SITE_URL", siteOrigin);
   for (const p of products) {
-    const src = p.images[0];
+    const src = p.__refImage;
     if (!src) continue;
     try {
       const abs = /^https?:/.test(src) ? src : `${base}/${src}`;
