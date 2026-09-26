@@ -470,6 +470,14 @@
 .cb-variant__name { font-size: 10px; letter-spacing: .02em; text-align: center; color: #444; }
 
 .cb-ai[hidden] { display: none; }
+
+/* Customize-tool block, reparented to the very top of the page (before the gallery/info grid)
+   for customBag products only — see the JS that moves #cbTopWrap into place. */
+#cbTopWrap { padding: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 16px) 16px 0; max-width: 640px; margin: 0 auto; }
+#cbTopWrap .cb-ai { margin-top: 0; }
+@media (min-width: 900px) {
+  #cbTopWrap { max-width: 900px; padding: calc(var(--header-h) + 40px) 40px 0; }
+}
 .cb-ai { margin: 6px 0 22px; border-radius: 28px; background: #fff; color: #111; box-shadow: 0 30px 70px rgba(0,0,0,.16), 0 0 0 1px #e4e4e1; padding: 22px; box-sizing: border-box; }
 .cb-ai__head { margin-bottom: 14px; }
 .cb-ai__title { margin: 0 0 4px; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; }
@@ -490,7 +498,7 @@
 .cb-ai__upload { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; border: 1px dashed #c9c9c5; border-radius: 999px; padding: 8px 16px; font-size: 11.5px; letter-spacing: .04em; cursor: pointer; color: #444; }
 .cb-ai__upload:hover { border-color: #111; color: #111; }
 .cb-ai__upload[hidden] { display: none; }
-.cb-ai__controls { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.cb-ai__controls { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; } .cb-ai__controls[hidden] { display: none; }
 .cb-ai__slider { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #6f6f6f; }
 .cb-ai__slider input[type="range"] { width: 110px; }
 .cb-ai__remove { border: none; background: none; color: #b3261e; font-size: 11.5px; text-decoration: underline; cursor: pointer; padding: 0; }
@@ -950,16 +958,16 @@
       details: ['Designs: Delulu, NOT FROM PARIS, Hot Girls, Muse', 'Each piece is custom created.', '100% Organic Cotton'], description: 'Embroidered cap. One size fits most.', shipping: SHIPPING,
       unavailable: [], colours: [{ id: 'default', name: 'As shown', hex: '#dcdcd8' }], chart: ONE_SIZE, gallery: [{ src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/0685D8EE-CB4D-4E6A-B3D2-C53E37A0BEDA.jpg?v=1786438201&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/566B89FB-67A2-44AF-8F3A-98CF86D5D3FE.jpg?v=1786438202&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/5E64FFF7-9B22-4D4B-952A-ABF3FAAA39D4.jpg?v=1786438202&width=1400', w: 1200, h: 1600 }, { src: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/6EAE3A01-6B76-4A11-A573-EC22024D775D.jpg?v=1786438201&width=1400', w: 1200, h: 1600 }] },
     'custom-painted-bag': {
-      customBag: true, gender: 'men', id: 'bymarccc:custom-painted-bag', title: 'Custom Painted Bag',
+      customBag: true, hideModelText: true, gender: 'men', id: 'bymarccc:custom-painted-bag', title: 'Custom Hand-Painted Bag',
       price: 1000, currency: 'RON', cut: 'Duffle', collections: ['bags'],
       details: [
-        'Genuine croc-embossed leather duffle, hand-painted to order',
-        '48 x 28 x 24 cm, dual leather handles, zip closure',
-        'Upload your own photos for the front and/or back, or leave it to the design alone',
-        'Optional custom text on the back',
-        'Each piece is made after you place your order — please allow extra production time',
+        'Custom hand-painted bag',
+        '48 x 28 x 24 cm',
+        'Dual leather handles, zip closure',
+        'Upload your own photos for the front and/or back',
+        'Custom text available as well',
       ],
-      description: 'Start from one of our hand-painted designs, then make it yours: add your own photos to the front and back, and an optional line of text. Your exact layout is saved with your order so our studio can paint it true to your preview.',
+      description: 'Your bag will be custom-painted in our studio according to your preferences.\n\nPlease allow additional time for production.',
       shipping: SHIPPING + ' Custom pieces are made to order and are final sale.',
       unavailable: [], colours: BLACK_ONLY, chart: ONE_SIZE, noSize: true,
       gallery: [{ src: 'assets/img/custom-bag/base.webp', w: 1400, h: 933 }],
@@ -1558,7 +1566,8 @@
       cbCtx.save();
       cbCtx.beginPath(); cbCtx.rect(pz.x, pz.y, pz.w, pz.h); cbCtx.clip();
       const side = cbState.activeSide;
-      const variantSrc = cbState.variant ? (side === 'front' ? cbState.variant.frontImage : cbState.variant.backImage) : null;
+      const sideHasPhotos = (cbState[side] || []).length > 0;
+      const variantSrc = (!sideHasPhotos && cbState.variant) ? (side === 'front' ? cbState.variant.frontImage : cbState.variant.backImage) : null;
       const variantImg = variantSrc ? cbResolved.get(variantSrc) : null;
       if (variantImg) cbDrawCover(variantImg, pz);
       cbDrawPhotos(side, pz);
@@ -1607,8 +1616,8 @@
     //      Never touches the standard addMain() flow for other products, and is entirely separate
     //      from Personal Stylist. ----
     cbHandleAddToBag = function (msg, btn) {
-      if (!cbState.variant) {
-        msg.classList.remove('is-ok'); msg.textContent = 'Please choose a design.';
+      if (!cbState.variant && !cbState.front.length && !cbState.back.length) {
+        msg.classList.remove('is-ok'); msg.textContent = 'Please choose a design or upload a photo.';
         cbVariantsEl.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' });
         return Promise.resolve(false);
       }
@@ -1619,17 +1628,17 @@
       const backPreview = cbCanvas.toDataURL('image/jpeg', 0.85);
       cbState.activeSide = prevSide; cbRender();
       const line = {
-        id: variantId() + ':' + cbState.variant.id,
-        name: PRODUCT.title, variant: cbState.variant.name, image: frontPreview,
+        id: variantId() + ':' + (cbState.variant ? cbState.variant.id : 'custom-photos'),
+        name: PRODUCT.title, variant: cbState.variant ? cbState.variant.name : 'Your photos', image: frontPreview,
         price: PRODUCT.price, currency: PRODUCT.currency, quantity: 1,
         customBag: {
-          variantId: cbState.variant.id,
+          variantId: cbState.variant ? cbState.variant.id : null,
           frontPhotos: cbState.front.map(p => p.dataUrl),
           backPhotos: cbState.back.map(p => p.dataUrl),
           backText: cbState.backText, backTextPos: cbState.backTextPos,
           preview: frontPreview, backPreview,
           designJSON: {
-            variantId: cbState.variant.id,
+            variantId: cbState.variant ? cbState.variant.id : null,
             front: cbState.front.map(p => ({ xNorm: p.xNorm, yNorm: p.yNorm, scale: p.scale, rotate: p.rotate })),
             back: cbState.back.map(p => ({ xNorm: p.xNorm, yNorm: p.yNorm, scale: p.scale, rotate: p.rotate })),
             backText: cbState.backText, backTextPos: cbState.backTextPos,
@@ -1647,7 +1656,22 @@
     $('cbVariantLabel').hidden = false; cbVariantsEl.hidden = false; cbAiEl.hidden = false;
     if (PRODUCT.pinterestUrl) { $('cbPinLink').href = PRODUCT.pinterestUrl; } else { $('cbPinLink').hidden = true; }
     cbRenderAllThumbs(); cbFront.cbRenderControls(); cbBack.cbRenderControls();
-    if (PRODUCT.variants && PRODUCT.variants.length) cbSelectVariant(PRODUCT.variants[0].id);
+    // No preset is auto-selected: the plain mockup shows first (see cbRender's `sideHasPhotos`
+    // precedence above and cbHandleAddToBag's relaxed check below) — presets are opt-in only.
+
+    // This product has no model/fit reference and no cross-sell "complete the look" pairing,
+    // so the model-info row, wishlist heart and hanger button (all sized for clothing) are
+    // hidden entirely here rather than adding more per-product flags to their own code paths.
+    if ($('wishBtn')) $('wishBtn').hidden = true;
+    if ($('hangerBtn')) $('hangerBtn').hidden = true;
+
+    // Move the whole customization tool to the very top of the page, before the gallery and
+    // all other standard product info (title, price, accordions, etc.) — customBag only.
+    const cbTopWrap = document.createElement('div');
+    cbTopWrap.id = 'cbTopWrap';
+    cbTopWrap.append($('cbVariantLabel'), cbVariantsEl, cbAiEl);
+    const pdpMain = document.querySelector('main.pdp-page');
+    if (pdpMain) pdpMain.insertBefore(cbTopWrap, pdpMain.firstChild);
   }
 
 
