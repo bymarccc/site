@@ -471,6 +471,10 @@
 .cb-variant__thumb--none { display: flex; align-items: center; justify-content: center; border-style: dashed; color: #9a9a96; }
 .cb-variant[aria-checked="true"] .cb-variant__thumb--none { border-style: solid; color: #111; }
 .cb-variant__thumb--none svg { width: 30px; height: 30px; }
+.cb-variants__track[hidden] { display: none; }
+.cb-variants__track { position: relative; height: 3px; width: 60px; margin: 2px auto 14px; background: #e7e7e4; border-radius: 3px; overflow: hidden; }
+.cb-variants__thumb { position: absolute; top: 0; left: 0; height: 100%; width: 22px; background: #111; border-radius: 3px; will-change: transform; }
+@media (min-width: 900px) { .cb-variants__track { display: none !important; } }
 
 .cb-ai[hidden] { display: none; }
 
@@ -541,6 +545,17 @@
   .pdp-info > #reviewRow { order: 7; }
   .pdp-info > #serviceRows { order: 8; }
   .pdp-info > #bar { order: 9; margin-top: 16px; }
+
+  /* ---- Custom Painted Bag, mobile only: tighter header gap, title clear of the logo,
+     a swipeable DESIGN carousel, and a stripped-down header (logo + Cart only). ---- */
+  body.is-custom-bag-page #cbTopWrap { padding-top: calc(env(safe-area-inset-top, 0px) + 8px); }
+  body.is-custom-bag-page .cb-ai__head { padding-left: 56px; position: relative; }
+  body.is-custom-bag-page #cbVariants { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; scrollbar-width: none; -ms-overflow-style: none; }
+  body.is-custom-bag-page #cbVariants::-webkit-scrollbar { display: none; }
+  body.is-custom-bag-page .cb-variant { flex: 0 0 auto; scroll-snap-align: start; }
+  body.is-custom-bag-page .acct-launch,
+  body.is-custom-bag-page .pdp-header__btn[aria-label="Search"],
+  body.is-custom-bag-page .pdp-header__btn[aria-label="Menu"] { display: none; }
 }
 
 </style>
@@ -1416,11 +1431,12 @@
   ================================================================== */
   let cbHandleAddToBag = null;
   if (PRODUCT.customBag) {
+    document.body.classList.add('is-custom-bag-page');   // scopes the mobile-only header/layout CSS to this product only
     const PRINT_ZONE = { x: 0.12, y: 0.42, w: 0.76, h: 0.46 }; // fitted visually to the croc panel on base.webp
     const MAX_PHOTOS = 3, MAX_FILE_BYTES = 8 * 1024 * 1024, ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
     const cbVariantsEl = $('cbVariants'), cbAiEl = $('cbAi'), cbCanvas = $('cbCanvas'), cbCtx = cbCanvas.getContext('2d');
     const cbErr = $('cbErr');
-    const cbState = { variant: null, activeSide: 'front', front: [], back: [], selFront: -1, selBack: -1, backText: '', backTextPos: 'center' };
+    const cbState = { frontVariant: null, backVariant: null, activeSide: 'front', front: [], back: [], selFront: -1, selBack: -1, backText: '', backTextPos: 'center' };
     let cbGen = 0;   // bumped by cbClearAll() so stale async work (e.g. a background-removal call in flight) never resurrects state after a reset
     const cbResolved = new Map();
     function cbLoadImage(src) {
@@ -1484,14 +1500,21 @@
     cbNoneBtn.innerHTML = '<span class="cb-variant__thumb cb-variant__thumb--none" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg></span><span class="cb-variant__name">None</span>';
     cbNoneBtn.addEventListener('click', () => cbClearAll());
     cbVariantsEl.appendChild(cbNoneBtn);
+    // The DESIGN tiles apply to whichever side (FRONT/BACK) is currently active; this keeps
+    // the checked tile and the "Select a design" label in sync with that side's own state.
+    function cbSyncVariantUI() {
+      const v = cbState[cbState.activeSide + 'Variant'];
+      cbVariantsEl.querySelectorAll('.cb-variant').forEach(b => b.setAttribute('aria-checked', String(v ? b.dataset.vid === v.id : b.dataset.vid === 'none')));
+      $('cbVariantName').textContent = v ? v.name : 'Select a design';
+    }
     function cbClearAll() {
       cbGen++;
-      cbState.variant = null;
-      cbState.front = []; cbState.back = [];
-      cbState.selFront = -1; cbState.selBack = -1;
-      cbState.backText = ''; cbBackTextInput.value = '';
-      cbVariantsEl.querySelectorAll('.cb-variant').forEach(b => b.setAttribute('aria-checked', String(b.dataset.vid === 'none')));
-      $('cbVariantName').textContent = 'Select a design';
+      const side = cbState.activeSide;
+      cbState[side + 'Variant'] = null;
+      cbState[side] = [];
+      if (side === 'front') cbState.selFront = -1; else cbState.selBack = -1;
+      if (side === 'back') { cbState.backText = ''; cbBackTextInput.value = ''; }
+      cbSyncVariantUI();
       cbRenderAllThumbs(); cbFront.cbRenderControls(); cbBack.cbRenderControls();
       cbRender();
     }
@@ -1509,9 +1532,8 @@
     async function cbSelectVariant(id) {
       const v = (PRODUCT.variants || []).find(x => x.id === id);
       if (!v) return;
-      cbState.variant = v;
-      cbVariantsEl.querySelectorAll('.cb-variant').forEach(b => b.setAttribute('aria-checked', String(b.dataset.vid === id)));
-      $('cbVariantName').textContent = v.name;
+      cbState[cbState.activeSide + 'Variant'] = v;
+      cbSyncVariantUI();
       try { await Promise.all([cbLoadImage(v.frontImage), cbLoadImage(v.backImage)]); } catch {}
       cbRender();
     }
@@ -1636,6 +1658,7 @@
         document.querySelectorAll('.cb-ai__tab').forEach(t => { t.classList.toggle('is-active', t === tab); t.setAttribute('aria-selected', String(t === tab)); });
         document.querySelectorAll('.cb-ai__panel').forEach(p => { p.hidden = p.dataset.cbpanel !== side; });
         cbState.activeSide = side;
+        cbSyncVariantUI();
         cbRender();
       });
     });
@@ -1702,7 +1725,8 @@
       cbCtx.beginPath(); cbCtx.rect(pz.x, pz.y, pz.w, pz.h); cbCtx.clip();
       const side = cbState.activeSide;
       const sideHasPhotos = (cbState[side] || []).length > 0;
-      const variantSrc = (!sideHasPhotos && cbState.variant) ? (side === 'front' ? cbState.variant.frontImage : cbState.variant.backImage) : null;
+      const activeVariant = cbState[side + 'Variant'];
+      const variantSrc = (!sideHasPhotos && activeVariant) ? (side === 'front' ? activeVariant.frontImage : activeVariant.backImage) : null;
       const variantImg = variantSrc ? cbResolved.get(variantSrc) : null;
       if (variantImg) cbDrawCover(variantImg, pz);
       cbDrawPhotos(side, pz);
@@ -1751,7 +1775,7 @@
     //      Never touches the standard addMain() flow for other products, and is entirely separate
     //      from Personal Stylist. ----
     cbHandleAddToBag = function (msg, btn) {
-      if (!cbState.variant && !cbState.front.length && !cbState.back.length) {
+      if (!cbState.frontVariant && !cbState.backVariant && !cbState.front.length && !cbState.back.length) {
         msg.classList.remove('is-ok'); msg.textContent = 'Please choose a design or upload a photo.';
         cbVariantsEl.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' });
         return Promise.resolve(false);
@@ -1762,18 +1786,22 @@
       cbState.activeSide = 'back'; cbRender();
       const backPreview = cbCanvas.toDataURL('image/jpeg', 0.85);
       cbState.activeSide = prevSide; cbRender();
+      const frontLabel = cbState.frontVariant ? cbState.frontVariant.name : (cbState.front.length ? 'Your photo' : 'None');
+      const backLabel = cbState.backVariant ? cbState.backVariant.name : (cbState.back.length ? 'Your photo' : 'None');
       const line = {
-        id: variantId() + ':' + (cbState.variant ? cbState.variant.id : 'custom-photos'),
-        name: PRODUCT.title, variant: cbState.variant ? cbState.variant.name : 'Your photos', image: frontPreview,
+        id: variantId() + ':front-' + (cbState.frontVariant ? cbState.frontVariant.id : (cbState.front.length ? 'photo' : 'none')) + ':back-' + (cbState.backVariant ? cbState.backVariant.id : (cbState.back.length ? 'photo' : 'none')),
+        name: PRODUCT.title, variant: `Front: ${frontLabel} · Back: ${backLabel}`, image: frontPreview,
         price: PRODUCT.price, currency: PRODUCT.currency, quantity: 1,
         customBag: {
-          variantId: cbState.variant ? cbState.variant.id : null,
+          frontVariantId: cbState.frontVariant ? cbState.frontVariant.id : null,
+          backVariantId: cbState.backVariant ? cbState.backVariant.id : null,
           frontPhotos: cbState.front.map(p => p.dataUrl),
           backPhotos: cbState.back.map(p => p.dataUrl),
           backText: cbState.backText, backTextPos: cbState.backTextPos,
           preview: frontPreview, backPreview,
           designJSON: {
-            variantId: cbState.variant ? cbState.variant.id : null,
+            frontVariantId: cbState.frontVariant ? cbState.frontVariant.id : null,
+            backVariantId: cbState.backVariant ? cbState.backVariant.id : null,
             front: cbState.front.map(p => ({ xNorm: p.xNorm, yNorm: p.yNorm, scale: p.scale, rotate: p.rotate })),
             back: cbState.back.map(p => ({ xNorm: p.xNorm, yNorm: p.yNorm, scale: p.scale, rotate: p.rotate })),
             backText: cbState.backText, backTextPos: cbState.backTextPos,
@@ -1787,10 +1815,29 @@
         .finally(() => { btn.disabled = false; btn.classList.remove('is-busy'); });
     };
 
+    // ---- Design carousel scroll indicator (mobile) ----
+    const cbVariantsTrack = document.createElement('div');
+    cbVariantsTrack.className = 'cb-variants__track'; cbVariantsTrack.id = 'cbVariantsTrack'; cbVariantsTrack.hidden = true;
+    const cbVariantsThumb = document.createElement('div'); cbVariantsThumb.className = 'cb-variants__thumb';
+    cbVariantsTrack.appendChild(cbVariantsThumb);
+    cbVariantsEl.insertAdjacentElement('afterend', cbVariantsTrack);
+    function cbUpdateVariantsIndicator() {
+      const maxScroll = cbVariantsEl.scrollWidth - cbVariantsEl.clientWidth;
+      if (maxScroll <= 4) { cbVariantsTrack.hidden = true; return; }
+      cbVariantsTrack.hidden = false;
+      const trackW = cbVariantsTrack.clientWidth, thumbW = cbVariantsThumb.offsetWidth;
+      const p = Math.min(1, Math.max(0, cbVariantsEl.scrollLeft / maxScroll));
+      cbVariantsThumb.style.transform = `translateX(${p * Math.max(0, trackW - thumbW)}px)`;
+    }
+    cbVariantsEl.addEventListener('scroll', cbUpdateVariantsIndicator, { passive: true });
+    window.addEventListener('resize', cbUpdateVariantsIndicator);
+
     // ---- Init ----
     $('cbVariantLabel').hidden = false; cbVariantsEl.hidden = false; cbAiEl.hidden = false;
     if (PRODUCT.pinterestUrl) { $('cbPinLink').href = PRODUCT.pinterestUrl; } else { $('cbPinLink').hidden = true; }
     cbRenderAllThumbs(); cbFront.cbRenderControls(); cbBack.cbRenderControls();
+    cbSyncVariantUI();
+    requestAnimationFrame(cbUpdateVariantsIndicator);
     // No preset is auto-selected: the plain mockup shows first (see cbRender's `sideHasPhotos`
     // precedence above and cbHandleAddToBag's relaxed check below) — presets are opt-in only.
 
