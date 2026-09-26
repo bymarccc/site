@@ -322,6 +322,20 @@
   @media (min-width: 1600px) {
     :root { --step: 44vw; }
   }
+  /* Laptop widths (1025-1599px): the default --step (50vw) puts the side
+     jeans' centers right at the viewport edges, so half of each pair is
+     clipped by .zebra's overflow:hidden. Pull them in and give the arrows
+     a bit more room so both side pairs sit fully on screen next to their
+     arrow. Desktop/laptop only — tablet (≤1024px) and phones are untouched. */
+  @media (min-width: 1025px) and (max-width: 1599px) {
+    :root { --step: 28vw; }
+  }
+  /* Desktop/laptop only: nudge the heading down and the product-info block
+     up slightly for better vertical balance. Subtle, positioning-only. */
+  @media (min-width: 1025px) {
+    .zebra__heading { margin-top: 14px; }
+    .zebra__info { margin-top: -12px; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
     :root { --move-dur: 180ms; --bg-dur: 250ms; --bg-delay: 60ms; }
@@ -673,10 +687,14 @@
 /* Desktop/laptop only (>1024px): bigger bag, jeans, money pouch, hang tag and alien card. Tablet/mobile untouched. */
 @media (min-width: 1025px) {
   .play { --card-w: clamp(378px, 40.5vw, 513px); }
-  .obj[data-obj="bag"]      { --dw-x: 1.4; }
-  .obj[data-obj="artjeans"] { --dw-x: 1.6; }
-  .obj[data-obj="money"]    { --dw-x: 1.4; }
-  .obj[data-obj="tag"]      { --dw-x: 1.5; }
+  .obj[data-obj="bag"]      { --dw-x: 1.54; }
+  .obj[data-obj="artjeans"] { --dw-x: 1.76; --dx: 5% !important;  --dy: 27% !important; }
+  .obj[data-obj="money"]    { --dw-x: 1.26; --dx: 73% !important; --dy: 45% !important; }
+  .obj[data-obj="tag"]      { --dw-x: 1.5;  --dx: 30% !important; --dy: 72% !important; }
+  .obj[data-obj="cd"]       { --dw-x: 0.9;  --dx: 16% !important; }
+  .obj[data-obj="vinyl"]    { --dw-x: 1.2;  --dx: 70% !important; --dy: 7% !important; }
+  .obj[data-obj="frame"]    { --dx: 30% !important; --dy: 4% !important; }
+  .obj[data-obj="passport"] { --dw-x: 1.1;  --dx: 55% !important; --dy: 74% !important; }
 }
 @media (max-width: 640px) {
   .play { --obj-scale: 1; --card-w: min(59.4vw, 270px); --card-ratio: 0.86; }
@@ -2291,22 +2309,22 @@
       src:   CLD + 'v1790162082/Sade_Paradise_.m4a',
       video: CLD + 'q_auto,f_auto/v1790162088/Sade_-_Paradise.mp4', poster: 'assets/img/thumb-sade-paradise.jpg',
       thumb: 'assets/img/thumb-sade-paradise.jpg' },
-    { id: 'weeknd-earned-it', title: 'The Weeknd - Earned It',   channel: '', duration: '',
+    { id: 'weeknd-earned-it', title: 'The Weeknd - Earned It',   channel: '', duration: '3:32',
       src:   CLD + 'v1790321199/The_Weeknd_-_Earned_itt.m4a',
       video: CLD + 'q_auto,f_auto/v1790321215/The_Weeknd_-_Earned_It_Fifty_Shades_Of_Grey.mp4',
       poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321215/The_Weeknd_-_Earned_It_Fifty_Shades_Of_Grey.jpg',
       thumb: 'assets/img/thumb-weeknd-earned-it.jpg' },
-    { id: 'goosebumps', title: 'Travis Scott - Goosebumps',      channel: '', duration: '',
+    { id: 'goosebumps', title: 'Travis Scott - Goosebumps',      channel: '', duration: '3:56',
       src:   CLD + 'v1790322008/Travis_Scott_-_Goosebumps.mp4',
       video: CLD + 'q_auto,f_auto/v1790321227/Travis_Scott_-_goosebumps_Official_Video_ft._Kendrick_Lamar.mp4',
       poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321227/Travis_Scott_-_goosebumps_Official_Video_ft._Kendrick_Lamar.jpg',
       thumb: 'assets/img/thumb-goosebumps.jpg' },
-    { id: 'miley-flowers', title: 'Miley Cyrus - Flowers',       channel: '', duration: '',
+    { id: 'miley-flowers', title: 'Miley Cyrus - Flowers',       channel: '', duration: '3:09',
       src:   CLD + 'v1790321201/Miley_Cyrus_-_Flowerss.m4a',
       video: CLD + 'q_auto,f_auto/v1790321227/Miley_Cyrus_-_Flowers_Official_Video.mp4',
       poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321227/Miley_Cyrus_-_Flowers_Official_Video.jpg',
       thumb: 'assets/img/thumb-miley-flowers.jpg' },
-    { id: 'carbonne-imagine', title: 'Carbonne - Imagine',       channel: '', duration: '',
+    { id: 'carbonne-imagine', title: 'Carbonne - Imagine',       channel: '', duration: '2:43',
       src:   CLD + 'v1790321282/Carbonne_Imagine.m4a',
       video: CLD + 'q_auto,f_auto/v1790321296/Carbonne_-_Imagine_Clip_Officiel.mp4',
       poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321296/Carbonne_-_Imagine_Clip_Officiel.jpg',
@@ -2899,6 +2917,14 @@
   let stopAtEnd = false;   // true for the "GOOD VIBES ONLY" playlist queue: stop + reset after the last track instead of looping to the first
   const fmt = t => { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
   const OBJECT_ITEMS = Object.entries(TRACKS).map(([key, t]) => ({ key, id: '', title: t.title, channel: t.artist || '', src: t.src }));
+  /* Clicking the vinyl (WAGWAN) chains into the CD (Water) and then the "GOOD VIBES
+     ONLY" playlist, in order — unless the visitor picks a different track themselves,
+     which simply replaces this queue like any other selection. */
+  const vinylChain = () => {
+    const vinylItem = OBJECT_ITEMS.find(t => t.key === 'vinyl');
+    const cdItem = OBJECT_ITEMS.find(t => t.key === 'cd');
+    return [vinylItem, cdItem].filter(Boolean).concat(playlist);
+  };
 
   /* volume: restored from the last choice, applied to the shared <audio> element */
   audio.volume = Math.min(1, Math.max(0, store.get('bym.play.vol', 80) / 100));
@@ -2948,6 +2974,7 @@
   }
   function miniToggle(key) {
     if (miniItem && miniItem.key === key && !mini.hidden) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
+    if (key === 'vinyl') { miniPlayList(vinylChain(), 0); return; }
     miniPlayList(OBJECT_ITEMS, OBJECT_ITEMS.findIndex(t => t.key === key));
   }
   function miniFullStop() {
