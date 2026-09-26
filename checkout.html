@@ -676,7 +676,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .vp__ax::after { content: ""; position: absolute; inset: -6px; }
 .vp__ax svg { width: 12px; height: 12px; }
 .vp__scrub { position: relative; height: 4px; margin: 10px auto 0; width: 57%; border-radius: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
-.vp__scrub::before { content: ""; position: absolute; inset: -12px 0; }
+.vp__scrub::before { content: ""; position: absolute; inset: -6px 0; }
 .vp__scrub i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; background: #fff; }
 .vp__scrub.is-seeking { height: 9px; margin-top: 12.5px; }
 /* times pulled in from 82% width so "0:15"/"-1:58" sit closer to center instead of hugging the outer edges, and the row is nudged up (was margin-top 6px) to close the gap under the seek bar — leaving more open, empty card surface below for dragging */
@@ -857,13 +857,15 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
         src:   CLD + 'v1790321282/Michael_Jackson_Heal_The_World_44s-346s.m4a',
         thumb: 'assets/img/thumb-mj-heal-the-world.jpg' },
         /* no `video` on purpose — track 9 is music-only, per instructions */
-      { id: 'gvx', title: 'GVX', channel: '', duration: '',
+      { id: 'gvx', title: 'Je veux - ZaZ', channel: '', duration: '',
         src:   CLD + 'v1790425042/Je_veux_-_Zaz.m4a',
         video: CLD + 'q_auto,f_auto/v1790426043/ZAZ_-_Je_veux_Clip_officiel.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790426043/ZAZ_-_Je_veux_Clip_officiel.jpg',
+        rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790426043/ZAZ_-_Je_veux_Clip_officiel.mp4',
         thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790426043/ZAZ_-_Je_veux_Clip_officiel.jpg' },
-      { id: 'nems-art', title: 'Nems Art', channel: '', duration: '',
+      { id: 'nems-art', title: 'Nemzzz - Art', channel: '', duration: '',
         src:   CLD + 'v1790425035/Nemzzz_-_Art.m4a',
         video: CLD + 'q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.jpg',
+        rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.mp4',
         thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.jpg' }
     ];
     window.BYMARCCC_PLAYLIST = SEED;
@@ -881,7 +883,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
              or paste your own image URL.
      ================================================================ */
   // The videos are the GOOD VIBES ONLY playlist items that have a Cloudinary `video` URL (see SEED in the music script)
-  const VIDEOS = (window.BYMARCCC_PLAYLIST || []).filter(t => t.video).map(t => ({ src: t.video, poster: t.poster || '', title: t.title }));
+  const VIDEOS = (window.BYMARCCC_PLAYLIST || []).filter(t => t.video).map(t => ({ src: t.video, raw: t.rawVideo || '', poster: t.poster || '', title: t.title }));
   const KEY_POS = 'bymarccc:vp:pos', KEY_OPEN = 'bymarccc:vp:open', KEY_NOW = 'bym.play.now';
   const $ = id => document.getElementById(id);
   const vp = $('vp'), handle = $('vpHandle'), video = $('vpVideo'), big = $('vpBig'), tab = $('vpTab');
@@ -923,6 +925,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     // switch, since the immediately-following tryPlay() races the first load's teardown.
     video.poster = posterOf(v) || '';
     video.preload = 'metadata';
+    delete video.dataset.triedRaw;
     video.src = v.src;
     title.textContent = v.title || `MUSIC VIDEO ${String(idx + 1).padStart(2, '0')}`;
     count.textContent = `${idx + 1} / ${list.length}`;
@@ -992,7 +995,11 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     if ((vp.dataset.orient === 'portrait') !== portrait) vp.dataset.orient = portrait ? 'portrait' : 'landscape';
     clampToViewport();
   });
-  video.addEventListener('error', () => { status.textContent = 'This video could not be loaded.'; setPlayIcon(false); });
+  video.addEventListener('error', () => {
+    const v = list[idx];
+    if (v && v.raw && video.src !== v.raw && !video.dataset.triedRaw) { video.dataset.triedRaw = '1'; video.src = v.raw; tryPlay(); return; }   // one retry with the original, untransformed URL before giving up
+    status.textContent = 'This video could not be loaded.'; setPlayIcon(false);
+  });
   // big play button: handled as a "tap" on the drag surface (see endDrag) so a drag started on it still works
   btnPlay.addEventListener('click', toggle);
   // tap on the video surface toggles play (handled at pointerup so it does not fight the drag)
@@ -1103,6 +1110,12 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     el.addEventListener('pointermove', dragMove);
     el.addEventListener('pointerup', endDrag); el.addEventListener('pointercancel', endDrag); el.addEventListener('lostpointercapture', endDrag);
   }
+  // Fallback tracking at the document level: if pointer capture is ever lost or not honoured
+  // (some mobile browsers are inconsistent here), the drag must not get stuck -- these are
+  // no-ops whenever `drag` is null or belongs to a different pointer.
+  document.addEventListener('pointermove', dragMove);
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
   // mouse only here — real touch is handled below with native Touch Events, because Safari's system
   // "swipe from screen edge = go back" gesture only backs off when touchstart/touchmove are preventDefault()'d
   // directly; the docked tab sits flush against the edge, so it's exactly where that system gesture fires,
