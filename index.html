@@ -2384,6 +2384,14 @@
       video: CLD + 'q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.jpg',
       rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.mp4',
       thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.jpg' },
+    { id: 'dave-raindance', title: 'Dave - Raindance (ft. Tems)', channel: '', duration: '',
+      src:   CLD + 'v1790439187/Dave_-_Raindance.m4a',
+      video: CLD + 'q_auto,f_auto/v1790437537/Dave_-_Raindance_ft._Tems_1.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790437537/Dave_-_Raindance_ft._Tems_1.jpg',
+      rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790437537/Dave_-_Raindance_ft._Tems_1.mp4',
+      thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790437537/Dave_-_Raindance_ft._Tems_1.jpg' },
+    { id: 'billie-birds', title: 'Billie Eilish - Birds of a Feather', channel: '', duration: '',
+      src:   CLD + 'v1790439185/Billie_Eilish_-_BIRDS_OF_A_FEATHER.m4a' },
+      /* no `video` on purpose — audio-only, per instructions; no local thumbnail supplied yet */
   ];
   window.BYMARCCC_PLAYLIST = SEED;
 
@@ -2633,6 +2641,25 @@
 
   const setStatus = msg => { statusEl.textContent = msg || ''; };
 
+  const pendingDur = new Set();
+  const fmtDur = sec => { sec = Math.max(0, Math.round(sec || 0)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); };
+  function resolveDuration(t) {
+    if (t.duration || pendingDur.has(t.id)) return;
+    const src = t.src || t.video;
+    if (!src) return;
+    pendingDur.add(t.id);
+    const probe = document.createElement(t.src ? 'audio' : 'video');
+    probe.preload = 'metadata'; probe.muted = true; probe.src = src;
+    const done = () => pendingDur.delete(t.id);
+    probe.addEventListener('loadedmetadata', () => {
+      if (probe.duration && isFinite(probe.duration)) {
+        t.duration = fmtDur(probe.duration);
+        list.querySelectorAll(`.track[data-id="${t.id}"] .track__dur`).forEach(el => { el.textContent = t.duration; });
+      }
+      done();
+    }, { once: true });
+    probe.addEventListener('error', done, { once: true });
+  }
   function render() {
     list.innerHTML = '';
     if (!shown.items.length) return;
@@ -2652,6 +2679,7 @@
       meta.append(tt, ar);
       const prog = document.createElement('span'); prog.className = 'track__prog'; prog.innerHTML = '<i></i>'; meta.appendChild(prog);
       const du = document.createElement('span'); du.className = 'track__dur'; du.textContent = t.duration || '';
+      if (!t.duration) resolveDuration(t);   // permanent rule: read the real media duration and fill it in automatically
       const pl = document.createElement('span'); pl.className = 'track__play'; pl.setAttribute('aria-hidden', 'true');
       pl.innerHTML = '<svg class="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
       b.append(img, meta, du, pl);
