@@ -4263,7 +4263,14 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     }
     const nodes = captureContent(document);
     nodes.forEach(n => n.remove());
-    cache.set(id, { nodes, title: document.title });
+    // document.body's own class (e.g. "pdp") gates almost every page-specific CSS
+    // rule ('.pdp .pdp-btn', '.pdp-header', etc.) — it must be cached and swapped
+    // back in step with the content, or a restored page loses all of that styling
+    // even though its markup and <style> are present (this was the cause of a
+    // product page rendering with an unstyled grey Add to Bag button, no gallery
+    // layout, and the account icon stuck in its homepage-only floating style,
+    // after navigating back to a cached page).
+    cache.set(id, { nodes, title: document.title, bodyClass: document.body.className });
   }
   function restore(id) {
     const entry = cache.get(id);
@@ -4271,6 +4278,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const anchor = document.body.firstChild;
     entry.nodes.forEach(n => document.body.insertBefore(n, anchor));
     document.title = entry.title;
+    document.body.className = entry.bodyClass || '';
     window.scrollTo(0, 0);
     return true;
   }
@@ -4306,6 +4314,14 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   }
   function insertFetched(doc) {
     insertHeadAssets(doc);
+    // The fetched page's <body> class (e.g. "pdp") must come across too, not just
+    // its content — every page-specific CSS rule is scoped under it (".pdp .pdp-btn",
+    // ".pdp-header", etc.). Without this, a product page opened via this client-side
+    // navigation kept the previous page's body class (or none, coming from the
+    // homepage), so none of those rules matched: the Add to Bag button fell back to
+    // the browser's default grey button, the gallery had no layout, and the account
+    // icon rendered in its homepage-only floating style instead of the header.
+    document.body.className = doc.body.className || '';
     // Every fetched page's inline scripts are re-run on every navigation, not just the
     // "new" ones. Scripts that only need to run once (e.g. one-time client setup) already
     // guard themselves (an early `if (window.SOME_FLAG) return;`), and scripts that inject
