@@ -4170,6 +4170,15 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
    opens, and restores the previous view on Back without resetting it. */
 (() => {
   'use strict';
+  // This script is duplicated verbatim in every product page's own markup
+  // (so it still exists if a product page is opened directly), and — since
+  // insertFetched() re-runs a fetched page's inline scripts on every
+  // navigation — it would otherwise re-execute itself each time the user
+  // navigates, creating a brand new cache/history closure and stacking a
+  // duplicate popstate/click listener on every single navigation. That
+  // silently corrupted Back/Forward after 2+ hops. Guard it like the
+  // codebase's other "run once" scripts.
+  if (window.BYM_NAV) return;
   const CONTENT_IDS = ['play','zebra','shop','crumble','shopWomen','reel','fp','fpTab','siteFooter','bagPill','pdpHeader','backdrop','ctlDrawer','cart','wl','qa','sizeModal'];
   const isContent = el => el.nodeType === 1 && (
     (el.id && CONTENT_IDS.indexOf(el.id) !== -1) ||
@@ -4195,6 +4204,17 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   let seq = 0, curId = 0;
 
   function snapshotCurrent(id) {
+    // #mini (the persistent mini audio bar) must never be detached during
+    // SPA navigation, even though it happens to live inside <section
+    // id="crumble"> (which IS swapped as content) — removing a playing
+    // <audio> element from the document pauses it and freezes its
+    // currentTime in every browser tested, which breaks "keep the music
+    // playing while browsing products". Re-home it as a direct child of
+    // <body> first so the content swap below never touches it.
+    const mini = document.getElementById('mini');
+    if (mini && mini.parentElement !== document.body) {
+      document.body.appendChild(mini);
+    }
     const nodes = captureContent(document);
     nodes.forEach(n => n.remove());
     cache.set(id, { nodes, title: document.title });
@@ -4208,16 +4228,53 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     window.scrollTo(0, 0);
     return true;
   }
+  function insertHeadAssets(doc) {
+    // Product pages keep almost all of their page-specific CSS in <head> (not <body>),
+    // so it must be transplanted too — otherwise the destination page renders with none
+    // of its own styling (this was the cause of product pages looking totally broken
+    // after a client-side navigation: content was there, CSS was not).
+    const knownStyles = existingStyleTexts();
+    const knownHrefs = new Set(Array.from(document.querySelectorAll('link[rel~="stylesheet"]')).map(l => l.href));
+    Array.from(doc.head.children).forEach(el => {
+      if (el.tagName === 'STYLE') {
+        const txt = el.textContent;
+        if (!knownStyles.has(txt)) {
+          const st = document.createElement('style');
+          st.textContent = txt;
+          document.head.appendChild(st);
+          knownStyles.add(txt);
+        }
+        return;
+      }
+      if (el.tagName === 'LINK' && (el.getAttribute('rel') || '').split(/\s+/).includes('stylesheet')) {
+        const href = el.href;
+        if (href && !knownHrefs.has(href)) {
+          const ln = document.createElement('link');
+          ln.rel = 'stylesheet';
+          ln.href = href;
+          document.head.appendChild(ln);
+          knownHrefs.add(href);
+        }
+      }
+    });
+  }
   function insertFetched(doc) {
-    const knownScripts = existingScriptTexts();
+    insertHeadAssets(doc);
+    // Every fetched page's inline scripts are re-run on every navigation, not just the
+    // "new" ones. Scripts that only need to run once (e.g. one-time client setup) already
+    // guard themselves (an early `if (window.SOME_FLAG) return;`), and scripts that inject
+    // UI into per-page containers guard themselves by checking the DOM (an early
+    // `if (document.getElementById(...)) return;`) — both kinds are safe to invoke again.
+    // Skipping "already seen" script text used to skip those DOM-guarded scripts too,
+    // which broke anything they inject (e.g. the header's account icon) on every page
+    // after the first, because the guard never got a chance to see the new page's DOM.
     const knownStyles = existingStyleTexts();
     const toRun = [];
     const contentNodes = [];
     Array.from(doc.body.children).forEach(el => {
       if (el.tagName === 'SCRIPT') {
         if (el.src) return;
-        const txt = el.textContent;
-        if (!knownScripts.has(txt)) toRun.push(txt);
+        toRun.push(el.textContent);
         return;
       }
       if (el.tagName === 'STYLE') {
