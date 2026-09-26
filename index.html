@@ -1195,11 +1195,8 @@
   .salebar__add { flex: 0 0 auto; height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: #111; color: #fff; font: inherit; font-size: 10px; font-weight: 600; letter-spacing: .14em; cursor: pointer; transition: background-color .2s, transform .12s; white-space: nowrap; }
   .salebar__add:active { transform: scale(.97); }
   .salebar__add.is-ok { background: var(--brand-blue, #5B95C3); }
-  .salebar__foot { display: flex; align-items: center; gap: 14px; margin: 16px clamp(16px, 4vw, 48px) 0; }
-  .salebar__foot .sales__progress { flex: 1 1 auto; margin: 0; height: 4px; }
-  .salebar__arrows { display: flex; gap: 6px; }
-  .salebar__arrows button { width: 30px; height: 30px; border: 1px solid #e4e4e1; border-radius: 50%; background: #fff; color: #111; display: grid; place-items: center; cursor: pointer; padding: 0; }
-  .salebar__arrows svg { width: 14px; height: 14px; }
+  .salebar__foot { display: flex; justify-content: center; margin: 16px clamp(16px, 4vw, 48px) 0; }
+  .salebar__foot .sales__progress { flex: 0 1 auto; width: 55%; max-width: 260px; margin: 0; height: 4px; }
   .salebar .sales__nav { display: none; }
   /* sale rail: the same card size/ratio as the shop grid, but on ONE row that slides */
   .salerail .sales__track { gap: 10px; padding: 2px clamp(16px, 4vw, 48px) 6px; scroll-padding: 0 clamp(16px, 4vw, 48px); }
@@ -1694,13 +1691,11 @@
     const thumb = document.createElement('div'); thumb.className = 'sales__progress__thumb';
     progress.appendChild(thumb);
     if (opts.compact) {
-      // reference layout: progress line + small arrows on one row under the cards
+      // reference layout: just the centered progress line under the cards (no visible
+      // arrow buttons here — the big side-of-image .sales__nav arrows above are already
+      // hidden below 900px, and swiping/dragging the track still works without either).
       const foot = document.createElement('div'); foot.className = 'salebar__foot';
-      const arrows = document.createElement('div'); arrows.className = 'salebar__arrows';
-      const p2 = prevBtn.cloneNode(true), n2 = nextBtn.cloneNode(true); p2.className = ''; n2.className = '';
-      p2.addEventListener('click', () => track.scrollBy({ left: -track.clientWidth * 0.85, behavior: 'smooth' }));
-      n2.addEventListener('click', () => track.scrollBy({ left: track.clientWidth * 0.85, behavior: 'smooth' }));
-      arrows.append(p2, n2); foot.append(progress, arrows);
+      foot.append(progress);
       grid.append(wrap, foot);
     } else grid.append(wrap, progress);
 
