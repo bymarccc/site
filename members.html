@@ -85,7 +85,7 @@
   <a class="top__back" href="javascript:history.length > 1 ? history.back() : location.assign('index.html')">← Back</a>
 </header>
 
-<main>
+<main id="membersMain">
   <section class="card" aria-live="polite">
     <div class="hero">
       <h1>bymarccc Members</h1>
@@ -514,8 +514,16 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
         thumb: 'assets/img/thumb-carbonne-imagine.jpg' },
       { id: 'mj-heal-the-world', title: 'Michael Jackson - Heal the World', channel: '', duration: '',
         src:   CLD + 'v1790321282/Michael_Jackson_Heal_The_World_44s-346s.m4a',
-        thumb: 'assets/img/thumb-mj-heal-the-world.jpg' }
+        thumb: 'assets/img/thumb-mj-heal-the-world.jpg' },
         /* no `video` on purpose — track 9 is music-only, per instructions */
+      { id: 'gvx', title: 'GVX', channel: '', duration: '',
+        src:   CLD + 'v1790425042/Je_veux_-_Zaz.m4a',
+        video: CLD + 'q_auto,f_auto/v1790426043/ZAZ_-_Je_veux_Clip_officiel.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790426043/ZAZ_-_Je_veux_Clip_officiel.jpg',
+        thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790426043/ZAZ_-_Je_veux_Clip_officiel.jpg' },
+      { id: 'nems-art', title: 'Nems Art', channel: '', duration: '',
+        src:   CLD + 'v1790425035/Nemzzz_-_Art.m4a',
+        video: CLD + 'q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.jpg',
+        thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.jpg' }
     ];
     window.BYMARCCC_PLAYLIST = SEED;
   })();
