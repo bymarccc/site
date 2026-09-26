@@ -126,12 +126,12 @@
 .pdp-stars svg { width: 16px; height: 16px; }
 .pdp-reviews-link { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font: inherit; }
 .pdp-reviews-link[disabled] { cursor: default; }
-.pdp-service { list-style: none; margin: 28px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.pdp-service { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
 .pdp-service li { border-bottom: 1px solid var(--line); }
-.pdp-service__row { width: 100%; display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 14px; padding: 13px 0; background: none; border: 0; text-align: left; font-size: 13px; font-weight: 400; }
+.pdp-service__row { width: 100%; display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 12px; padding: 9px 0; background: none; border: 0; text-align: left; font-size: 12px; font-weight: 400; }
 .pdp-service__row[disabled] { cursor: default; }
-.pdp-service__row svg { width: 22px; height: 22px; display: block; }
-.pdp-service__chev { width: 16px; height: 16px; color: #111; }
+.pdp-service__row svg { width: 18px; height: 18px; display: block; }
+.pdp-service__chev { width: 14px; height: 14px; color: #111; }
 .pdp-service__panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s var(--ease); }
 .pdp-service__panel > div { overflow: hidden; }
 .pdp-service__panel.is-open { grid-template-rows: 1fr; }
@@ -177,7 +177,7 @@
 .pdp-bar__price[hidden] { display: none; }
 .pdp-bar__applepay { flex: 0 0 35%; height: 52px; border: 1.5px solid #111; border-radius: 10px; background: #fff; display: grid; place-items: center; overflow: hidden; }
 .pdp-bar__applepay[hidden] { display: none; }
-.pdp-member { margin-top: 18px; margin-bottom: 30px; text-decoration: none; border-radius: 6px; }
+.pdp-member { margin-top: 6px; margin-bottom: 0; text-decoration: none; border-radius: 6px; color: #111; }
 @media (hover: hover) { .pdp-member:hover { text-decoration: underline; text-underline-offset: 3px; } }
 .pdp-member[aria-disabled="true"] { cursor: default; }
 .pdp-bar__msg { font-size: 12px; color: var(--err); min-height: 0; }
@@ -1040,7 +1040,7 @@
     mt.hidden = false;
     mt.textContent = PRODUCT.gender === 'women'
       ? 'Model is 177 cm and 53 kg, wearing size S-M'
-      : 'Model is 184 cm and 74 kg, wearing size L';
+      : 'Model is 184 cm and 74 kg, wearing size M';
   }
   function layout(dx = 0, anim = true) {
     track.classList.toggle('no-anim', !anim || reduced.matches);
