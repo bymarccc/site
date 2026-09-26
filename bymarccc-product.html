@@ -120,8 +120,9 @@
 .pdp-summary__row { display: none; }
 .pdp-info__title { margin: 0; font-size: 14px; font-weight: 400; letter-spacing: .04em; min-width: 0; line-height: 1.4; }
 .pdp-info__price { margin: 0; font-size: 14px; font-weight: 400; letter-spacing: .04em; flex: 0 0 auto; }
-.pdp-summary__reviews { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.pdp-summary__reviews { display: flex; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 14px; font-size: 13px; color: var(--muted); }
 .pdp-summary__reviews:empty { display: none; }
+body.is-custom-bag-page #gallery { display: none; }
 .pdp-stars { display: inline-flex; gap: 2px; }
 .pdp-stars svg { width: 16px; height: 16px; }
 .pdp-reviews-link { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font: inherit; }
@@ -391,6 +392,7 @@
 @media (min-width: 900px) {
   .pdp { --bar-h: 0px; }
   .pdp-layout { display: grid; grid-template-columns: 1fr 460px; }
+  body.is-custom-bag-page .pdp-layout { grid-template-columns: 1fr; }
   .pdp-gallery { aspect-ratio: auto; height: 100vh; height: 100svh; max-height: none; position: sticky; top: 0; }
   .pdp-gallery__slide { padding: 0; }
   .pdp-gallery__slide { display: flex; align-items: center; justify-content: center; }
@@ -820,7 +822,7 @@
   const ONE_SIZE = { category: 'one-size', label: s => s, sizes: [{ size: 'One size' }] };
   const sizeChart = list => ({ category: 'apparel', label: s => s, sizes: list.map(size => ({ size })) });
   const SHIPPING = 'Romania: 3–5 working days.\nEU & UK: DHL Express — 5–7 working days.\nUSA: UPS Express — 7–9 working days.\n\nReturns accepted within 14 days of delivery, unworn and with tags.';
-  const REVIEWS = { rating: 4.8, count: 200, label: '200+ Reviews', anchor: null };   // count set by Mark; no review app yet
+  const REVIEWS = { rating: 4.8, count: 1000, label: '1000+ Reviews', anchor: null };   // count set by Mark; no review app yet
   const MODEL = Object.assign({ height: 176, weight: 62, size: '36', modelMedia: [] }, window.BYMARCCC_MODEL || {});
   const APPAREL_MODEL = { height: 184, weight: 74, size: 'M', modelMedia: [0], text: 'Model measurements: 184 cm & 74 kg. Model is wearing size M' };
 
@@ -1033,6 +1035,7 @@
         },
       ],
       baseImage: 'assets/img/custom-bag/base.webp',
+      baseImageBack: 'assets/img/custom-bag/base-back.webp',
       hardwareOverlay: 'assets/img/custom-bag/hardware-overlay.webp',
     },
   };
@@ -1678,8 +1681,8 @@
     //      the base photo)  3 client photo/design (clipped to the printable zone)  4 back text
     //      5-6 zipper + handles — one fixed overlay, drawn last so it always sits above whatever
     //      the shopper adds (approved hardware scope: handles + zipper only, no chain/strap). ----
-    let cbBaseImg = null, cbHwImg = null;
-    Promise.all([cbLoadImage(PRODUCT.baseImage), cbLoadImage(PRODUCT.hardwareOverlay)]).then(([b, h]) => { cbBaseImg = b; cbHwImg = h; cbRender(); });
+    let cbBaseImg = null, cbBaseImgBack = null, cbHwImg = null;
+    Promise.all([cbLoadImage(PRODUCT.baseImage), cbLoadImage(PRODUCT.baseImageBack || PRODUCT.baseImage), cbLoadImage(PRODUCT.hardwareOverlay)]).then(([b, bb, h]) => { cbBaseImg = b; cbBaseImgBack = bb; cbHwImg = h; cbRender(); });
 
     function cbDrawCover(img, pz) {
       const ar = img.naturalWidth / img.naturalHeight, zar = pz.w / pz.h;
@@ -1716,14 +1719,16 @@
       cbCtx.restore();
     }
     function cbRender() {
-      if (!cbBaseImg) return;
+      const side = cbState.activeSide;
+      // BACK renders its own base photo (when provided) instead of reusing the FRONT one.
+      const activeBaseImg = side === 'back' ? (cbBaseImgBack || cbBaseImg) : cbBaseImg;
+      if (!activeBaseImg) return;
       const W = cbCanvas.width, H = cbCanvas.height;
       cbCtx.clearRect(0, 0, W, H);
-      cbCtx.drawImage(cbBaseImg, 0, 0, W, H);
+      cbCtx.drawImage(activeBaseImg, 0, 0, W, H);
       const pz = { x: PRINT_ZONE.x * W, y: PRINT_ZONE.y * H, w: PRINT_ZONE.w * W, h: PRINT_ZONE.h * H };
       cbCtx.save();
       cbCtx.beginPath(); cbCtx.rect(pz.x, pz.y, pz.w, pz.h); cbCtx.clip();
-      const side = cbState.activeSide;
       const sideHasPhotos = (cbState[side] || []).length > 0;
       const activeVariant = cbState[side + 'Variant'];
       const variantSrc = (!sideHasPhotos && activeVariant) ? (side === 'front' ? activeVariant.frontImage : activeVariant.backImage) : null;
@@ -1922,7 +1927,7 @@
      is bymarccc's own (2 payments, card-only), never PayPal's. */
   function splitPayBodyInner() {
     const [a, b] = splitTwo(priceMinor());
-    return `<p>Split this order into 2 card payments: <strong>${fmtMinor(a)}</strong> today and <strong>${fmtMinor(b)}</strong> in 30 days, charged automatically to the same card. No PayPal account needed, no interest, no fees.</p><p class="pdp-service__terms"><a href="https://www.paypal.com/uk/campaign/paypal-payin3/terms" target="_blank" rel="noopener noreferrer">Terms and conditions apply.</a></p>`;
+    return `<p>Split this order into 2 card payments: <strong>${fmtMinor(a)}</strong> today and <strong>${fmtMinor(b)}</strong> in 30 days, charged automatically to the same card. No PayPal account needed, no interest, no fees.</p><p class="pdp-service__terms"><a href="pay-in-2-terms.html" target="_blank" rel="noopener noreferrer">Terms and conditions apply.</a></p>`;
   }
   const splitRow = SERVICE.splitPay.enabled && hasPrice ? svcRow(ICON.pay, '', splitPayBodyInner(), 'svc-split') : null;
   function renderSplit() {
