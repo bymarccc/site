@@ -2322,6 +2322,17 @@
 (() => {
   'use strict';
 
+  // Run this whole "playful hero" player setup only ONCE per real page load,
+  // never again on a BYM_NAV client-side navigation back to index.html.
+  // insertFetched() re-runs this script's text on every such navigation, and
+  // without this guard every element handled here (#miniAudio's play/pause/
+  // ended/timeupdate/etc. listeners, the drag objects, the flip card) would get
+  // a second, third, Nth set of listeners stacked on the very same persisted
+  // DOM nodes — e.g. a track ending would fire miniStep(1) multiple times.
+  // Same fix, same reasoning as BYM_NAV's own self-guard just above in this file.
+  if (window.BYMARCCC_HERO_INIT) return;
+  window.BYMARCCC_HERO_INIT = true;
+
   /* ------------------------------------------------------------------
      CONFIG — dormant YouTube integration boundary. Nothing in this file
      calls searchYouTube()/createPlayer() anymore (the playlist panel is
@@ -3849,6 +3860,20 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
              or paste your own image URL.
      ================================================================ */
   // The videos are the GOOD VIBES ONLY playlist items that have a Cloudinary `video` URL (see SEED in the music script)
+  // Run this floating-video-player setup — including the localStorage-based
+  // restoreNow() resurrection further down — only ONCE per real page load, never
+  // again on a BYM_NAV client-side navigation. BYM_NAV's insertFetched() re-runs
+  // every fetched page's inline <script>s on each navigation (see its own comment
+  // on this same problem for the popstate/click listener), but #vp/#vpVideo are
+  // never removed or recreated by that router (they aren't in its CONTENT_IDS
+  // list) — they keep playing untouched, so a second init is not just redundant,
+  // it's harmful: restoreNow() would fire again, force the widget open, and
+  // reseek the still-live playing audio/video back to its last localStorage
+  // snapshot (a few seconds stale). That reseek was the unwanted big player and
+  // the backwards jump on ordinary navigation; guarding the init like this fixes
+  // both at the source, with no timing workaround.
+  if (window.BYMARCCC_VP_INIT) return;
+  window.BYMARCCC_VP_INIT = true;
   const VIDEOS = (window.BYMARCCC_PLAYLIST || []).filter(t => t.video).map(t => ({ src: t.video, raw: t.rawVideo || '', poster: t.poster || '', title: t.title }));
   const KEY_POS = 'bymarccc:vp:pos', KEY_OPEN = 'bymarccc:vp:open', KEY_NOW = 'bym.play.now';
   const $ = id => document.getElementById(id);
