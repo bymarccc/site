@@ -182,7 +182,8 @@
   .zebra__link {
     display: inline-block; padding: 6px 2px;
     color: var(--fg); text-decoration: none; font-size: 13px; font-weight: 600; letter-spacing: .22em;
-    border-bottom: 1px solid transparent; opacity: .45;
+    border: none; border-bottom: 1px solid transparent; opacity: .45;
+    background: none; font-family: inherit; cursor: pointer;
     transition: color var(--bg-dur) var(--ease), opacity .2s, border-color .2s;
   }
   .zebra__link.is-active { opacity: 1; border-bottom-color: currentColor; }
@@ -973,7 +974,7 @@
   <div class="zebra__info" aria-live="polite" aria-atomic="true">
     <h3 class="zebra__name" id="productName">Grey Zebra Patch Jeans</h3>
     <p class="zebra__desc">Hand-finished statement denim, made to fit you.</p>
-    <nav class="zebra__links" aria-label="Zebra Patch fits"><a class="zebra__link" id="skinnyLink" href="bymarccc-product.html?p=skinny">SKINNY</a><a class="zebra__link" id="relaxedLink" href="bymarccc-product.html?p=relaxed">RELAXED</a></nav>
+    <nav class="zebra__links" aria-label="Zebra Patch fits"><button type="button" class="zebra__link" id="skinnyLink">SKINNY</button><button type="button" class="zebra__link" id="relaxedLink">RELAXED</button></nav>
   </div>
 
 </section>
