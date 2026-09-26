@@ -1580,7 +1580,7 @@
 
     const add = card.querySelector('.sales__add'), msg = card.querySelector('.sales__msg');
     add.addEventListener('click', async () => {
-      if (p.needsBody) { location.href = 'bymarccc-product.html?p=' + key; return; }   // made-to-measure jeans need the product page
+      if (p.needsBody) { (window.BYM_NAV ? window.BYM_NAV.navigate('bymarccc-product.html?p=' + key) : (location.href = 'bymarccc-product.html?p=' + key)); return; }   // made-to-measure jeans need the product page
       const size = needsSize ? card.querySelector('[data-size]').value : (sizes[0] || '');
       const colour = needsColour ? card.querySelector('[data-colour]').value : (colours[0] && colours[0].id);
       const design = needsDesign ? card.querySelector('[data-design]').value : '';
@@ -4152,5 +4152,144 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 })();
 </script>
 
+
+<script>
+/* bymarccc — lightweight client-side navigation for product pages.
+   Keeps the shared audio/video player mounted & playing when a product
+   opens, and restores the previous view on Back without resetting it. */
+(() => {
+  'use strict';
+  const CONTENT_IDS = ['play','zebra','shop','crumble','shopWomen','reel','fp','fpTab','siteFooter','bagPill','pdpHeader','backdrop','ctlDrawer','cart','wl','qa','sizeModal'];
+  const isContent = el => el.nodeType === 1 && (
+    (el.id && CONTENT_IDS.indexOf(el.id) !== -1) ||
+    (el.tagName === 'MAIN' && el.classList.contains('pdp-page'))
+  );
+
+  function captureContent(root) {
+    return Array.from(root.body.children).filter(isContent);
+  }
+  function existingScriptTexts() {
+    const set = new Set();
+    document.querySelectorAll('script:not([src])').forEach(s => set.add(s.textContent));
+    return set;
+  }
+  function existingStyleTexts() {
+    const set = new Set();
+    document.querySelectorAll('style').forEach(s => set.add(s.textContent));
+    return set;
+  }
+
+  const cache = new Map();
+  const urlToId = new Map();
+  let seq = 0, curId = 0;
+
+  function snapshotCurrent(id) {
+    const nodes = captureContent(document);
+    nodes.forEach(n => n.remove());
+    cache.set(id, { nodes, title: document.title });
+  }
+  function restore(id) {
+    const entry = cache.get(id);
+    if (!entry) return false;
+    const anchor = document.body.firstChild;
+    entry.nodes.forEach(n => document.body.insertBefore(n, anchor));
+    document.title = entry.title;
+    window.scrollTo(0, 0);
+    return true;
+  }
+  function insertFetched(doc) {
+    const knownScripts = existingScriptTexts();
+    const knownStyles = existingStyleTexts();
+    const toRun = [];
+    const contentNodes = [];
+    Array.from(doc.body.children).forEach(el => {
+      if (el.tagName === 'SCRIPT') {
+        if (el.src) return;
+        const txt = el.textContent;
+        if (!knownScripts.has(txt)) toRun.push(txt);
+        return;
+      }
+      if (el.tagName === 'STYLE') {
+        const txt = el.textContent;
+        if (!knownStyles.has(txt)) {
+          const st = document.createElement('style');
+          st.textContent = txt;
+          document.head.appendChild(st);
+        }
+        return;
+      }
+      if (isContent(el)) contentNodes.push(el);
+    });
+    const anchor = document.body.firstChild;
+    contentNodes.forEach(n => { document.adoptNode(n); document.body.insertBefore(n, anchor); });
+    toRun.forEach(txt => {
+      const s = document.createElement('script');
+      s.textContent = txt;
+      document.body.appendChild(s);
+    });
+    window.scrollTo(0, 0);
+  }
+
+  async function navigate(url, opts) {
+    opts = opts || {};
+    let dest;
+    try { dest = new URL(url, location.href); } catch (e) { location.href = url; return; }
+    if (dest.origin !== location.origin) { location.href = url; return; }
+    try {
+      if (urlToId.has(dest.href) && cache.has(urlToId.get(dest.href))) {
+        const id = urlToId.get(dest.href);
+        snapshotCurrent(curId);
+        restore(id);
+        curId = id;
+        if (opts.push === false) history.replaceState({ bymId: id }, '', dest.href);
+        else history.pushState({ bymId: id }, '', dest.href);
+        return;
+      }
+      const res = await fetch(dest.href, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('fetch failed: ' + res.status);
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      snapshotCurrent(curId);
+      const newId = ++seq;
+      if (opts.push === false) history.replaceState({ bymId: newId }, '', dest.href);
+      else history.pushState({ bymId: newId }, '', dest.href);
+      document.title = doc.title || document.title;
+      insertFetched(doc);
+      urlToId.set(dest.href, newId);
+      curId = newId;
+    } catch (err) {
+      location.href = url;
+    }
+  }
+
+  window.addEventListener('popstate', (e) => {
+    const st = e.state;
+    if (!st || typeof st.bymId !== 'number') { location.reload(); return; }
+    if (st.bymId === curId) return;
+    snapshotCurrent(curId);
+    if (!restore(st.bymId)) { location.reload(); return; }
+    curId = st.bymId;
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    if (a.target && a.target !== '' && a.target !== '_self') return;
+    if (a.hasAttribute('download')) return;
+    let dest;
+    try { dest = new URL(a.href, location.href); } catch (e2) { return; }
+    if (dest.origin !== location.origin) return;
+    if (!/\/bymarccc-product\.html$/.test(dest.pathname)) return;
+    e.preventDefault();
+    navigate(a.href);
+  }, true);
+
+  history.replaceState({ bymId: curId }, '', location.href);
+  urlToId.set(location.href, curId);
+
+  window.BYM_NAV = { navigate };
+})();
+</script>
 </body>
 </html>
