@@ -462,12 +462,15 @@
 
 /* ---------- Custom Painted Bag: variant selector + AI corner widget (gated by PRODUCT.customBag) ---------- */
 .cb-variants[hidden] { display: none; }
-.cb-variants { display: flex; flex-wrap: wrap; gap: 10px; margin: 2px 0 18px; }
-.cb-variant { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 68px; border: none; background: none; padding: 0; cursor: pointer; }
-.cb-variant__thumb { width: 64px; height: 64px; border-radius: 14px; overflow: hidden; border: 2px solid #e4e4e1; box-sizing: border-box; }
-.cb-variant__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cb-variant[aria-checked="true"] .cb-variant__thumb { border-color: #111; }
+.cb-variants { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0 18px; }
+.cb-variant { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; border: none; background: none; padding: 0; cursor: pointer; }
+.cb-variant__thumb { width: 92px; height: 92px; border-radius: 24px; overflow: hidden; border: 1px solid #ececea; box-sizing: border-box; background: transparent; }
+.cb-variant__thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.cb-variant[aria-checked="true"] .cb-variant__thumb { border-color: #111; border-width: 2px; }
 .cb-variant__name { font-size: 10px; letter-spacing: .02em; text-align: center; color: #444; }
+.cb-variant__thumb--none { display: flex; align-items: center; justify-content: center; border-style: dashed; color: #9a9a96; }
+.cb-variant[aria-checked="true"] .cb-variant__thumb--none { border-style: solid; color: #111; }
+.cb-variant__thumb--none svg { width: 30px; height: 30px; }
 
 .cb-ai[hidden] { display: none; }
 
@@ -509,6 +512,15 @@
 .cb-ai__note { font-size: 10.5px; color: #8a8a86; margin: 16px 0 0; }
 .cb-ai__err { font-size: 11.5px; color: #b3261e; margin: 10px 0 0; }
 .cb-ai__err[hidden] { display: none; }
+.cb-ai__bgstatus { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 11.5px; color: #6f6f6f; flex-wrap: wrap; }
+.cb-ai__bgstatus[hidden] { display: none; }
+.cb-ai__bgstatus.is-error { color: #b3261e; }
+.cb-ai__bgspin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #d8d8d5; border-top-color: #111; animation: cbSpin .7s linear infinite; flex: 0 0 auto; }
+.cb-ai__bgstatus.is-error .cb-ai__bgspin { display: none; }
+@keyframes cbSpin { to { transform: rotate(360deg); } }
+.cb-ai__bgactions { display: flex; gap: 12px; }
+.cb-ai__bgactions[hidden] { display: none; }
+.cb-ai__bgretry, .cb-ai__bgkeep { border: none; background: none; font-size: 11.5px; text-decoration: underline; cursor: pointer; padding: 0; color: #111; }
 .cb-ai__pin { display: inline-flex; align-items: center; gap: 4px; margin-top: 14px; font-size: 12.5px; color: #111; text-decoration: none; border-bottom: 1px solid #111; }
 .cb-ai__pin span { color: #5B95C3; }
 
@@ -587,9 +599,6 @@
       <div class="pdp-label"><span>SIZE</span><span id="sizeName">Select a size</span></div>
       <div class="pdp-sizes" id="sizes" role="radiogroup" aria-label="Size"></div>
 
-      <div class="pdp-label" id="cbVariantLabel" hidden><span>DESIGN</span><span id="cbVariantName">Select a design</span></div>
-      <div class="cb-variants" id="cbVariants" hidden role="radiogroup" aria-label="Design"></div>
-
       <div class="cb-ai" id="cbAi" hidden>
         <div class="cb-ai__head">
           <h3 class="cb-ai__title">CUSTOMIZE YOUR BAG</h3>
@@ -600,6 +609,9 @@
           <canvas id="cbCanvas" width="1400" height="933" aria-label="Bag preview"></canvas>
         </div>
 
+        <div class="pdp-label" id="cbVariantLabel" hidden><span>DESIGN</span><span id="cbVariantName">Select a design</span></div>
+        <div class="cb-variants" id="cbVariants" hidden role="radiogroup" aria-label="Design"></div>
+
         <div class="cb-ai__tabs" role="tablist">
           <button type="button" class="cb-ai__tab is-active" data-cbside="front" role="tab" aria-selected="true">FRONT</button>
           <button type="button" class="cb-ai__tab" data-cbside="back" role="tab" aria-selected="false">BACK</button>
@@ -609,6 +621,14 @@
           <p class="cb-ai__hint">Upload up to 3 photos</p>
           <div class="cb-ai__thumbs" id="cbFrontThumbs"></div>
           <label class="cb-ai__upload" id="cbFrontUploadLabel"><input type="file" id="cbFrontInput" accept="image/png,image/jpeg,image/webp" multiple hidden>+ Add photo</label>
+          <div class="cb-ai__bgstatus" id="cbFrontBgStatus" hidden role="status" aria-live="polite">
+            <span class="cb-ai__bgspin" aria-hidden="true"></span>
+            <span id="cbFrontBgText">Removing background…</span>
+            <div class="cb-ai__bgactions" id="cbFrontBgActions" hidden>
+              <button type="button" class="cb-ai__bgretry" id="cbFrontBgRetry">Retry</button>
+              <button type="button" class="cb-ai__bgkeep" id="cbFrontBgKeep">Continue with original</button>
+            </div>
+          </div>
           <div class="cb-ai__controls" id="cbFrontControls" hidden>
             <label class="cb-ai__slider">Size<input type="range" id="cbFrontScale" min="20" max="200" value="100"></label>
             <label class="cb-ai__slider">Rotate<input type="range" id="cbFrontRotate" min="-45" max="45" value="0"></label>
@@ -620,6 +640,14 @@
           <p class="cb-ai__hint">Upload up to 3 photos</p>
           <div class="cb-ai__thumbs" id="cbBackThumbs"></div>
           <label class="cb-ai__upload" id="cbBackUploadLabel"><input type="file" id="cbBackInput" accept="image/png,image/jpeg,image/webp" multiple hidden>+ Add photo</label>
+          <div class="cb-ai__bgstatus" id="cbBackBgStatus" hidden role="status" aria-live="polite">
+            <span class="cb-ai__bgspin" aria-hidden="true"></span>
+            <span id="cbBackBgText">Removing background…</span>
+            <div class="cb-ai__bgactions" id="cbBackBgActions" hidden>
+              <button type="button" class="cb-ai__bgretry" id="cbBackBgRetry">Retry</button>
+              <button type="button" class="cb-ai__bgkeep" id="cbBackBgKeep">Continue with original</button>
+            </div>
+          </div>
           <div class="cb-ai__controls" id="cbBackControls" hidden>
             <label class="cb-ai__slider">Size<input type="range" id="cbBackScale" min="20" max="200" value="100"></label>
             <label class="cb-ai__slider">Rotate<input type="range" id="cbBackRotate" min="-45" max="45" value="0"></label>
@@ -978,13 +1006,13 @@
       variants: [
         {
           id: 'design-01', name: 'Sticker Wall',
-          thumbnail: 'assets/img/custom-bag/designs/graffiti-thumb.jpg',
+          thumbnail: 'assets/img/custom-bag/designs/graffiti-texture.webp',
           frontImage: 'assets/img/custom-bag/designs/graffiti-texture.webp',
           backImage: 'assets/img/custom-bag/designs/graffiti-texture.webp',
         },
         {
           id: 'design-02', name: 'Candy Pop',
-          thumbnail: 'assets/img/custom-bag/designs/candy-thumb.jpg',
+          thumbnail: 'assets/img/custom-bag/designs/candy-texture.webp',
           frontImage: 'assets/img/custom-bag/designs/candy-texture.webp',
           backImage: 'assets/img/custom-bag/designs/candy-texture.webp',
         },
@@ -1393,6 +1421,7 @@
     const cbVariantsEl = $('cbVariants'), cbAiEl = $('cbAi'), cbCanvas = $('cbCanvas'), cbCtx = cbCanvas.getContext('2d');
     const cbErr = $('cbErr');
     const cbState = { variant: null, activeSide: 'front', front: [], back: [], selFront: -1, selBack: -1, backText: '', backTextPos: 'center' };
+    let cbGen = 0;   // bumped by cbClearAll() so stale async work (e.g. a background-removal call in flight) never resurrects state after a reset
     const cbResolved = new Map();
     function cbLoadImage(src) {
       if (cbResolved.has(src)) return Promise.resolve(cbResolved.get(src));
@@ -1406,6 +1435,65 @@
     function cbShowError(msg) {
       cbErr.textContent = msg; cbErr.hidden = false;
       clearTimeout(cbShowError._t); cbShowError._t = setTimeout(() => { cbErr.hidden = true; }, 4000);
+    }
+
+    // ---- AI background removal — client-side, no API key and nothing to configure server-side.
+    //      @imgly/background-removal is an open-source ML background remover that runs entirely
+    //      in the shopper's browser via WebAssembly/ONNX. On first use it downloads its own ML
+    //      model (tens of MB) from IMG.LY's CDN, which just needs the shopper's browser to have
+    //      normal internet access — the same as loading any other asset on this page. ----
+    let cbBgModulePromise = null;
+    function cbLoadBgModule() {
+      if (!cbBgModulePromise) cbBgModulePromise = import('https://cdn.jsdelivr.net/npm/@imgly/background-removal/dist/browser.mjs');
+      return cbBgModulePromise;
+    }
+    async function cbRemoveBackground(dataUrl) {
+      const mod = await cbLoadBgModule();
+      const blob = await mod.removeBackground(dataUrl, {
+        publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal/dist/',
+        output: { format: 'image/png', quality: 0.92 },
+      });
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error('Could not read the processed image.'));
+        reader.readAsDataURL(blob);
+      });
+    }
+    function cbReadFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error('Could not read the file.'));
+        reader.readAsDataURL(file);
+      });
+    }
+    function cbLoadImageEl(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Could not load the image.'));
+        img.src = src;
+      });
+    }
+
+    // ---- "None" — always first. Clears any selected design AND any uploaded photos on both
+    //      sides, so a shopper can back out to the plain bag and pick something else at any time. ----
+    const cbNoneBtn = document.createElement('button');
+    cbNoneBtn.type = 'button'; cbNoneBtn.className = 'cb-variant'; cbNoneBtn.setAttribute('role', 'radio'); cbNoneBtn.setAttribute('aria-checked', 'true'); cbNoneBtn.dataset.vid = 'none';
+    cbNoneBtn.innerHTML = '<span class="cb-variant__thumb cb-variant__thumb--none" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg></span><span class="cb-variant__name">None</span>';
+    cbNoneBtn.addEventListener('click', () => cbClearAll());
+    cbVariantsEl.appendChild(cbNoneBtn);
+    function cbClearAll() {
+      cbGen++;
+      cbState.variant = null;
+      cbState.front = []; cbState.back = [];
+      cbState.selFront = -1; cbState.selBack = -1;
+      cbState.backText = ''; cbBackTextInput.value = '';
+      cbVariantsEl.querySelectorAll('.cb-variant').forEach(b => b.setAttribute('aria-checked', String(b.dataset.vid === 'none')));
+      $('cbVariantName').textContent = 'Select a design';
+      cbRenderAllThumbs(); cbFront.cbRenderControls(); cbBack.cbRenderControls();
+      cbRender();
     }
 
     // ---- Variant selector — explicit id/name/thumbnail/frontImage/backImage map, never inferred
@@ -1459,30 +1547,77 @@
         els.scale.value = Math.round((arr()[i].scale || 1) * 100);
         els.rotate.value = Math.round(arr()[i].rotate || 0);
       }
-      els.input.addEventListener('change', () => {
+      function bgShow(text) { els.bgStatus.hidden = false; els.bgStatus.classList.remove('is-error'); els.bgActions.hidden = true; els.bgText.textContent = text; }
+      function bgError(text) { els.bgStatus.hidden = false; els.bgStatus.classList.add('is-error'); els.bgActions.hidden = false; els.bgText.textContent = text; }
+      function bgHide() { els.bgStatus.hidden = true; }
+      function commitPhoto(dataUrl) {
+        const small = new Image();
+        small.onload = () => {
+          const idx = arr().length;
+          arr().push({ dataUrl, img: small, xNorm: 0.5, yNorm: 0.5, scale: 1, rotate: 0 });
+          setSel(idx);
+          cbRender();
+        };
+        small.src = dataUrl;
+      }
+      // Uploading a photo automatically removes its background (see cbRemoveBackground above)
+      // and shows the transparent result on the bag. If it fails, the shopper can retry or
+      // continue with their original (un-removed) photo instead — nothing is ever silently faked.
+      async function processOne(file) {
+        const myGen = cbGen;
+        if (!ALLOWED_TYPES.includes(file.type)) { cbShowError('Please choose a PNG, JPG or WEBP image.'); return; }
+        if (file.size > MAX_FILE_BYTES) { cbShowError('Each photo must be under 8 MB.'); return; }
+        let downscaled;
+        try {
+          const rawDataUrl = await cbReadFileAsDataURL(file);
+          const orig = await cbLoadImageEl(rawDataUrl);
+          downscaled = cbDownscale(orig, 1200);
+        } catch {
+          cbShowError('That image could not be read. Please try another file.');
+          return;
+        }
+        if (myGen !== cbGen) return;   // cleared while this file was being read
+
+        bgShow('Removing background\u2026');
+        try {
+          const transparent = await cbRemoveBackground(downscaled);
+          if (myGen !== cbGen) return;
+          bgHide();
+          commitPhoto(transparent);
+          return;
+        } catch (err) {
+          console.error('Background removal failed:', err);
+          if (myGen !== cbGen) return;
+        }
+        // Failed once: offer Retry / Continue with original and wait for the shopper's choice
+        // before moving on to the next file in this batch.
+        await new Promise(resolve => {
+          const cleanup = () => { els.bgRetry.removeEventListener('click', onRetry); els.bgKeep.removeEventListener('click', onKeep); };
+          function commitOriginalAfterFailure() { bgHide(); commitPhoto(downscaled); }
+          const onRetry = async () => {
+            cleanup();
+            bgShow('Removing background\u2026');
+            try {
+              const transparent = await cbRemoveBackground(downscaled);
+              if (myGen === cbGen) { bgHide(); commitPhoto(transparent); }
+            } catch (err2) {
+              console.error('Background removal failed again:', err2);
+              if (myGen === cbGen) { bgError('Still could not remove the background automatically.'); els.bgRetry.addEventListener('click', onRetry); els.bgKeep.addEventListener('click', onKeep); return; }
+            }
+            resolve();
+          };
+          const onKeep = () => { cleanup(); if (myGen === cbGen) commitOriginalAfterFailure(); resolve(); };
+          bgError('Automatic background removal isn\u2019t available right now.');
+          els.bgRetry.addEventListener('click', onRetry);
+          els.bgKeep.addEventListener('click', onKeep);
+        });
+      }
+      els.input.addEventListener('change', async () => {
         const files = Array.from(els.input.files || []);
         els.input.value = '';
         for (const file of files) {
           if (arr().length >= MAX_PHOTOS) { cbShowError(`You can upload up to ${MAX_PHOTOS} photos on this side.`); break; }
-          if (!ALLOWED_TYPES.includes(file.type)) { cbShowError('Please choose a PNG, JPG or WEBP image.'); continue; }
-          if (file.size > MAX_FILE_BYTES) { cbShowError('Each photo must be under 8 MB.'); continue; }
-          const reader = new FileReader();
-          reader.onload = () => {
-            const orig = new Image();
-            orig.onload = () => {
-              const dataUrl = cbDownscale(orig, 1200);
-              const small = new Image();
-              small.onload = () => {
-                const idx = arr().length;
-                arr().push({ dataUrl, img: small, xNorm: 0.5, yNorm: 0.5, scale: 1, rotate: 0 });
-                setSel(idx);
-                cbRender();
-              };
-              small.src = dataUrl;
-            };
-            orig.src = reader.result;
-          };
-          reader.readAsDataURL(file);
+          await processOne(file);
         }
       });
       els.scale.addEventListener('input', () => { const i = selIndex(); if (i >= 0 && arr()[i]) { arr()[i].scale = Number(els.scale.value) / 100; cbRender(); } });
@@ -1490,8 +1625,8 @@
       els.remove.addEventListener('click', () => { const i = selIndex(); if (i >= 0) { arr().splice(i, 1); setSel(-1); cbRender(); } });
       return { cbRenderThumbs, cbRenderControls, setSel };
     }
-    const cbFront = cbMakeSide('front', { input: $('cbFrontInput'), uploadLabel: $('cbFrontUploadLabel'), thumbs: $('cbFrontThumbs'), controls: $('cbFrontControls'), scale: $('cbFrontScale'), rotate: $('cbFrontRotate'), remove: $('cbFrontRemove') });
-    const cbBack = cbMakeSide('back', { input: $('cbBackInput'), uploadLabel: $('cbBackUploadLabel'), thumbs: $('cbBackThumbs'), controls: $('cbBackControls'), scale: $('cbBackScale'), rotate: $('cbBackRotate'), remove: $('cbBackRemove') });
+    const cbFront = cbMakeSide('front', { input: $('cbFrontInput'), uploadLabel: $('cbFrontUploadLabel'), thumbs: $('cbFrontThumbs'), controls: $('cbFrontControls'), scale: $('cbFrontScale'), rotate: $('cbFrontRotate'), remove: $('cbFrontRemove'), bgStatus: $('cbFrontBgStatus'), bgText: $('cbFrontBgText'), bgActions: $('cbFrontBgActions'), bgRetry: $('cbFrontBgRetry'), bgKeep: $('cbFrontBgKeep') });
+    const cbBack = cbMakeSide('back', { input: $('cbBackInput'), uploadLabel: $('cbBackUploadLabel'), thumbs: $('cbBackThumbs'), controls: $('cbBackControls'), scale: $('cbBackScale'), rotate: $('cbBackRotate'), remove: $('cbBackRemove'), bgStatus: $('cbBackBgStatus'), bgText: $('cbBackBgText'), bgActions: $('cbBackBgActions'), bgRetry: $('cbBackBgRetry'), bgKeep: $('cbBackBgKeep') });
     function cbRenderAllThumbs() { cbFront.cbRenderThumbs(); cbBack.cbRenderThumbs(); }
 
     // ---- FRONT / BACK tabs ----
@@ -1669,7 +1804,7 @@
     // all other standard product info (title, price, accordions, etc.) — customBag only.
     const cbTopWrap = document.createElement('div');
     cbTopWrap.id = 'cbTopWrap';
-    cbTopWrap.append($('cbVariantLabel'), cbVariantsEl, cbAiEl);
+    cbTopWrap.append(cbAiEl);   // cbVariantLabel/cbVariantsEl now live inside cbAiEl, right under the bag preview
     const pdpMain = document.querySelector('main.pdp-page');
     if (pdpMain) pdpMain.insertBefore(cbTopWrap, pdpMain.firstChild);
   }
