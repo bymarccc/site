@@ -1005,10 +1005,16 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const setTab = mode => { tab.classList.toggle('is-dock', mode === 'dock'); tab.querySelector('.vp-tab__i').toggleAttribute('hidden', mode === 'dock'); tab.querySelector('.vp-tab__c').toggleAttribute('hidden', mode !== 'dock');   /* SVG has no .hidden property */ tab.setAttribute('aria-label', mode === 'dock' ? 'Show video' : 'Show music videos'); };
   let dockSide = 'left';
   function dock(side = 'left') {
-    docked = true; dockSide = side; vp.classList.add('is-docked', 'is-snapping');
-    const h = vp.offsetHeight; tab.style.setProperty('--ty', Math.round(y + h / 2) + 'px');
-    x = side === 'right' ? document.documentElement.clientWidth + 4 : -vp.offsetWidth - 4; apply();   // fully off-screen; media stays live so the music keeps going
-    setTab('dock'); tab.classList.toggle('is-right', side === 'right'); tab.hidden = false;
+    // Snap flush against the edge instead of sliding fully off-screen behind a tiny
+    // arrow tab: the player keeps its full YouTube-style size, shape and controls —
+    // it just pins to that edge instead of floating free. (This used to move the
+    // whole player off-screen and swap in a small black tab, which is the "short,
+    // differently-styled bar" look we don't want when the player is docked.)
+    docked = true; dockSide = side; vp.classList.add('is-snapping');
+    const b = bounds();
+    x = side === 'right' ? b.maxX : b.minX;
+    y = Math.min(b.maxY, Math.max(b.minY, y));
+    apply();
     setTimeout(() => vp.classList.remove('is-snapping'), 480);
   }
   function undock(animate = true) {
