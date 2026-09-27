@@ -4409,6 +4409,72 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     window.scrollTo(0, 0);
     return true;
   }
+  // ---- Per-page stylesheet isolation ----
+  // Every page's own <style>/<link> sheets used to stay live forever once visited, so rules
+  // from one page leaked onto every page shown after it (e.g. members.html's `.card { width:100% }`
+  // blew the homepage's alien music card up to full width; checkout/members rules shifted the
+  // custom-bag product page after Back). Now each page records the sheets its own markup defines,
+  // and only the current page's sheets are active; every other page's sheets are switched off
+  // (media="not all") until that page is shown again. Sheets injected at runtime by shared widgets
+  // (account launcher, AI stylist, etc.) are never tracked, so they always stay on.
+  const pageStyles = new Map();      // bymId -> Set of live sheet elements owned by that page
+  const managedStyles = new Set();   // every sheet element owned by any page
+  function isSheetEl(el) {
+    return el.tagName === 'STYLE' || (el.tagName === 'LINK' && (el.getAttribute('rel') || '').split(/\s+/).includes('stylesheet'));
+  }
+  function ownedStylesOf(doc) {
+    const byText = new Map(), byHref = new Map();
+    document.querySelectorAll('style, link[rel~="stylesheet"]').forEach(el => {
+      const map = el.tagName === 'STYLE' ? byText : byHref;
+      const key = el.tagName === 'STYLE' ? el.textContent : el.href;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(el);
+    });
+    const set = new Set();
+    Array.from(doc.head.children).concat(Array.from(doc.body.children)).forEach(el => {
+      if (!isSheetEl(el)) return;
+      const hits = el.tagName === 'STYLE' ? byText.get(el.textContent) : byHref.get(el.href);
+      if (hits) hits.forEach(h => set.add(h));
+    });
+    return set;
+  }
+  function registerPageStyles(id, set) {
+    pageStyles.set(id, set);
+    set.forEach(el => managedStyles.add(el));
+  }
+  function setSheetOn(el, on) {
+    if (on) {
+      if (el.hasAttribute('data-bym-off')) {
+        const m = el.getAttribute('data-bym-off');
+        if (m) el.setAttribute('media', m); else el.removeAttribute('media');
+        el.removeAttribute('data-bym-off');
+      }
+    } else if (!el.hasAttribute('data-bym-off')) {
+      el.setAttribute('data-bym-off', el.getAttribute('media') || '');
+      el.setAttribute('media', 'not all');
+    }
+  }
+  function applyPageStyles(id) {
+    const own = pageStyles.get(id);
+    if (!own) return;
+    managedStyles.forEach(el => setSheetOn(el, own.has(el)));
+  }
+  // The first page's own sheets are read from its source (served from the browser cache),
+  // lazily — only once the visitor actually leaves it.
+  let initialStylesRequested = false;
+  function ensureInitialStyles() {
+    if (initialStylesRequested) return;
+    initialStylesRequested = true;
+    try {
+      fetch(initialHref, { credentials: 'same-origin', cache: 'force-cache' })
+        .then(r => r.ok ? r.text() : Promise.reject(new Error('initial styles fetch failed')))
+        .then(html => {
+          registerPageStyles(0, ownedStylesOf(new DOMParser().parseFromString(html, 'text/html')));
+          applyPageStyles(curId);
+        })
+        .catch(() => {});
+    } catch (e) {}
+  }
   function insertHeadAssets(doc) {
     // Product pages keep almost all of their page-specific CSS in <head> (not <body>),
     // so it must be transplanted too — otherwise the destination page renders with none
@@ -4509,12 +4575,14 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     let dest;
     try { dest = new URL(url, location.href); } catch (e) { location.href = url; return; }
     if (dest.origin !== location.origin) { location.href = url; return; }
+    ensureInitialStyles();
     try {
       if (urlToId.has(dest.href) && cache.has(urlToId.get(dest.href))) {
         const id = urlToId.get(dest.href);
         snapshotCurrent(curId);
         restore(id);
         curId = id;
+        applyPageStyles(id);
         if (opts.push === false) history.replaceState({ bymId: id }, '', dest.href);
         else history.pushState({ bymId: id }, '', dest.href);
         lastHref = location.href;
@@ -4530,8 +4598,10 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       else history.pushState({ bymId: newId }, '', dest.href);
       document.title = doc.title || document.title;
       insertFetched(doc);
+      registerPageStyles(newId, ownedStylesOf(doc));
       urlToId.set(dest.href, newId);
       curId = newId;
+      applyPageStyles(newId);
       lastHref = location.href;
     } catch (err) {
       location.href = url;
@@ -4552,9 +4622,11 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       return;
     }
     if (st.bymId === curId) { lastHref = location.href; return; }
+    ensureInitialStyles();
     snapshotCurrent(curId);
     if (!restore(st.bymId)) { lastHref = location.href; navigate(location.href, { push: false }); return; }
     curId = st.bymId;
+    applyPageStyles(curId);
     lastHref = location.href;
   });
 
@@ -4581,6 +4653,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   history.replaceState({ bymId: curId }, '', location.href);
   urlToId.set(location.href, curId);
+  const initialHref = location.href.split('#')[0];
   let lastHref = location.href;
 
   window.BYM_NAV = { navigate };
