@@ -1221,6 +1221,7 @@
   .salerail__price { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; }
   .salerail__price s { color: #9a9a9a; }
   .salerail__price b { color: #c8102e; font-weight: 600; }
+  .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
 <script>
 /* =====================================================================
@@ -1667,7 +1668,7 @@
     const words = p.title.split(' '); const name = words.length > 1 ? `${words.slice(0, -1).join(' ')}<br>${words[words.length - 1]}` : p.title;
     const card = document.createElement('article'); card.className = 'sales__card salegrid__card';
     card.innerHTML = `<span class="shop__img"><img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on"><button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
-      <span class="salerail__meta"><span class="salerail__name">${name}</span>${typeof p.price === 'number' ? `<span class="salerail__price">${onSale ? `<s>${fmt(p.price, p.currency)}</s><b>${fmt(p.salePrice, p.currency)}</b>` : `<b>${fmt(p.price, p.currency)}</b>`}</span>` : ''}</span>`;
+      <span class="salerail__meta"><span class="salerail__name">${name}</span>${typeof p.price === 'number' ? `<span class="salerail__price">${onSale ? `<s>${fmt(p.price, p.currency)}</s><b>${fmt(p.salePrice, p.currency)}</b>` : `<span class="salerail__price--plain">${fmt(p.price, p.currency)}</span>`}</span>` : ''}</span>`;
     const add = card.querySelector('.salegrid__add');
     add.addEventListener('click', async () => {
       const store = window.BYMARCCC && window.BYMARCCC.bag; if (!store) return;
