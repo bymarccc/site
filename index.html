@@ -1224,9 +1224,12 @@
     .salerail .sales__card { width: calc((100vw - 12px - 8px) / 2); }
   }
   .salerail .sales__card { background: none; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
-  /* men SALES rails: cards exactly the size of the regular shop cards (e.g. Zebra Patch Jeans) — they were a bit bigger */
-  .sales__section--men.salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - clamp(10px, 2vw, 20px)) / 2); }
-  @media (min-width: 900px) { .sales__section--men.salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - 3 * clamp(10px, 2vw, 20px)) / 4); } }
+  /* sliding rails (men SALES, SKINNY / RELAXED JEANS): cards exactly the size of the regular shop cards (e.g. Zebra Patch Jeans) — they were a bit bigger */
+  .shop .salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - clamp(10px, 2vw, 20px)) / 2); }
+  @media (min-width: 900px) { .shop .salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - 3 * clamp(10px, 2vw, 20px)) / 4); } }
+  /* women: shorter photos (3:4 instead of 2:3) — the tall 2:3 frames looked too big/long there */
+  #shopWomen .shop__img { aspect-ratio: 3 / 4; }
+  #shopWomen .shop__img img { object-position: 50% 30%; }
   .salerail .shop__img { aspect-ratio: 2 / 3; touch-action: pan-x pan-y pinch-zoom; }   /* the shop grid's pan-y blocked finger swiping on the rail */
   .salerail__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 10px; font-size: 12.5px; letter-spacing: .04em; line-height: 1.35; }
   .salerail__name { text-transform: uppercase; }
