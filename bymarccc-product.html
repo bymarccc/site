@@ -3432,6 +3432,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
         curId = id;
         if (opts.push === false) history.replaceState({ bymId: id }, '', dest.href);
         else history.pushState({ bymId: id }, '', dest.href);
+        lastHref = location.href;
         return;
       }
       const res = await fetch(dest.href, { credentials: 'same-origin' });
@@ -3446,18 +3447,30 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       insertFetched(doc);
       urlToId.set(dest.href, newId);
       curId = newId;
+      lastHref = location.href;
     } catch (err) {
       location.href = url;
     }
   }
 
+  // Back/Forward must NEVER turn into a full document load — that would tear down the
+  // whole page, including the persistent audio element, and stop the music (and, after
+  // the reload, mobile autoplay rules would keep it stopped). A history entry with no
+  // bymId state (e.g. one pushed by an in-page #hash link) or a cache miss is handled by
+  // re-fetching the destination through the same in-document navigate() path instead.
   window.addEventListener('popstate', (e) => {
     const st = e.state;
-    if (!st || typeof st.bymId !== 'number') { location.reload(); return; }
-    if (st.bymId === curId) return;
+    if (!st || typeof st.bymId !== 'number') {
+      if (location.href.split('#')[0] === lastHref.split('#')[0]) { lastHref = location.href; return; }   // same page, hash-only change
+      lastHref = location.href;
+      navigate(location.href, { push: false });
+      return;
+    }
+    if (st.bymId === curId) { lastHref = location.href; return; }
     snapshotCurrent(curId);
-    if (!restore(st.bymId)) { location.reload(); return; }
+    if (!restore(st.bymId)) { lastHref = location.href; navigate(location.href, { push: false }); return; }
     curId = st.bymId;
+    lastHref = location.href;
   });
 
   document.addEventListener('click', (e) => {
@@ -3469,7 +3482,9 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     let dest;
     try { dest = new URL(a.href, location.href); } catch (e2) { return; }
     if (dest.origin !== location.origin) return;
-    if (!/\/(index|bymarccc-product|checkout|members)\.html$/.test(dest.pathname)) return;
+    // Same four pages, whether linked with or without the .html suffix (Cloudflare Pages
+    // serves both spellings) or as the site root — anything else is a real external navigation.
+    if (!/\/(index|bymarccc-product|checkout|members)(\.html)?$/.test(dest.pathname) && dest.pathname !== '/') return;
     // Already on this exact page (e.g. a self-referencing home logo) — nothing to splice in,
     // and re-fetching/re-inserting would just reset scroll/carousel state for no reason. Still
     // preventDefault(): letting the browser's own default action run would do a real, full
@@ -3481,6 +3496,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   history.replaceState({ bymId: curId }, '', location.href);
   urlToId.set(location.href, curId);
+  let lastHref = location.href;
 
   window.BYM_NAV = { navigate };
 })();

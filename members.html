@@ -965,5 +965,254 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 })();
 
 </script>
+<script>
+/* bymarccc — lightweight client-side navigation for product pages.
+   Keeps the shared audio/video player mounted & playing when a product
+   opens, and restores the previous view on Back without resetting it. */
+(() => {
+  'use strict';
+  // This script is duplicated verbatim in every product page's own markup
+  // (so it still exists if a product page is opened directly), and — since
+  // insertFetched() re-runs a fetched page's inline scripts on every
+  // navigation — it would otherwise re-execute itself each time the user
+  // navigates, creating a brand new cache/history closure and stacking a
+  // duplicate popstate/click listener on every single navigation. That
+  // silently corrupted Back/Forward after 2+ hops. Guard it like the
+  // codebase's other "run once" scripts.
+  if (window.BYM_NAV) return;
+  const CONTENT_IDS = ['play','zebra','shop','shopCustomize','crumble','shopWomen','reel','fp','fpTab','siteFooter','bagPill','pdpHeader','backdrop','ctlDrawer','cart','wl','qa','sizeModal','coGrid','coThankYou','membersMain']; // coGrid/coThankYou: checkout.html's two content roots. membersMain: members.html's single content root. shopCustomize: the homepage's CUSTOMIZE tab section, missing from this list until now (harmless while index.html was never a navigate() target itself, but broke its own mount() call once navigating TO index.html via SPA became possible). All added so BYM_NAV can splice those pages in like a product page.
+  const isContent = el => el.nodeType === 1 && (
+    (el.id && CONTENT_IDS.indexOf(el.id) !== -1) ||
+    (el.tagName === 'MAIN' && el.classList.contains('pdp-page'))
+  );
+
+  function captureContent(root) {
+    return Array.from(root.body.children).filter(isContent);
+  }
+  function existingScriptTexts() {
+    const set = new Set();
+    document.querySelectorAll('script:not([src])').forEach(s => set.add(s.textContent));
+    return set;
+  }
+  function existingStyleTexts() {
+    const set = new Set();
+    document.querySelectorAll('style').forEach(s => set.add(s.textContent));
+    return set;
+  }
+
+  const cache = new Map();
+  const urlToId = new Map();
+  let seq = 0, curId = 0;
+
+  function snapshotCurrent(id) {
+    // #mini (the persistent mini audio bar) must never be detached during
+    // SPA navigation, even though it happens to live inside <section
+    // id="crumble"> (which IS swapped as content) — removing a playing
+    // <audio> element from the document pauses it and freezes its
+    // currentTime in every browser tested, which breaks "keep the music
+    // playing while browsing products". Re-home it as a direct child of
+    // <body> first so the content swap below never touches it.
+    const mini = document.getElementById('mini');
+    if (mini && mini.parentElement !== document.body) {
+      document.body.appendChild(mini);
+    }
+    const nodes = captureContent(document);
+    nodes.forEach(n => n.remove());
+    // document.body's own class (e.g. "pdp") gates almost every page-specific CSS
+    // rule ('.pdp .pdp-btn', '.pdp-header', etc.) — it must be cached and swapped
+    // back in step with the content, or a restored page loses all of that styling
+    // even though its markup and <style> are present (this was the cause of a
+    // product page rendering with an unstyled grey Add to Bag button, no gallery
+    // layout, and the account icon stuck in its homepage-only floating style,
+    // after navigating back to a cached page).
+    cache.set(id, { nodes, title: document.title, bodyClass: document.body.className });
+  }
+  function restore(id) {
+    const entry = cache.get(id);
+    if (!entry) return false;
+    const anchor = document.body.firstChild;
+    entry.nodes.forEach(n => document.body.insertBefore(n, anchor));
+    document.title = entry.title;
+    document.body.className = entry.bodyClass || '';
+    window.scrollTo(0, 0);
+    return true;
+  }
+  function insertHeadAssets(doc) {
+    // Product pages keep almost all of their page-specific CSS in <head> (not <body>),
+    // so it must be transplanted too — otherwise the destination page renders with none
+    // of its own styling (this was the cause of product pages looking totally broken
+    // after a client-side navigation: content was there, CSS was not).
+    const knownStyles = existingStyleTexts();
+    const knownHrefs = new Set(Array.from(document.querySelectorAll('link[rel~="stylesheet"]')).map(l => l.href));
+    Array.from(doc.head.children).forEach(el => {
+      if (el.tagName === 'STYLE') {
+        const txt = el.textContent;
+        if (!knownStyles.has(txt)) {
+          const st = document.createElement('style');
+          st.textContent = txt;
+          document.head.appendChild(st);
+          knownStyles.add(txt);
+        }
+        return;
+      }
+      if (el.tagName === 'LINK' && (el.getAttribute('rel') || '').split(/\s+/).includes('stylesheet')) {
+        const href = el.href;
+        if (href && !knownHrefs.has(href)) {
+          const ln = document.createElement('link');
+          ln.rel = 'stylesheet';
+          ln.href = href;
+          document.head.appendChild(ln);
+          knownHrefs.add(href);
+        }
+      }
+    });
+  }
+  function insertFetched(doc) {
+    insertHeadAssets(doc);
+    // The fetched page's <body> class (e.g. "pdp") must come across too, not just
+    // its content — every page-specific CSS rule is scoped under it (".pdp .pdp-btn",
+    // ".pdp-header", etc.). Without this, a product page opened via this client-side
+    // navigation kept the previous page's body class (or none, coming from the
+    // homepage), so none of those rules matched: the Add to Bag button fell back to
+    // the browser's default grey button, the gallery had no layout, and the account
+    // icon rendered in its homepage-only floating style instead of the header.
+    document.body.className = doc.body.className || '';
+    // Every fetched page's inline scripts are re-run on every navigation, not just the
+    // "new" ones. Scripts that only need to run once (e.g. one-time client setup) already
+    // guard themselves (an early `if (window.SOME_FLAG) return;`), and scripts that inject
+    // UI into per-page containers guard themselves by checking the DOM (an early
+    // `if (document.getElementById(...)) return;`) — both kinds are safe to invoke again.
+    // Skipping "already seen" script text used to skip those DOM-guarded scripts too,
+    // which broke anything they inject (e.g. the header's account icon) on every page
+    // after the first, because the guard never got a chance to see the new page's DOM.
+    const knownStyles = existingStyleTexts();
+    const toRun = [];
+    const contentNodes = [];
+    Array.from(doc.body.children).forEach(el => {
+      if (el.tagName === 'SCRIPT') {
+        if (el.src) return;
+        toRun.push(el.textContent);
+        return;
+      }
+      if (el.tagName === 'STYLE') {
+        const txt = el.textContent;
+        if (!knownStyles.has(txt)) {
+          const st = document.createElement('style');
+          st.textContent = txt;
+          document.head.appendChild(st);
+        }
+        return;
+      }
+      if (isContent(el)) contentNodes.push(el);
+    });
+    // #mini (the persistent mini audio bar) is a top-level body child deliberately left OUT
+    // of CONTENT_IDS, precisely so a future snapshotCurrent() never sweeps it up once it's
+    // live (see that function's own comment — removing a playing <audio> pauses it). That
+    // also means the generic isContent() filter above silently drops the FETCHED document's
+    // own #mini on every navigation. That's correct once a live #mini already exists
+    // (the normal case) — but the very first time this session navigates straight INTO a page
+    // that owns #mini (e.g. reaching index.html from a page with no #mini of its own, like the
+    // product page) there is no live copy yet, and dropping the fetched one would just delete
+    // the widget outright. So: insert the fetched #mini only when the live document doesn't
+    // have one yet; otherwise make sure no duplicate copy is hiding inside another fetched
+    // content node (defensive — #mini is a body-level sibling, never nested, in every page
+    // that defines it today).
+    const fetchedMini = doc.getElementById('mini');
+    if (fetchedMini) {
+      if (!document.getElementById('mini')) contentNodes.push(fetchedMini);
+      else contentNodes.forEach(n => { const dup = n.querySelector && n.querySelector('#mini'); if (dup) dup.remove(); });
+    }
+    const anchor = document.body.firstChild;
+    contentNodes.forEach(n => { document.adoptNode(n); document.body.insertBefore(n, anchor); });
+    toRun.forEach(txt => {
+      const s = document.createElement('script');
+      s.textContent = txt;
+      document.body.appendChild(s);
+    });
+    window.scrollTo(0, 0);
+  }
+
+  async function navigate(url, opts) {
+    opts = opts || {};
+    let dest;
+    try { dest = new URL(url, location.href); } catch (e) { location.href = url; return; }
+    if (dest.origin !== location.origin) { location.href = url; return; }
+    try {
+      if (urlToId.has(dest.href) && cache.has(urlToId.get(dest.href))) {
+        const id = urlToId.get(dest.href);
+        snapshotCurrent(curId);
+        restore(id);
+        curId = id;
+        if (opts.push === false) history.replaceState({ bymId: id }, '', dest.href);
+        else history.pushState({ bymId: id }, '', dest.href);
+        lastHref = location.href;
+        return;
+      }
+      const res = await fetch(dest.href, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('fetch failed: ' + res.status);
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      snapshotCurrent(curId);
+      const newId = ++seq;
+      if (opts.push === false) history.replaceState({ bymId: newId }, '', dest.href);
+      else history.pushState({ bymId: newId }, '', dest.href);
+      document.title = doc.title || document.title;
+      insertFetched(doc);
+      urlToId.set(dest.href, newId);
+      curId = newId;
+      lastHref = location.href;
+    } catch (err) {
+      location.href = url;
+    }
+  }
+
+  // Back/Forward must NEVER turn into a full document load — that would tear down the
+  // whole page, including the persistent audio element, and stop the music (and, after
+  // the reload, mobile autoplay rules would keep it stopped). A history entry with no
+  // bymId state (e.g. one pushed by an in-page #hash link) or a cache miss is handled by
+  // re-fetching the destination through the same in-document navigate() path instead.
+  window.addEventListener('popstate', (e) => {
+    const st = e.state;
+    if (!st || typeof st.bymId !== 'number') {
+      if (location.href.split('#')[0] === lastHref.split('#')[0]) { lastHref = location.href; return; }   // same page, hash-only change
+      lastHref = location.href;
+      navigate(location.href, { push: false });
+      return;
+    }
+    if (st.bymId === curId) { lastHref = location.href; return; }
+    snapshotCurrent(curId);
+    if (!restore(st.bymId)) { lastHref = location.href; navigate(location.href, { push: false }); return; }
+    curId = st.bymId;
+    lastHref = location.href;
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    if (a.target && a.target !== '' && a.target !== '_self') return;
+    if (a.hasAttribute('download')) return;
+    let dest;
+    try { dest = new URL(a.href, location.href); } catch (e2) { return; }
+    if (dest.origin !== location.origin) return;
+    // Same four pages, whether linked with or without the .html suffix (Cloudflare Pages
+    // serves both spellings) or as the site root — anything else is a real external navigation.
+    if (!/\/(index|bymarccc-product|checkout|members)(\.html)?$/.test(dest.pathname) && dest.pathname !== '/') return;
+    // Already on this exact page (e.g. a self-referencing home logo) — nothing to splice in,
+    // and re-fetching/re-inserting would just reset scroll/carousel state for no reason. Still
+    // preventDefault(): letting the browser's own default action run would do a real, full
+    // reload of the same URL — exactly the kind of "page load" that must never happen here.
+    if (dest.href.split('#')[0] === location.href.split('#')[0]) { e.preventDefault(); return; }
+    e.preventDefault();
+    navigate(a.href);
+  }, true);
+
+  history.replaceState({ bymId: curId }, '', location.href);
+  urlToId.set(location.href, curId);
+  let lastHref = location.href;
+
+  window.BYM_NAV = { navigate };
+})();
+</script>
 </body>
 </html>

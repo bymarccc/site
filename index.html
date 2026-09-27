@@ -856,6 +856,10 @@
 .mini__volume input[type="range"]:focus-visible { outline: 2px solid var(--play-blue, #5B95C3); outline-offset: 3px; }
 @media (max-width: 640px) {
   .mini { padding: 12px 14px 10px; border-radius: 16px; }
+  /* Retired: the floating PiP widget (#vp) is the only now-playing UI. The panel markup is kept
+     (hidden) purely because the player script wires its buttons and the PiP reads the current
+     title/artist from it — it must never be visible. */
+  #mini, #mini.is-open, #mini:not([hidden]) { display: none !important; }
   .mini__btn--play { width: 52px; height: 52px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2205,7 +2209,9 @@
     if (dragMoved) { dragMoved = false; e.preventDefault(); e.stopPropagation(); return; }
     if (e.target.closest('.zebra__arrow')) return;
     if (!e.target.closest('.zebra__slide')) return;
-    window.location.href = `bymarccc-product.html?p=${FIT}`;
+    const dest = `bymarccc-product.html?p=${FIT}`;
+    // In-document navigation (keeps the music playing); a plain location change would reload the whole page.
+    if (window.BYM_NAV) window.BYM_NAV.navigate(dest); else window.location.href = dest;
   });
 
   /* ------------------------------------------------------------------
@@ -2238,8 +2244,11 @@
 
 
 <!-- Mini audio bar for the local tracks attached to the vinyl / CD -->
+<!-- The ONE persistent audio element for the whole session. Body-level on every page
+     (never inside a panel or a section the client-side router swaps), so no navigation
+     ever detaches, recreates or reloads it — the PiP widget (#vp) is its only visible UI. -->
+<audio id="miniAudio" preload="metadata"></audio>
 <div class="mini" id="mini" hidden role="region" aria-label="Now playing">
-  <audio id="miniAudio" preload="metadata"></audio>
   <div class="mini__top">
     <span class="mini__meta"><span class="mini__title" id="miniTitle">—</span><span class="mini__artist" id="miniArtist"></span></span>
     <button class="mini__close" id="miniClose" type="button" aria-label="Close player and stop">
@@ -4508,6 +4517,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
         curId = id;
         if (opts.push === false) history.replaceState({ bymId: id }, '', dest.href);
         else history.pushState({ bymId: id }, '', dest.href);
+        lastHref = location.href;
         return;
       }
       const res = await fetch(dest.href, { credentials: 'same-origin' });
@@ -4522,18 +4532,30 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       insertFetched(doc);
       urlToId.set(dest.href, newId);
       curId = newId;
+      lastHref = location.href;
     } catch (err) {
       location.href = url;
     }
   }
 
+  // Back/Forward must NEVER turn into a full document load — that would tear down the
+  // whole page, including the persistent audio element, and stop the music (and, after
+  // the reload, mobile autoplay rules would keep it stopped). A history entry with no
+  // bymId state (e.g. one pushed by an in-page #hash link) or a cache miss is handled by
+  // re-fetching the destination through the same in-document navigate() path instead.
   window.addEventListener('popstate', (e) => {
     const st = e.state;
-    if (!st || typeof st.bymId !== 'number') { location.reload(); return; }
-    if (st.bymId === curId) return;
+    if (!st || typeof st.bymId !== 'number') {
+      if (location.href.split('#')[0] === lastHref.split('#')[0]) { lastHref = location.href; return; }   // same page, hash-only change
+      lastHref = location.href;
+      navigate(location.href, { push: false });
+      return;
+    }
+    if (st.bymId === curId) { lastHref = location.href; return; }
     snapshotCurrent(curId);
-    if (!restore(st.bymId)) { location.reload(); return; }
+    if (!restore(st.bymId)) { lastHref = location.href; navigate(location.href, { push: false }); return; }
     curId = st.bymId;
+    lastHref = location.href;
   });
 
   document.addEventListener('click', (e) => {
@@ -4545,7 +4567,9 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     let dest;
     try { dest = new URL(a.href, location.href); } catch (e2) { return; }
     if (dest.origin !== location.origin) return;
-    if (!/\/(index|bymarccc-product|checkout|members)\.html$/.test(dest.pathname)) return;
+    // Same four pages, whether linked with or without the .html suffix (Cloudflare Pages
+    // serves both spellings) or as the site root — anything else is a real external navigation.
+    if (!/\/(index|bymarccc-product|checkout|members)(\.html)?$/.test(dest.pathname) && dest.pathname !== '/') return;
     // Already on this exact page (e.g. a self-referencing home logo) — nothing to splice in,
     // and re-fetching/re-inserting would just reset scroll/carousel state for no reason. Still
     // preventDefault(): letting the browser's own default action run would do a real, full
@@ -4557,6 +4581,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   history.replaceState({ bymId: curId }, '', location.href);
   urlToId.set(location.href, curId);
+  let lastHref = location.href;
 
   window.BYM_NAV = { navigate };
 })();
