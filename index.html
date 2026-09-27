@@ -1119,6 +1119,11 @@
   .shop__price { flex: 0 0 auto; color: #111; }
   .shop__price--old { color: #9a9a9a; font-weight: 400; text-decoration: line-through; margin-right: 6px; }
   .shop__price--sale { color: #c8102e; font-weight: 600; }
+  /* sale price: old price above the new one (like the men SALES cards) — side by side it was wider than the
+     card on phones and pushed the whole page sideways (the black strip on the right in women SALES) */
+  .shop__price { text-align: right; }
+  .shop__price--old, .shop__price--sale { display: block; }
+  .shop__price--old { margin-right: 0; }
   .shop__all, .shop__next { grid-column: 1 / -1; width: 100%; height: 54px; margin-top: 8px; border: 0; background: #111; color: #fff; font: inherit; font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; cursor: pointer; }
   .shop__all:hover, .shop__next:hover { background: #000; }
   .shop__loadmore { grid-column: 1 / -1; display: block; width: auto; margin: 28px auto 8px; padding: 16px 52px; border: 0; border-radius: 999px; background: #111; color: #fff; font: inherit; font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; cursor: pointer; }
@@ -1219,6 +1224,9 @@
     .salerail .sales__card { width: calc((100vw - 12px - 8px) / 2); }
   }
   .salerail .sales__card { background: none; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
+  /* men SALES rails: cards exactly the size of the regular shop cards (e.g. Zebra Patch Jeans) — they were a bit bigger */
+  .sales__section--men.salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - clamp(10px, 2vw, 20px)) / 2); }
+  @media (min-width: 900px) { .sales__section--men.salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - 3 * clamp(10px, 2vw, 20px)) / 4); } }
   .salerail .shop__img { aspect-ratio: 2 / 3; touch-action: pan-x pan-y pinch-zoom; }   /* the shop grid's pan-y blocked finger swiping on the rail */
   .salerail__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 10px; font-size: 12.5px; letter-spacing: .04em; line-height: 1.35; }
   .salerail__name { text-transform: uppercase; }
@@ -1852,7 +1860,7 @@
         const standalone = items.filter(([, p]) => p.saleStandalone);   // pinned product card(s) shown above the slider, normal shop-card styling
         const duo = items.filter(([, p]) => p.saleDuo);   // a small shared swipeable row for a fixed group of items (e.g. Black Leather Jacket + Embroidered Cross Turtleneck)
         if (rail.length || duo.length) {
-          const section = document.createElement('div'); section.className = 'sales__section'; grid.appendChild(section);
+          const section = document.createElement('div'); section.className = 'sales__section sales__section--men'; grid.appendChild(section);
           if (standalone.length) { const sWrap = document.createElement('div'); sWrap.className = 'sales__standalone'; standalone.forEach(([k, p]) => sWrap.appendChild(saleGridCard(k, p))); section.appendChild(sWrap); }
           if (duo.length) mountSalesSlider(section, duo, { compact: true, rail: true, note: 'Size: M' });
           if (rail.length) mountSalesSlider(section, rail, { compact: true, rail: true, note: 'Size: 40' }); // one sliding row of shop-sized cards, below the standalone card(s)
