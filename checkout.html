@@ -1718,11 +1718,24 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     window.scrollTo(0, 0);
   }
 
+  // Leaving a page must never carry the AI stylist's scroll lock along: if it was open, its
+  // body{position:fixed} would freeze the next page (e.g. checkout could not scroll past the
+  // postcode). Close it silently and unlock without restoring the old page's scroll offset.
+  function releaseAssistantLock() {
+    const p = document.getElementById('aiPanel'), bd = document.getElementById('aiBackdrop'), l = document.getElementById('aiLaunch');
+    if (p && !p.hidden) { p.classList.remove('is-in', 'is-kbd'); p.hidden = true; }
+    if (bd && !bd.hidden) { bd.classList.remove('is-in'); bd.hidden = true; }
+    if (l) l.classList.remove('is-hidden');
+    const b = document.body.style;
+    if (b.position === 'fixed') { b.position = ''; b.top = ''; b.left = ''; b.right = ''; b.width = ''; }
+  }
+
   async function navigate(url, opts) {
     opts = opts || {};
     let dest;
     try { dest = new URL(url, location.href); } catch (e) { location.href = url; return; }
     if (dest.origin !== location.origin) { location.href = url; return; }
+    releaseAssistantLock();
     ensureInitialStyles();
     try {
       if (urlToId.has(dest.href) && cache.has(urlToId.get(dest.href))) {
@@ -1770,6 +1783,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       return;
     }
     if (st.bymId === curId) { lastHref = location.href; return; }
+    releaseAssistantLock();
     ensureInitialStyles();
     snapshotCurrent(curId);
     if (!restore(st.bymId)) { lastHref = location.href; navigate(location.href, { push: false }); return; }
