@@ -1504,6 +1504,21 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   }
   // screen size changes (e.g. Safari's bars showing/hiding): glide back into the nearest corner instead of jumping
   addEventListener('resize', () => { if (drag || vp.hidden || docked) return; settleToCorner(); store.set(KEY_POS, { x, y }); }, { passive: true });
+  // Back from the lock screen / another app (iPhone): Safari can keep hit-testing the fixed, transformed player
+  // layer at its pre-sleep geometry, so taps on the player (play, pause, X) land nowhere. Drop any half-finished
+  // drag and force a fresh layout of the layer each time the page becomes visible again.
+  const revive = () => {
+    if (document.hidden) return;
+    if (drag) { drag = null; vp.classList.remove('is-dragging'); document.documentElement.classList.remove('is-vp-drag'); }
+    vp.classList.remove('is-settling', 'is-snapping');
+    const layer = vp.parentElement;
+    if (layer) { layer.style.transform = 'translateZ(0)'; void layer.offsetHeight; requestAnimationFrame(() => { layer.style.transform = ''; void layer.offsetHeight; }); }
+    if (!vp.hidden && !docked) { clampToViewport(); apply(); }
+  };
+  document.addEventListener('visibilitychange', revive);
+  addEventListener('pageshow', revive);
+  addEventListener('focus', revive);
+  if (window.visualViewport) visualViewport.addEventListener('resize', () => { if (!drag) revive(); }, { passive: true });
   addEventListener('orientationchange', () => setTimeout(clampToViewport, 250), { passive: true });
 
   /* ---------- boot ---------- */
