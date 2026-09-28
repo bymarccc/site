@@ -1065,10 +1065,14 @@ __name(geocodeAddress, "geocodeAddress");
 var ORDER_T = {
   en: { subj: (id) => `Order confirmed — ${id}`, hi: (n) => `Thank you${n ? ", " + n : ""}!`, intro: "Your order is confirmed. We'll e-mail you again when it ships.",
     order: "Order", items: "Items", subtotal: "Subtotal", shipping: "Shipping", total: "Total", pay: "Payment", cod: "Cash on delivery", card: "Card (paid)",
-    ship: "Shipping address", help: "Questions? Just reply to this e-mail." },
+    ship: "Shipping address", help: "Questions? Just reply to this e-mail.",
+    kindTitle: "After you try them on, smile! 🙂", kindText: "You've just helped feed people in need: 30% of the profit from your order goes to the homeless. 💙",
+    qty: "Qty", shop: "Continue shopping" },
   ro: { subj: (id) => `Comandă confirmată — ${id}`, hi: (n) => `Mulțumim${n ? ", " + n : ""}!`, intro: "Comanda ta este confirmată. Îți scriem din nou când o expediem.",
     order: "Comanda", items: "Produse", subtotal: "Subtotal", shipping: "Livrare", total: "Total", pay: "Plată", cod: "Ramburs (cash la livrare)", card: "Card (plătit)",
-    ship: "Adresă de livrare", help: "Întrebări? Răspunde la acest e-mail." }
+    ship: "Adresă de livrare", help: "Întrebări? Răspunde la acest e-mail.",
+    kindTitle: "După ce le probezi, zâmbește! 🙂", kindText: "Tocmai ai ajutat la hrănirea unor oameni fără adăpost: 30% din profitul comenzii tale merge către ei. 💙",
+    qty: "Cant.", shop: "Continuă cumpărăturile" }
 };
 var oesc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 var ofmt = (n) => (Math.round(n * 100) / 100).toFixed(2) + " RON";
@@ -1096,7 +1100,7 @@ function cleanOrder(b) {
   return { order_id: str(b.order_id, 60).replace(/[^A-Za-z0-9-]/g, ""), customer, items, lang: b.language === "ro" ? "ro" : "en", session_id: str(b.session_id, 200) };
 }
 __name(cleanOrder, "cleanOrder");
-function orderEmails(o, pay, totals) {
+function orderEmails(o, pay, totals, images = [], base = "https://bymarccc.com") {
   const t = ORDER_T[o.lang], c = o.customer;
   const lines = o.items.map((it) => `${it.qty} × ${it.name}${it.variant ? " (" + it.variant + ")" : ""} — ${ofmt(it.price * it.qty)}`);
   const addr = [c.full_name, c.address + (c.apartment ? ", " + c.apartment : ""), `${c.postal_code} ${c.city}`.trim(), c.country].filter(Boolean);
@@ -1104,14 +1108,56 @@ function orderEmails(o, pay, totals) {
   const rows = o.items.map((it) => `<tr><td style="padding:6px 0">${it.qty} × ${oesc(it.name)}${it.variant ? ` <span style="color:#888">(${oesc(it.variant)})</span>` : ""}</td><td align="right" style="padding:6px 0;white-space:nowrap">${ofmt(it.price * it.qty)}</td></tr>`).join("");
   const sums = `<tr><td style="padding:10px 0 2px;border-top:1px solid #e5e5e5">${t.subtotal}</td><td align="right" style="padding:10px 0 2px;border-top:1px solid #e5e5e5">${ofmt(totals.sub)}</td></tr><tr><td style="padding:2px 0">${t.shipping}</td><td align="right">${ofmt(totals.ship)}</td></tr><tr><td style="padding:8px 0;font-weight:700;font-size:17px">${t.total}</td><td align="right" style="font-weight:700;font-size:17px">${ofmt(totals.total)}</td></tr>`;
   const wrap = (inner) => `<!doctype html><html><body style="margin:0;background:#fff"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#333;font-size:15px;line-height:1.5"><tr><td style="font-size:26px;color:#555;padding-bottom:22px">BYMARCCC</td></tr><tr><td>${inner}</td></tr></table></td></tr></table></body></html>`;
-  const customerHtml = wrap(`<p style="margin:0;color:#777">${t.order.toUpperCase()} ${oesc(o.order_id)}</p><h1 style="margin:6px 0 0;font-size:24px;font-weight:400">${oesc(t.hi((c.full_name || "").split(/\s+/)[0]))}</h1><p style="margin:10px 0 22px;color:#777">${t.intro}</p><h2 style="font-size:17px;font-weight:400;margin:0 0 8px">${t.items}</h2><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}${sums}</table><p style="margin:18px 0 0"><b>${t.pay}:</b> ${payLabel}<br><b>${t.ship}:</b><br>${addr.map(oesc).join("<br>")}</p><p style="margin:22px 0 0;color:#777">${t.help}</p>`);
-  const customerText = [t.hi((c.full_name || "").split(/\s+/)[0]), "", `${t.order} ${o.order_id}`, t.intro, "", ...lines, "", `${t.subtotal}: ${ofmt(totals.sub)}`, `${t.shipping}: ${ofmt(totals.ship)}`, `${t.total}: ${ofmt(totals.total)}`, "", `${t.pay}: ${payLabel}`, `${t.ship}: ${addr.join(", ")}`, "", t.help].join("\n");
+  const customerHtml = orderCustomerHtml(o, t, payLabel, totals, addr, images, base);
+  const customerText = [t.hi((c.full_name || "").split(/\s+/)[0]), "", `${t.order} ${o.order_id}`, t.intro, "", t.kindTitle, t.kindText, "", ...lines, "", `${t.subtotal}: ${ofmt(totals.sub)}`, `${t.shipping}: ${ofmt(totals.ship)}`, `${t.total}: ${ofmt(totals.total)}`, "", `${t.pay}: ${payLabel}`, `${t.ship}: ${addr.join(", ")}`, "", t.help].join("\n");
   const ownerText = [`NEW ORDER ${o.order_id}`, `Payment: ${pay === "card" ? "Card (Stripe, paid)" : "Cash on delivery"}`, "", ...lines, "", `Subtotal: ${ofmt(totals.sub)}`, `Shipping: ${ofmt(totals.ship)}`, `TOTAL: ${ofmt(totals.total)}`, "",
     `Name: ${c.full_name}`, `Phone: ${c.phone}`, `E-mail: ${c.email}`, `Address: ${addr.slice(1).join(", ")}`, `Billing: ${c.billing}`, `Language: ${o.lang}`].join("\n");
   const ownerHtml = wrap(`<h1 style="margin:0 0 4px;font-size:22px">New order ${oesc(o.order_id)}</h1><p style="margin:0 0 18px;color:#777">${pay === "card" ? "Card (Stripe) — paid" : "Cash on delivery — collect on delivery"}</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}${sums}</table><p style="margin:18px 0 0"><b>${oesc(c.full_name)}</b><br>${oesc(c.phone)}<br><a href="mailto:${oesc(c.email)}">${oesc(c.email)}</a><br>${addr.slice(1).map(oesc).join("<br>")}<br>Billing: ${oesc(c.billing)} · Language: ${o.lang}</p>`);
   return { customer: { subject: t.subj(o.order_id), html: customerHtml, text: customerText }, owner: { subject: `New order ${o.order_id} — ${ofmt(totals.total)} — ${pay === "card" ? "CARD" : "COD"}`, html: ownerHtml, text: ownerText } };
 }
 __name(orderEmails, "orderEmails");
+// Customer confirmation e-mail — table layout + inline styles (Gmail, Apple Mail, Outlook). Product photos come from
+// catalog.json on the server (never from the browser); the hero is the thank-you page's "kindness" picture.
+function orderCustomerHtml(o, t, payLabel, totals, addr, images, base) {
+  const F = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif", BLUE = "#1268F3", INK = "#111111", SUB = "#6b6b68", LINE = "#ecebe6";
+  const img = (u) => typeof u === "string" && /^https:\/\/[^\s"'<>]+$/i.test(u) ? u : "";
+  const first = (o.customer.full_name || "").split(/\s+/)[0];
+  const items = o.items.map((it, i) => {
+    const src = img(images[i]);
+    const pic = src ? `<img src="${oesc(src)}" width="72" height="72" alt="" style="display:block;width:72px;height:72px;object-fit:cover;border-radius:12px;background:#f4f3ef;border:0">` : `<div style="width:72px;height:72px;border-radius:12px;background:#f4f3ef"></div>`;
+    return `<tr><td width="88" valign="middle" style="padding:0 16px 16px 0">${pic}</td><td valign="middle" style="padding:0 0 16px;font-family:${F}"><div style="font-size:15px;font-weight:600;color:${INK};line-height:1.35">${oesc(it.name)}</div>${it.variant ? `<div style="font-size:13px;color:${SUB};margin-top:2px">${oesc(it.variant)}</div>` : ""}<div style="font-size:13px;color:${SUB};margin-top:2px">${t.qty}: ${it.qty}</div></td><td valign="middle" align="right" style="padding:0 0 16px 12px;font-family:${F};font-size:15px;color:${INK};white-space:nowrap">${ofmt(it.price * it.qty)}</td></tr>`;
+  }).join("");
+  const sum = (k, v, strong) => `<tr><td style="padding:${strong ? "12px 0 0" : "4px 0"};font-family:${F};font-size:${strong ? 17 : 14}px;color:${strong ? INK : SUB};font-weight:${strong ? 700 : 400}">${k}</td><td align="right" style="padding:${strong ? "12px 0 0" : "4px 0"};font-family:${F};font-size:${strong ? 19 : 14}px;color:${INK};font-weight:${strong ? 700 : 400};white-space:nowrap">${v}</td></tr>`;
+  const hero = `${base.replace(/\/$/, "")}/assets/img/thankyou-kindness-900.webp`;
+  return `<!doctype html><html lang="${o.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>BYMARCCC</title></head>
+<body style="margin:0;padding:0;background:#f4f3ef">
+<div style="display:none;max-height:0;overflow:hidden">${oesc(t.hi(first))} ${oesc(t.kindText)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f3ef"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border-radius:20px">
+<tr><td style="padding:26px 28px 18px;font-family:${F};font-size:15px;font-weight:700;letter-spacing:5px;color:${INK}">bymarccc</td></tr>
+<tr><td style="padding:0 16px"><img src="${oesc(hero)}" width="528" alt="" style="display:block;width:100%;max-width:528px;height:auto;border-radius:16px;border:0"></td></tr>
+<tr><td style="padding:26px 28px 0;font-family:${F}">
+  <div style="font-size:12px;letter-spacing:1.5px;color:${SUB};text-transform:uppercase">${oesc(t.order)} ${oesc(o.order_id)}</div>
+  <h1 style="margin:8px 0 0;font-family:${F};font-size:30px;line-height:1.15;font-weight:800;color:${INK}">${oesc(t.hi(first))}</h1>
+  <p style="margin:10px 0 0;font-size:15px;line-height:1.55;color:${SUB}">${t.intro}</p>
+</td></tr>
+<tr><td style="padding:22px 28px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef4fe;border-radius:16px"><tr><td style="padding:18px 20px;font-family:${F}">
+  <div style="font-size:18px;font-weight:800;color:${BLUE};line-height:1.3">${oesc(t.kindTitle)}</div>
+  <div style="margin-top:6px;font-size:15px;line-height:1.5;color:#1f2a3d">${oesc(t.kindText)}</div>
+</td></tr></table></td></tr>
+<tr><td style="padding:26px 28px 0"><div style="font-family:${F};font-size:12px;letter-spacing:1.5px;color:${SUB};text-transform:uppercase;padding-bottom:14px;border-bottom:1px solid ${LINE};margin-bottom:16px">${oesc(t.items)}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${items}</table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${LINE};margin-top:2px;padding-top:10px">${sum(t.subtotal, ofmt(totals.sub))}${sum(t.shipping, ofmt(totals.ship))}${sum(t.total, ofmt(totals.total), true)}</table>
+</td></tr>
+<tr><td style="padding:22px 28px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f7f5;border-radius:16px"><tr><td style="padding:16px 20px;font-family:${F};font-size:14px;line-height:1.55;color:${INK}">
+  <div style="font-size:12px;letter-spacing:1.5px;color:${SUB};text-transform:uppercase">${oesc(t.pay)}</div><div style="margin:2px 0 12px">${oesc(payLabel)}</div>
+  <div style="font-size:12px;letter-spacing:1.5px;color:${SUB};text-transform:uppercase">${oesc(t.ship)}</div><div style="margin-top:2px">${addr.map(oesc).join("<br>")}</div>
+</td></tr></table></td></tr>
+<tr><td align="center" style="padding:26px 28px 0"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="${INK}" style="border-radius:999px"><a href="${oesc(base)}" style="display:inline-block;padding:14px 30px;font-family:${F};font-size:14px;font-weight:700;letter-spacing:1px;color:#ffffff;text-decoration:none;text-transform:uppercase">${oesc(t.shop)}</a></td></tr></table></td></tr>
+<tr><td style="padding:26px 28px 28px;font-family:${F};font-size:13px;line-height:1.55;color:${SUB};text-align:center">${oesc(t.help)}<br><a href="${oesc(base)}" style="color:${SUB}">bymarccc.com</a></td></tr>
+</table></td></tr></table></body></html>`;
+}
+__name(orderCustomerHtml, "orderCustomerHtml");
 async function orderSubmit(request) {
   if (request.method !== "POST") return json(405, { error: "Method not allowed" });
   if (!checkOrigin(request)) return json(403, { error: "Forbidden origin" });
@@ -1138,7 +1184,8 @@ async function orderSubmit(request) {
   const sub = o.items.reduce((a, it) => a + it.price * it.qty, 0);
   const ship = Number(env("SHIPPING_RON", "20")) || 0;
   const totals = { sub, ship, total: totalOverride != null && pay === "card" && !b.installments ? totalOverride : sub + ship };
-  const m = orderEmails(o, pay, totals);
+  const chk = await goatifyItemCheck(b.items).catch(() => ({ extras: [], notes: "" }));
+  const m = orderEmails(o, pay, totals, chk.extras.map((e) => e && e.image), CURRENT_ORIGIN || "https://bymarccc.com");
   const from = env("ORDER_EMAIL_FROM");
   try {
     await resendSend({ from, to: env("ORDER_NOTIFY_TO").split(",").map((x) => x.trim()).filter(Boolean), reply_to: c.email || void 0, subject: m.owner.subject, html: m.owner.html, text: m.owner.text });
@@ -1149,7 +1196,6 @@ async function orderSubmit(request) {
   if (store) await store.put(key, "1", { expirationTtl: 60 * 60 * 24 * 60 }).catch(() => {});
   // GOATIFY: forward the accepted order (no-op unless GOATIFY_FORWARDING=on). Never changes the answer to the customer.
   try {
-    const chk = await goatifyItemCheck(b.items);
     const fo = { ...o, items: o.items.map((it, i) => ({ ...it, ...(chk.extras[i] || {}) })) };
     const notes = [chk.notes, b.installments && pay === "card" ? "Pay in 2: first instalment paid by card, second charged automatically later." : ""].filter(Boolean).join("\n");
     const g = await forwardToGoatify(fo, { pay, totals: { sub: totals.sub, ship: totals.ship }, placedAt: new Date().toISOString(), notes, sourceUrl: CURRENT_ORIGIN ? CURRENT_ORIGIN + "/checkout.html" : void 0 }, (k) => env(k));
