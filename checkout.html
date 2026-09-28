@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   /* =====================================================================
      bymarccc checkout — same black / white / #F5F4F1 language as the site.
@@ -137,6 +137,53 @@
   .co-ty__sec h3{ margin:0 0 6px; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--sub); font-weight:600; }
   .co-ty__sec p{ margin:0 0 2px; font-size:14px; line-height:1.55; }
   .co-ty__row{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  /* ---------- order confirmation: editorial hero + cards (post-purchase page) ---------- */
+  .co-ty{ --ty-blue:#1268F3; background:#fff; }
+  .ty-hero{ background:var(--bg); padding:36px clamp(16px,4vw,48px) 8px; overflow:hidden; }
+  .ty-hero__in{ max-width:1180px; margin:0 auto; display:grid; grid-template-columns:1fr; align-items:center; gap:10px; }
+  .ty-hero__title{ position:relative; margin:0; font-weight:800; font-size:clamp(46px,13.5vw,112px); line-height:.9; letter-spacing:-.035em; color:var(--ink); }
+  .ty-hero__title .ty-blue{ color:var(--ty-blue); }
+  .ty-hero__heart{ display:inline-block; width:.62em; height:.62em; margin-left:.04em; vertical-align:.18em; color:var(--ty-blue); }
+  .ty-hero__sub{ margin:14px 0 0; font-size:clamp(16px,4.4vw,22px); font-weight:500; line-height:1.3; }
+  .ty-hero__sub b{ font-weight:800; }
+  .ty-hero__art{ display:block; width:calc(100% + 16px); max-width:none; height:auto; margin:10px -8px 0; }
+  @media (min-width:900px){
+    .ty-hero{ padding:56px clamp(16px,4vw,48px) 24px; }
+    .ty-hero__in{ grid-template-columns:minmax(0,5fr) minmax(0,7fr); gap:32px; }
+    .ty-hero__art{ width:100%; margin:0; }
+  }
+  .ty-card{ background:#fff; border:1px solid var(--line); border-radius:18px; padding:20px; margin:0 0 14px; }
+  .ty-confirm__head{ display:flex; align-items:center; gap:14px; }
+  .ty-check{ flex:0 0 auto; width:52px; height:52px; border-radius:50%; border:2px solid var(--ty-blue); color:var(--ty-blue); display:grid; place-items:center; }
+  .ty-check svg{ width:24px; height:24px; }
+  .ty-confirm__num{ margin:0 0 2px; font-size:13px; color:var(--sub); letter-spacing:.02em; word-break:break-all; }
+  .ty-confirm__title{ margin:0; font-size:clamp(22px,6vw,30px); font-weight:700; line-height:1.1; letter-spacing:-.01em; }
+  .ty-confirm__msg{ margin:14px 0 0; font-size:15px; line-height:1.55; color:#3d3d3b; }
+  .ty-confirm .co-ty__msg{ margin:10px 0 0; }
+  .ty-map{ position:relative; padding:0; overflow:hidden; }
+  .ty-map__canvas{ height:220px; background:#ecebe6; }
+  @media (min-width:900px){ .ty-map__canvas{ height:260px; } }
+  .ty-map.is-loading .ty-map__canvas{ background:linear-gradient(100deg,#ecebe6 30%,#f4f3ef 50%,#ecebe6 70%) 0 0/300% 100%; animation:tyShimmer 1.4s linear infinite; }
+  @keyframes tyShimmer{ to{ background-position:-150% 0; } }
+  .ty-map__canvas .leaflet-tile-pane{ filter:saturate(.45) brightness(1.03); }
+  .ty-map__canvas .leaflet-control-attribution{ font-size:9px; background:rgba(255,255,255,.7); }
+  .ty-map__label{ position:absolute; z-index:500; top:14px; left:50%; transform:translateX(-50%); min-width:min(62%,260px); max-width:calc(100% - 28px); padding:10px 18px; border-radius:14px; background:#fff; box-shadow:0 6px 24px rgba(0,0,0,.12); text-align:center; }
+  .ty-map__label span{ display:block; font-size:12.5px; color:var(--sub); }
+  .ty-map__label strong{ display:block; margin-top:2px; font-size:16px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ty-map.is-nomap .ty-map__canvas{ display:none; }
+  .ty-map.is-nomap .ty-map__label{ position:static; transform:none; max-width:none; box-shadow:none; text-align:left; padding:18px 20px; display:flex; flex-direction:column; }
+  .ty-map.is-nomap .ty-map__label::before{ content:""; width:18px; height:22px; margin-bottom:8px; background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 30'%3E%3Cpath d='M12 0C5.4 0 0 5.2 0 11.7 0 20.4 12 30 12 30s12-9.6 12-18.3C24 5.2 18.6 0 12 0z' fill='%23E5332A'/%3E%3Ccircle cx='12' cy='11.5' r='4.2' fill='%23fff'/%3E%3C/svg%3E"); }
+  .ty-pin{ background:none; border:0; }
+  .ty-pin svg{ display:block; width:34px; height:44px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.28)); transform-origin:50% 100%; animation:tyPinDrop .55s cubic-bezier(.22,1,.36,1) both; }
+  @keyframes tyPinDrop{ from{ transform:translateY(-18px) scale(.9); opacity:0; } to{ transform:none; opacity:1; } }
+  @media (prefers-reduced-motion:reduce){ .ty-pin svg, .ty-map.is-loading .ty-map__canvas{ animation:none; } }
+  .ty-updates h3, .ty-details__h{ margin:0 0 6px; font-size:19px; font-weight:700; letter-spacing:-.005em; }
+  .ty-updates p{ margin:0; font-size:15px; line-height:1.5; color:#3d3d3b; }
+  .ty-updates__btn{ display:inline-flex; align-items:center; gap:10px; margin-top:16px; min-height:48px; padding:0 20px; border:1.5px solid var(--line); border-radius:14px; background:#fff; color:var(--ty-blue); font:600 15px/1.2 inherit; cursor:pointer; text-align:left; }
+  .ty-updates__btn svg{ flex:0 0 auto; width:22px; height:22px; }
+  .ty-updates__btn:hover{ border-color:var(--ty-blue); }
+  .ty-updates__ok{ margin-top:14px !important; font-size:14px !important; color:var(--ink) !important; }
+  .ty-details .co-ty__sec:first-of-type{ border-top:0; padding-top:8px; }
   .co-ty__continue{ display:inline-flex; align-items:center; justify-content:center; height:48px; padding:0 28px; margin-top:28px; border-radius:999px; background:var(--ink); color:#fff; text-decoration:none; font:600 11px/1 inherit; letter-spacing:.2em; text-transform:uppercase; }
 </style>
 </head>
@@ -251,19 +298,46 @@
 </div>
 
 <div class="co-ty" id="coThankYou">
+  <section class="ty-hero" aria-labelledby="coTyHeroTitle">
+    <div class="ty-hero__in">
+      <div class="ty-hero__text">
+        <h1 class="ty-hero__title" id="coTyHeroTitle">Congrats on your <span class="ty-blue">order.</span><svg class="ty-hero__heart" viewBox="0 0 48 44" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 40C10 30 4 22 5 14c1-7 8-11 14-8 3 1 5 4 5 7 0-4 3-8 8-9 7-1 12 5 11 12-1 8-8 15-19 23"/><path d="M40 4l3-3M44 12l4-1"/></svg></h1>
+        <p class="ty-hero__sub"><b>30%</b> of the profit goes to the Homeless! 🤗</p>
+      </div>
+      <img class="ty-hero__art" src="assets/img/thankyou-kindness.webp" srcset="assets/img/thankyou-kindness-900.webp 900w, assets/img/thankyou-kindness.webp 1462w" sizes="(min-width: 900px) 58vw, 100vw" width="1462" height="702" decoding="async" alt="A bymarccc customer in an alien hoodie hands food to a smiling homeless man. Good people make a better world. Human kindness goes a long way.">
+    </div>
+  </section>
   <div class="co-ty__grid">
     <div class="co-ty__main">
-      <div class="co-ty__check">&#10003;</div>
-      <p class="co-ty__eyebrow" data-i18n="tyEyebrow">Order confirmed</p>
-      <h1 class="co-ty__title"><span data-i18n="tyThanks">Thank you</span><span id="coTyName"></span></h1>
-      <p class="co-ty__msg" data-i18n="tyMsg">Your order is in. Every bymarccc piece is custom made, so we’ll reach out to confirm the details and the delivery date.</p>
-      <p class="co-ty__num"><span data-i18n="tyConfirmNum">Order</span> <span id="coTyOrderNum">—</span></p>
-      <p class="co-ty__msg" id="coTyInstallment" style="display:none;"></p>
-      <div class="co-ty__sec"><h3 data-i18n="tyContactInfo">Contact</h3><p id="coTyEmail"></p><p id="coTyPhone"></p></div>
-      <div class="co-ty__sec"><h3 data-i18n="tyShipAddr">Shipping address</h3><p id="coTyAddress"></p></div>
-      <div class="co-ty__row">
-        <div class="co-ty__sec"><h3 data-i18n="hShipping">Shipping method</h3><p>Fan Courier<br><span data-i18n="shipDays">2–3 business days</span></p></div>
-        <div class="co-ty__sec"><h3 data-i18n="tyPayMethod">Payment</h3><p data-i18n="payCod">Cash on delivery</p></div>
+      <div class="ty-card ty-confirm">
+        <div class="ty-confirm__head">
+          <span class="ty-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+          <div>
+            <p class="ty-confirm__num"><span data-i18n="tyConfirmNum">Order</span> #<span id="coTyOrderNum">—</span></p>
+            <h2 class="ty-confirm__title"><span data-i18n="tyThanks">Thank you</span><span id="coTyName"></span>!</h2>
+          </div>
+        </div>
+        <p class="ty-confirm__msg" data-i18n="tyMsg">Your order is confirmed and will be shipped as soon as possible.</p>
+        <p class="co-ty__msg" id="coTyInstallment" style="display:none;"></p>
+      </div>
+      <div class="ty-card ty-map is-nomap" id="coTyMapCard">
+        <div class="ty-map__canvas" id="coTyMap" aria-hidden="true"></div>
+        <div class="ty-map__label"><span data-i18n="tyShipAddr">Shipping address</span><strong id="coTyPlace">—</strong></div>
+      </div>
+      <div class="ty-card ty-updates">
+        <h3 data-i18n="tyUpdatesH">Order updates</h3>
+        <p data-i18n="tyUpdatesP">You’ll get shipping and delivery updates by email.</p>
+        <button type="button" class="ty-updates__btn" id="coTyUpdatesBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg><span data-i18n="tyUpdatesBtn">Get shipping updates by email</span></button>
+        <p class="ty-updates__ok" id="coTyUpdatesOk" hidden></p>
+      </div>
+      <div class="ty-card ty-details">
+        <h3 class="ty-details__h" data-i18n="tyDetails">Order details</h3>
+        <div class="co-ty__sec"><h3 data-i18n="tyContactInfo">Contact</h3><p id="coTyEmail"></p><p id="coTyPhone"></p></div>
+        <div class="co-ty__sec"><h3 data-i18n="tyShipAddr">Shipping address</h3><p id="coTyAddress"></p></div>
+        <div class="co-ty__row">
+          <div class="co-ty__sec"><h3 data-i18n="hShipping">Shipping method</h3><p>Fan Courier<br><span data-i18n="shipDays">2–3 business days</span></p></div>
+          <div class="co-ty__sec"><h3 data-i18n="tyPayMethod">Payment</h3><p data-i18n="payCod">Cash on delivery</p></div>
+        </div>
       </div>
       <a class="co-ty__continue" href="index.html" data-i18n="continue">Continue shopping</a>
     </div>
@@ -315,7 +389,8 @@
       linkRefund:'Delivery & returns', linkTerms:'Terms & conditions', linkContact:'Contact',
       hBag:'Your bag', hOrder:'Order summary', emptyBag:'Your bag is empty.', continue:'Continue shopping', qty:'Qty', remove:'Remove',
       phDiscount:'Discount code', btnApply:'Apply', subtotal:'Subtotal', shipping:'Shipping', total:'Total',
-      tyEyebrow:'Order confirmed', tyThanks:'Thank you', tyMsg:'Your order is in. Every bymarccc piece is custom made, so we’ll reach out to confirm the details and the delivery date.',
+      tyEyebrow:'Order confirmed', tyThanks:'Thank you', tyMsg:'Your order is confirmed and will be shipped as soon as possible.',
+      tyUpdatesH:'Order updates', tyUpdatesP:'You’ll get shipping and delivery updates by email.', tyUpdatesBtn:'Get shipping updates by email', tyUpdatesOn:'✓ Shipping updates will be sent to {email}', tyDetails:'Order details',
       tyConfirmNum:'Order', tyContactInfo:'Contact', tyShipAddr:'Shipping address', tyPayMethod:'Payment',
       statusSending:'Sending your order…', statusSent:'Order sent ✓', errEmpty:'Your bag is empty.', errFields:'Please fill in all the required fields.',
       errPhone:'Phone number must have at least 10 digits.', errNoService:'Could not reach the order service. Please try again in a moment or contact us directly.',
@@ -338,7 +413,8 @@
       linkRefund:'Livrare și retur', linkTerms:'Termeni și condiții', linkContact:'Contact',
       hBag:'Coșul tău', hOrder:'Rezumatul comenzii', emptyBag:'Coșul tău este gol.', continue:'Continuă cumpărăturile', qty:'Cant.', remove:'Șterge',
       phDiscount:'Cod de reducere', btnApply:'Aplică', subtotal:'Subtotal', shipping:'Livrare', total:'Total',
-      tyEyebrow:'Comandă confirmată', tyThanks:'Mulțumim', tyMsg:'Comanda ta a ajuns la noi. Fiecare piesă bymarccc este făcută la comandă, așa că te vom contacta pentru confirmarea detaliilor și a datei de livrare.',
+      tyEyebrow:'Comandă confirmată', tyThanks:'Mulțumim', tyMsg:'Comanda ta este confirmată și va fi expediată cât mai curând posibil.',
+      tyUpdatesH:'Actualizări comandă', tyUpdatesP:'Vei primi pe email actualizări despre expediere și livrare.', tyUpdatesBtn:'Primește actualizări pe email', tyUpdatesOn:'✓ Actualizările despre livrare vor fi trimise la {email}', tyDetails:'Detaliile comenzii',
       tyConfirmNum:'Comanda', tyContactInfo:'Contact', tyShipAddr:'Adresă de livrare', tyPayMethod:'Plată',
       statusSending:'Se trimite comanda ta…', statusSent:'Comandă trimisă ✓', errEmpty:'Coșul tău este gol.', errFields:'Te rugăm să completezi toate câmpurile obligatorii.',
       errPhone:'Numărul de telefon trebuie să aibă cel puțin 10 cifre.', errNoService:'Nu am putut contacta serviciul de comenzi. Te rugăm să încerci din nou sau să ne contactezi direct.',
@@ -456,7 +532,63 @@
       tyInstallment.style.display = '';
     } else { tyInstallment.style.display = 'none'; tyInstallment.textContent = ''; }
     $('coGrid').style.display = 'none'; $('coThankYou').style.display = 'block'; window.scrollTo(0, 0);
+    tyLast = d; $('coTyUpdatesOk').hidden = true; $('coTyUpdatesBtn').hidden = false;
+    loadShipMap(d);
   }
+
+  /* ---------- order confirmation: shipping-destination map ----------
+     The location comes ONLY from the shipping address the customer entered for this order
+     (never IP / GPS). It is geocoded server-side by /api/geocode (street → postal code → city →
+     country fallback); the card shows just "City, Country". If no reliable position comes back,
+     the card stays a plain text card — a wrong pin is never shown (and if only the country could be
+     resolved, the map shows the country without a pin). */
+  var tyLast = null, tyMap = null, tyMapReq = 0, leafletP = null;
+  function loadLeaflet(){
+    if (window.L && window.L.map) return Promise.resolve(window.L);
+    if (leafletP) return leafletP;
+    leafletP = new Promise(function(resolve, reject){
+      var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
+      var js = document.createElement('script'); js.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; js.async = true;
+      var to = setTimeout(function(){ reject(new Error('leaflet timeout')); }, 10000);
+      js.onload = function(){ clearTimeout(to); window.L && window.L.map ? resolve(window.L) : reject(new Error('leaflet missing')); };
+      js.onerror = function(){ clearTimeout(to); reject(new Error('leaflet failed')); };
+      document.head.appendChild(js);
+    });
+    leafletP.catch(function(){ leafletP = null; });
+    return leafletP;
+  }
+  var TY_PIN = '<svg viewBox="0 0 34 44" aria-hidden="true"><path d="M17 1C8.2 1 1 7.9 1 16.6 1 28.2 17 43 17 43s16-14.8 16-26.4C33 7.9 25.8 1 17 1z" fill="#E5332A" stroke="#fff" stroke-width="2"/><circle cx="17" cy="16.5" r="5.6" fill="#fff"/></svg>';
+  function loadShipMap(d){
+    var card = $('coTyMapCard'), el = $('coTyMap'), req = ++tyMapReq;
+    var city = String(d.city || '').trim(), country = String(d.country || '').trim();
+    $('coTyPlace').textContent = [city, country].filter(Boolean).join(', ') || '—';
+    if (tyMap) { tyMap.remove(); tyMap = null; }
+    card.classList.remove('is-nomap'); card.classList.add('is-loading');
+    var fail = function(){ if (req !== tyMapReq) return; card.classList.remove('is-loading'); card.classList.add('is-nomap'); };
+    if (!city && !String(d.postal_code || '').trim() && !country) { fail(); return; }
+    var geo = fetch('/api/geocode', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: d.address || '', city: city, postal_code: d.postal_code || '', country: country }) })
+      .then(function(r){ return r.ok ? r.json() : null; });
+    Promise.all([geo, loadLeaflet()]).then(function(res){
+      var g = res[0], L = res[1];
+      if (req !== tyMapReq) return;
+      if (!g || !g.ok || !isFinite(g.lat) || !isFinite(g.lon)) { fail(); return; }
+      if (!city && !country) $('coTyPlace').textContent = [g.city, g.country].filter(Boolean).join(', ') || '—';
+      card.classList.remove('is-loading');
+      tyMap = L.map(el, { zoomControl: false, dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, tap: false });
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' }).addTo(tyMap);
+      tyMap.attributionControl.setPrefix(false);
+      tyMap.setView([g.lat, g.lon], g.zoom || 11, { animate: false });
+      tyMap.panBy([0, -34], { animate: false });   // keep the pin clear of the "Shipping address" label on top
+      if (g.level !== 'country') L.marker([g.lat, g.lon], { icon: L.divIcon({ className: 'ty-pin', html: TY_PIN, iconSize: [34, 44], iconAnchor: [17, 43] }), interactive: false, keyboard: false }).addTo(tyMap);
+      setTimeout(function(){ if (tyMap) { tyMap.invalidateSize(); tyMap.setView([g.lat, g.lon], g.zoom || 11, { animate: false }); tyMap.panBy([0, -34], { animate: false }); } }, 80);
+    }).catch(fail);
+  }
+  $('coTyUpdatesBtn').addEventListener('click', function(){
+    var d = tyLast || {}, email = String(d.email || '').trim(), ok = $('coTyUpdatesOk');
+    if (email) { ok.textContent = t('tyUpdatesOn').replace('{email}', email); ok.hidden = false; $('coTyUpdatesBtn').hidden = true; return; }
+    location.href = 'mailto:contact@bymarccc.com?subject=' + encodeURIComponent('Shipping updates — order ' + (d.order_id || ''));
+  });
   function orderId(){
     var d = new Date(), pad = function(n){ return (n < 10 ? '0' : '') + n; };
     return ORDER_PREFIX + '-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();

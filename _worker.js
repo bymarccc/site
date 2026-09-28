@@ -1010,6 +1010,52 @@ async function membersMe(request) {
 }
 __name(membersMe, "membersMe");
 
+// lib/geocode.js — shipping address → map position for the order-confirmation page.
+// Server-side only, so the customer's browser never talks to a third-party geocoder and no key is
+// ever exposed (OpenStreetMap Nominatim needs no key; it asks for an identifying User-Agent and a
+// light request rate — one lookup per completed order is well within that). Tries the most precise
+// query first and falls back step by step: street → postal code → city → country. A structured
+// query with `country` set can only return a place inside that country, so a failed lookup never
+// lands the pin somewhere wrong — it just returns { ok:false } and the page shows no map.
+var GEO_ZOOM = { address: 15, postal: 13, city: 11, country: 5 };
+async function geocodeAddress(request) {
+  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
+  if (!checkOrigin(request)) return json(403, { error: "Forbidden origin" });
+  if (!rateLimit(request)) return json(429, { error: "Too many requests. Please wait a moment." });
+  const b = await readJson(request) || {};
+  const clean = (v, n) => String(v || "").replace(/[\u0000-\u001f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, n);
+  const street = clean(b.address, 200), city = clean(b.city, 100), postal = clean(b.postal_code, 30), country = clean(b.country, 60);
+  if (!city && !postal && !country) return json(400, { ok: false, error: "No address" });
+  const tries = [];
+  if (street && (city || postal)) tries.push(["address", { street, city, postalcode: postal, country }]);
+  if (postal) tries.push(["postal", { postalcode: postal, city, country }]);
+  if (city) tries.push(["city", { city, country }]);
+  if (country) tries.push(["country", { country }]);
+  for (const [level, q] of tries) {
+    const p = new URLSearchParams({ format: "jsonv2", limit: "1", addressdetails: "1", "accept-language": "en" });
+    for (const [k, v] of Object.entries(q)) if (v) p.set(k, v);
+    try {
+      const r = await fetch("https://nominatim.openstreetmap.org/search?" + p.toString(), {
+        headers: { "User-Agent": "bymarccc.com order-confirmation map (https://bymarccc.com)", "Accept": "application/json" },
+        cf: { cacheTtl: 86400, cacheEverything: true }
+      });
+      if (!r.ok) continue;
+      const list = await r.json();
+      const hit = Array.isArray(list) && list[0];
+      const lat = hit && Number(hit.lat), lon = hit && Number(hit.lon);
+      if (!hit || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+      const a = hit.address || {};
+      return json(200, {
+        ok: true, level, zoom: GEO_ZOOM[level], lat, lon,
+        city: city || a.city || a.town || a.village || a.municipality || a.county || "",
+        country: country || a.country || ""
+      });
+    } catch {}
+  }
+  return json(200, { ok: false });
+}
+__name(geocodeAddress, "geocodeAddress");
+
 // [[path]].js
 var ROUTES = {
   "assistant-chat": assistantChat,
@@ -1023,6 +1069,7 @@ var ROUTES = {
   "members-me": membersMe,
   "checkout-create": checkoutCreate,
   "checkout-session": checkoutSession,
+  "geocode": geocodeAddress,
   "cron-charge-installments": cronChargeInstallments
 };
 async function onRequest(context) {
