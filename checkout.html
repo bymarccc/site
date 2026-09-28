@@ -439,9 +439,25 @@
     clear(){ this.items = []; this.save(); }
   };
   BAG.load();
+  /* ---------- "Add to order" (link from the confirmation e-mail): same parcel, no extra shipping. The server
+     checks the signature; the browser only decides what to show. ---------- */
+  var ADD_TO = (function(){ try {
+    var qs = new URLSearchParams(location.search);
+    if (qs.get('addto') && qs.get('sig')) sessionStorage.setItem('bym.addto', JSON.stringify({ order_id: qs.get('addto'), sig: qs.get('sig'), at: Date.now() }));
+    var a = JSON.parse(sessionStorage.getItem('bym.addto') || 'null');
+    return a && /^BYM-\d{8}-[A-Z0-9]{2,10}$/.test(a.order_id) && /^[0-9a-f]{24}$/.test(a.sig) && Date.now() - (a.at || 0) < 7 * 864e5 ? { order_id: a.order_id, sig: a.sig } : null;
+  } catch(e){ return null; } })();
+  var clearAddTo = function(){ try { sessionStorage.removeItem('bym.addto'); } catch(e){} };
+  (function showAddTo(){ if (!ADD_TO) return; var h = document.querySelector('.co-summary .co-h');
+    if (!h) { document.addEventListener('DOMContentLoaded', showAddTo, { once: true }); return; }
+    if (document.getElementById('coAddTo')) return;
+    var d = document.createElement('div'); d.id = 'coAddTo';
+    d.setAttribute('style', 'margin:4px 0 18px;padding:14px 16px;border-radius:14px;background:#eef4fe;color:#1268F3;font-weight:600;font-size:14px;line-height:1.45');
+    d.textContent = 'Adding to your order ' + ADD_TO.order_id + ' — it ships together, no extra shipping.';
+    h.parentNode.insertBefore(d, h.nextSibling); })();
   var fmt = function(n, cur){ return (Math.round(n * 100) / 100).toLocaleString(LANG === 'ro' ? 'ro-RO' : 'en-GB') + ' ' + (cur || 'RON'); };
   var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); };
-  var shippingFor = function(){ return BAG.items.length ? SHIPPING_RON : 0; };
+  var shippingFor = function(){ return BAG.items.length && !ADD_TO ? SHIPPING_RON : 0; };
   var total = function(){ return BAG.subtotal() + shippingFor(); };
 
   function itemHtml(it, editable){
@@ -611,12 +627,12 @@
     if (wantsSplit && !splitConsent.checked) { setStatus(t('errSplitConsent'), 'is-error'); splitConsent.focus(); return; }
     var items = BAG.items.slice(), customer = collectCustomer(), oid = orderId();
     persistSavedInfo();
-    try { sessionStorage.setItem('bym.pendingOrder', JSON.stringify({ order_id: oid, customer: customer, items: items, language: LANG, installments: wantsSplit ? 2 : 1 })); } catch(e){}
+    try { sessionStorage.setItem('bym.pendingOrder', JSON.stringify({ order_id: oid, customer: customer, items: items, language: LANG, installments: wantsSplit ? 2 : 1, addto: ADD_TO || null })); } catch(e){}
     var lines = items.map(function(it){ return (it.quantity || 1) + ' × ' + it.name + (it.variant ? ' (' + it.variant + ')' : ''); });
     submitBtn.disabled = true; setStatus(t('statusSending'), 'is-sending');
     fetch('/api/checkout-create', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_id: oid, items: items, shipping: shippingFor(), items_summary: lines.join('\n'), customer: customer, installments: wantsSplit ? 2 : 1 })
+      body: JSON.stringify({ order_id: oid, items: items, shipping: shippingFor(), items_summary: lines.join('\n'), customer: customer, installments: wantsSplit ? 2 : 1, addto: ADD_TO || undefined })
     }).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); }).then(function(res){
       if (!res.ok || !res.d || !res.d.url) { setStatus(t('errNoService'), 'is-error'); submitBtn.disabled = false; return; }
       window.location.href = res.d.url;
@@ -643,7 +659,7 @@
     var items = (pending && pending.items) || BAG.items.slice();
     var customer = (pending && pending.customer) || {};
     var subtotal = items.reduce(function(a,b){ return a + (typeof b.price === 'number' ? b.price * (b.quantity || 1) : 0); }, 0);
-    var ship = items.length ? SHIPPING_RON : 0;
+    var ship = items.length && !(pending && pending.addto) ? SHIPPING_RON : 0;
     fetch('/api/checkout-session?id=' + encodeURIComponent(sid)).then(function(r){ return r.json(); }).then(function(d){
       history.replaceState(null, '', location.pathname);
       if (!d || !d.paid) { setStatus(t('errSendFailed'), 'is-error'); return; }
@@ -660,9 +676,9 @@
         language: (pending && pending.language) || LANG,
         installment: d.installment || null
       };
-      sendOrderMail({ order_id: params.order_id, session_id: sid, customer: customer, items: items, language: params.language })
+      sendOrderMail({ order_id: params.order_id, session_id: sid, customer: customer, items: items, language: params.language, addto: (pending && pending.addto) || undefined })
         .catch(function(err){ console.error('Order e-mail failed:', err); });
-      BAG.clear(); try { sessionStorage.removeItem('bym.pendingOrder'); } catch(e){}
+      BAG.clear(); clearAddTo(); try { sessionStorage.removeItem('bym.pendingOrder'); } catch(e){}
       showThankYou(params, items); setStatus('', '');
     }).catch(function(){ setStatus(t('errSendFailed'), 'is-error'); });
   }
@@ -694,8 +710,8 @@
     try { if ($('coSave').checked) { var o = {}; FIELDS.forEach(function(id){ o[id] = $(id).value; }); localStorage.setItem('bym.checkout', JSON.stringify(o)); } else localStorage.removeItem('bym.checkout'); } catch(e){}
 
     submitBtn.disabled = true; setStatus(t('statusSending'), 'is-sending');
-    sendOrderMail({ order_id: params.order_id, customer: collectCustomer(), items: items, language: LANG }).then(function(){
-      BAG.clear(); showThankYou(params, items); setStatus('', ''); submitBtn.disabled = false;
+    sendOrderMail({ order_id: params.order_id, customer: collectCustomer(), items: items, language: LANG, addto: ADD_TO || undefined }).then(function(){
+      BAG.clear(); clearAddTo(); showThankYou(params, items); setStatus('', ''); submitBtn.disabled = false;
     }, function(err){
       console.error('Order send failed:', err); setStatus(t(err && err.code === 503 ? 'errNoService' : 'errSendFailed'), 'is-error'); submitBtn.disabled = false;
     });

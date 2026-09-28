@@ -151,7 +151,9 @@ async function checkoutCreate(request, origin) {
     billing: String(c.billing || "").slice(0, 60),
     items_summary: String(body.items_summary || "").slice(0, 480)
   };
-  const shipping = Number(body.shipping || 0);
+  const addTo = await verifyAddTo(body.addto).catch(() => null);
+  const shipping = addTo ? 0 : Number(env("SHIPPING_RON", "20")) || 0;
+  if (addTo) metaBase.add_to = addTo;
   const shippingMinor = shipping > 0 ? Math.round(shipping * 100) : 0;
   // Server-side total, in minor units (bani) — never trust a client-sent total for what gets charged.
   const itemsTotalMinor = items.slice(0, 50).reduce((sum, it) => {
@@ -1067,7 +1069,9 @@ var ORDER_T = {
     order: "Order", items: "Items", subtotal: "Subtotal", shipping: "Shipping", total: "Total", pay: "Payment", cod: "Cash on delivery", card: "Card (paid)",
     ship: "Shipping address", help: "Questions? Just reply to this e-mail.",
     kindTitle: "After you try them on, smile! 🙂", kindText: "You've just helped feed people in need: 30% of the profit from your order goes to the homeless. 💙",
-    qty: "Qty", shop: "Continue shopping" },
+    qty: "Qty", shop: "Continue shopping",
+    recTitle: "You might also like", recText: (id) => `Add it to order ${id} — we'll ship everything together, no extra shipping.`, addTo: "Add to order",
+    together: (id) => `This ships together with your order ${id} — no extra shipping.` },
   ro: { subj: (id) => `Comandă confirmată — ${id}`, hi: (n) => `Mulțumim${n ? ", " + n : ""}!`, intro: "Comanda ta este confirmată. Îți scriem din nou când o expediem.",
     order: "Comanda", items: "Produse", subtotal: "Subtotal", shipping: "Livrare", total: "Total", pay: "Plată", cod: "Ramburs (cash la livrare)", card: "Card (plătit)",
     ship: "Adresă de livrare", help: "Întrebări? Răspunde la acest e-mail.",
@@ -1110,14 +1114,14 @@ function orderEmails(o, pay, totals, images = [], base = "https://bymarccc.com")
   const wrap = (inner) => `<!doctype html><html><body style="margin:0;background:#fff"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#333;font-size:15px;line-height:1.5"><tr><td style="font-size:26px;color:#555;padding-bottom:22px">BYMARCCC</td></tr><tr><td>${inner}</td></tr></table></td></tr></table></body></html>`;
   const customerHtml = orderCustomerHtml(o, t, payLabel, totals, addr, images, base);
   const customerText = [t.hi((c.full_name || "").split(/\s+/)[0]), "", `${t.order} ${o.order_id}`, t.intro, "", t.kindTitle, t.kindText, "", ...lines, "", `${t.subtotal}: ${ofmt(totals.sub)}`, `${t.shipping}: ${ofmt(totals.ship)}`, `${t.total}: ${ofmt(totals.total)}`, "", `${t.pay}: ${payLabel}`, `${t.ship}: ${addr.join(", ")}`, "", t.help].join("\n");
-  const ownerText = [`NEW ORDER ${o.order_id}`, `Payment: ${pay === "card" ? "Card (Stripe, paid)" : "Cash on delivery"}`, "", ...lines, "", `Subtotal: ${ofmt(totals.sub)}`, `Shipping: ${ofmt(totals.ship)}`, `TOTAL: ${ofmt(totals.total)}`, "",
+  const ownerText = [`NEW ORDER ${o.order_id}`, ...(o.addToParent ? [`ADD-ON to ${o.addToParent} — SHIP TOGETHER (no shipping charged)`] : []), `Payment: ${pay === "card" ? "Card (Stripe, paid)" : "Cash on delivery"}`, "", ...lines, "", `Subtotal: ${ofmt(totals.sub)}`, `Shipping: ${ofmt(totals.ship)}`, `TOTAL: ${ofmt(totals.total)}`, "",
     `Name: ${c.full_name}`, `Phone: ${c.phone}`, `E-mail: ${c.email}`, `Address: ${addr.slice(1).join(", ")}`, `Billing: ${c.billing}`, `Language: ${o.lang}`].join("\n");
-  const ownerHtml = wrap(`<h1 style="margin:0 0 4px;font-size:22px">New order ${oesc(o.order_id)}</h1><p style="margin:0 0 18px;color:#777">${pay === "card" ? "Card (Stripe) — paid" : "Cash on delivery — collect on delivery"}</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}${sums}</table><p style="margin:18px 0 0"><b>${oesc(c.full_name)}</b><br>${oesc(c.phone)}<br><a href="mailto:${oesc(c.email)}">${oesc(c.email)}</a><br>${addr.slice(1).map(oesc).join("<br>")}<br>Billing: ${oesc(c.billing)} · Language: ${o.lang}</p>`);
-  return { customer: { subject: t.subj(o.order_id), html: customerHtml, text: customerText }, owner: { subject: `New order ${o.order_id} — ${ofmt(totals.total)} — ${pay === "card" ? "CARD" : "COD"}`, html: ownerHtml, text: ownerText } };
+  const ownerHtml = wrap(`<h1 style="margin:0 0 4px;font-size:22px">New order ${oesc(o.order_id)}</h1>${o.addToParent ? `<p style="margin:0 0 6px;color:#1268F3;font-weight:700">ADD-ON to ${oesc(o.addToParent)} — ship together (no shipping charged)</p>` : ""}<p style="margin:0 0 18px;color:#777">${pay === "card" ? "Card (Stripe) — paid" : "Cash on delivery — collect on delivery"}</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}${sums}</table><p style="margin:18px 0 0"><b>${oesc(c.full_name)}</b><br>${oesc(c.phone)}<br><a href="mailto:${oesc(c.email)}">${oesc(c.email)}</a><br>${addr.slice(1).map(oesc).join("<br>")}<br>Billing: ${oesc(c.billing)} · Language: ${o.lang}</p>`);
+  return { customer: { subject: t.subj(o.order_id), html: customerHtml, text: customerText }, owner: { subject: `${o.addToParent ? `ADD-ON to ${o.addToParent} · ` : ""}New order ${o.order_id} — ${ofmt(totals.total)} — ${pay === "card" ? "CARD" : "COD"}`, html: ownerHtml, text: ownerText } };
 }
 __name(orderEmails, "orderEmails");
 // Customer confirmation e-mail — table layout + inline styles (Gmail, Apple Mail, Outlook). Product photos come from
-// catalog.json on the server (never from the browser); the hero is the thank-you page's "kindness" picture.
+// catalog.json on the server (never from the browser).
 function orderCustomerHtml(o, t, payLabel, totals, addr, images, base) {
   const F = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif", BLUE = "#1268F3", INK = "#111111", SUB = "#6b6b68", LINE = "#ecebe6";
   const img = (u) => typeof u === "string" && /^https:\/\/[^\s"'<>]+$/i.test(u) ? u : "";
@@ -1128,18 +1132,18 @@ function orderCustomerHtml(o, t, payLabel, totals, addr, images, base) {
     return `<tr><td width="88" valign="middle" style="padding:0 16px 16px 0">${pic}</td><td valign="middle" style="padding:0 0 16px;font-family:${F}"><div style="font-size:15px;font-weight:600;color:${INK};line-height:1.35">${oesc(it.name)}</div>${it.variant ? `<div style="font-size:13px;color:${SUB};margin-top:2px">${oesc(it.variant)}</div>` : ""}<div style="font-size:13px;color:${SUB};margin-top:2px">${t.qty}: ${it.qty}</div></td><td valign="middle" align="right" style="padding:0 0 16px 12px;font-family:${F};font-size:15px;color:${INK};white-space:nowrap">${ofmt(it.price * it.qty)}</td></tr>`;
   }).join("");
   const sum = (k, v, strong) => `<tr><td style="padding:${strong ? "12px 0 0" : "4px 0"};font-family:${F};font-size:${strong ? 17 : 14}px;color:${strong ? INK : SUB};font-weight:${strong ? 700 : 400}">${k}</td><td align="right" style="padding:${strong ? "12px 0 0" : "4px 0"};font-family:${F};font-size:${strong ? 19 : 14}px;color:${INK};font-weight:${strong ? 700 : 400};white-space:nowrap">${v}</td></tr>`;
-  const hero = `${base.replace(/\/$/, "")}/assets/img/thankyou-kindness-900.webp`;
+  const recs = (o.recs || []).map((r) => `<tr><td width="88" valign="middle" style="padding:0 14px 14px 0"><a href="${oesc(r.url)}"><img src="${oesc(img(r.image))}" width="76" height="76" alt="" style="display:block;width:76px;height:76px;object-fit:cover;border-radius:12px;background:#f4f3ef;border:0"></a></td><td valign="middle" style="padding:0 0 14px;font-family:${F}"><div style="font-size:15px;font-weight:600;color:${INK};line-height:1.35">${oesc(r.title)}</div><div style="font-size:14px;color:${SUB};margin-top:2px">${ofmt(r.price)}</div></td><td valign="middle" align="right" style="padding:0 0 14px 10px"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="${INK}" style="border-radius:999px"><a href="${oesc(r.url)}" style="display:inline-block;padding:10px 16px;font-family:${F};font-size:12px;font-weight:700;letter-spacing:.5px;color:#ffffff;text-decoration:none;white-space:nowrap">${oesc(t.addTo)}</a></td></tr></table></td></tr>`).join("");
   return `<!doctype html><html lang="${o.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><title>BYMARCCC</title></head>
 <body style="margin:0;padding:0;background:#f4f3ef">
 <div style="display:none;max-height:0;overflow:hidden">${oesc(t.hi(first))} ${oesc(t.kindText)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f3ef"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border-radius:20px">
 <tr><td style="padding:26px 28px 18px;font-family:${F};font-size:15px;font-weight:700;letter-spacing:5px;color:${INK}">bymarccc</td></tr>
-<tr><td style="padding:0 16px"><img src="${oesc(hero)}" width="528" alt="" style="display:block;width:100%;max-width:528px;height:auto;border-radius:16px;border:0"></td></tr>
 <tr><td style="padding:26px 28px 0;font-family:${F}">
   <div style="font-size:12px;letter-spacing:1.5px;color:${SUB};text-transform:uppercase">${oesc(t.order)} ${oesc(o.order_id)}</div>
   <h1 style="margin:8px 0 0;font-family:${F};font-size:30px;line-height:1.15;font-weight:800;color:${INK}">${oesc(t.hi(first))}</h1>
-  <p style="margin:10px 0 0;font-size:15px;line-height:1.55;color:${SUB}">${t.intro}</p>
+  <p style="margin:10px 0 0;font-size:15px;line-height:1.55;color:${SUB}">${t.intro}</p>${o.addToParent ? `
+  <p style="margin:10px 0 0;font-size:15px;line-height:1.55;color:${BLUE};font-weight:600">${oesc(t.together(o.addToParent))}</p>` : ""}
 </td></tr>
 <tr><td style="padding:22px 28px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef4fe;border-radius:16px"><tr><td style="padding:18px 20px;font-family:${F}">
   <div style="font-size:18px;font-weight:800;color:${BLUE};line-height:1.3">${oesc(t.kindTitle)}</div>
@@ -1149,6 +1153,7 @@ function orderCustomerHtml(o, t, payLabel, totals, addr, images, base) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${items}</table>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${LINE};margin-top:2px;padding-top:10px">${sum(t.subtotal, ofmt(totals.sub))}${sum(t.shipping, ofmt(totals.ship))}${sum(t.total, ofmt(totals.total), true)}</table>
 </td></tr>
+${recs ? `<tr><td style="padding:30px 28px 0"><div style="font-family:${F};font-size:20px;font-weight:800;color:${INK}">${oesc(t.recTitle)}</div><div style="font-family:${F};font-size:14px;line-height:1.5;color:${SUB};margin:4px 0 16px">${oesc(t.recText(o.addToParent || o.order_id))}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${recs}</table></td></tr>` : ""}
 <tr><td style="padding:22px 28px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f7f7f5;border-radius:16px"><tr><td style="padding:16px 20px;font-family:${F};font-size:14px;line-height:1.55;color:${INK}">
   <div style="font-size:12px;letter-spacing:1.5px;color:${SUB};text-transform:uppercase">${oesc(t.pay)}</div><div style="margin:2px 0 12px">${oesc(payLabel)}</div>
   <div style="font-size:12px;letter-spacing:1.5px;color:${SUB};text-transform:uppercase">${oesc(t.ship)}</div><div style="margin-top:2px">${addr.map(oesc).join("<br>")}</div>
@@ -1166,6 +1171,9 @@ async function orderSubmit(request) {
   const b = await readJson(request);
   if (!b) return json(400, { error: "Invalid JSON" });
   const o = cleanOrder(b), c = o.customer;
+  o.lang = "en";   // customer e-mails are always in English
+  const addTo = await verifyAddTo(b.addto).catch(() => null);
+  if (addTo && addTo !== o.order_id) o.addToParent = addTo;
   if (!o.order_id || !o.items.length) return json(400, { error: "Invalid order" });
   let pay = "cod", totalOverride = null;
   if (o.session_id) {
@@ -1182,9 +1190,10 @@ async function orderSubmit(request) {
   const store = kv(), key = `ordermail:${o.order_id}`;
   if (sentOrders.has(key) || (store && await store.get(key))) return json(200, { ok: true, duplicate: true });
   const sub = o.items.reduce((a, it) => a + it.price * it.qty, 0);
-  const ship = Number(env("SHIPPING_RON", "20")) || 0;
+  const ship = o.addToParent ? 0 : Number(env("SHIPPING_RON", "20")) || 0;
   const totals = { sub, ship, total: totalOverride != null && pay === "card" && !b.installments ? totalOverride : sub + ship };
   const chk = await goatifyItemCheck(b.items).catch(() => ({ extras: [], notes: "" }));
+  o.recs = await orderRecommendations(b.items, o.addToParent || o.order_id).catch(() => []);
   const m = orderEmails(o, pay, totals, chk.extras.map((e) => e && e.image), CURRENT_ORIGIN || "https://bymarccc.com");
   const from = env("ORDER_EMAIL_FROM");
   try {
@@ -1197,7 +1206,7 @@ async function orderSubmit(request) {
   // GOATIFY: forward the accepted order (no-op unless GOATIFY_FORWARDING=on). Never changes the answer to the customer.
   try {
     const fo = { ...o, items: o.items.map((it, i) => ({ ...it, ...(chk.extras[i] || {}) })) };
-    const notes = [chk.notes, b.installments && pay === "card" ? "Pay in 2: first instalment paid by card, second charged automatically later." : ""].filter(Boolean).join("\n");
+    const notes = [o.addToParent ? `ADD-ON to ${o.addToParent} — ship together in the same parcel.` : "", chk.notes, b.installments && pay === "card" ? "Pay in 2: first instalment paid by card, second charged automatically later." : ""].filter(Boolean).join("\n");
     const g = await forwardToGoatify(fo, { pay, totals: { sub: totals.sub, ship: totals.ship }, placedAt: new Date().toISOString(), notes, sourceUrl: CURRENT_ORIGIN ? CURRENT_ORIGIN + "/checkout.html" : void 0 }, (k) => env(k));
     if (!g.forwarded && g.reason !== "off") console.error("GOATIFY forward failed", JSON.stringify(g));
   } catch (e) { console.error("GOATIFY forward error", String(e && e.message || e)); }
@@ -1289,6 +1298,55 @@ async function goatifyItemCheck(rawItems) {
   return { extras, notes: warn.length ? "⚠ Price not verified against catalog.json: " + warn.join("; ") : "" };
 }
 __name(goatifyItemCheck, "goatifyItemCheck");
+
+// "Add to order": signed link from the confirmation e-mail → product page → checkout, same parcel, no extra shipping.
+// The signature ties the link to ONE order id (HMAC, server secret) and it is valid for ADDON_DAYS after that order.
+var ADDON_DAYS = 7;
+async function addToSig(orderId) {
+  const secret = env("ORDER_LINK_SECRET") || env("RESEND_API_KEY");
+  if (!secret) return "";
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("addto:" + orderId));
+  return [...new Uint8Array(sig)].map((x) => x.toString(16).padStart(2, "0")).join("").slice(0, 24);
+}
+__name(addToSig, "addToSig");
+async function verifyAddTo(a) {
+  if (!a || typeof a !== "object") return null;
+  const id = String(a.order_id || ""), sig = String(a.sig || "");
+  const m = /^BYM-(\d{4})(\d{2})(\d{2})-[A-Z0-9]{2,10}$/.exec(id);
+  if (!m || !/^[0-9a-f]{24}$/.test(sig)) return null;
+  const placed = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+  if (!(Date.now() - placed <= (ADDON_DAYS + 1) * 864e5)) return null;
+  return sig === await addToSig(id) ? id : null;
+}
+__name(verifyAddTo, "verifyAddTo");
+// Up to 3 suggestions from catalog.json, based on what was bought: a women's top → the Delulu blazer first; then
+// accessories (caps, bags) for the same gender; then another jeans/top. Never something already in the order.
+// Photos for catalogue items that have none in catalog.json yet (the product page has them in its own gallery).
+var REC_IMAGES = { "w-hg-delulu-blazer": "assets/img/gallery/delulu-blazer-1-73460abe.webp" };
+async function orderRecommendations(rawItems, parentOrderId, max = 3) {
+  const base = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN || "https://bymarccc.com").replace(/\/$/, "");
+  const cat = (await loadCatalog().catch(() => [])).map((p) => ({ ...p,
+    images: (p.images || []).length ? p.images : REC_IMAGES[p.id] ? [`${base}/${REC_IMAGES[p.id]}`] : [],
+    url: /[?&]p=/.test(p.url || "") ? p.url : `${base}/bymarccc-product.html?p=${encodeURIComponent(p.id)}` }));
+  const byId = new Map(cat.map((p) => [String(p.id), p]));
+  const bought = (Array.isArray(rawItems) ? rawItems : []).map((it) => byId.get(String(it && it.id || "").split(":")[0])).filter(Boolean);
+  const boughtIds = new Set(bought.map((p) => p.id));
+  const ok = (p) => p && !boughtIds.has(p.id) && typeof p.price === "number" && (p.images || []).length && (p.variants || []).some((v) => v.available !== false);
+  const genders = new Set(bought.flatMap((p) => p.gender || []));
+  const gender = genders.has("women") && !genders.has("men") ? "women" : genders.has("men") && !genders.has("women") ? "men" : (bought[0] && (bought[0].gender || [])[0]) || "women";
+  const forG = (p) => (p.gender || []).includes(gender);
+  const picks = [], add = (p) => { if (ok(p) && !picks.includes(p) && picks.length < max) picks.push(p); };
+  if (bought.some((p) => p.productType === "top" && (p.gender || []).includes("women"))) add(byId.get("w-hg-delulu-blazer"));
+  cat.filter((p) => p.productType === "accessory" && forG(p)).sort((a, b) => a.price - b.price).slice(0, 2).forEach(add);
+  const boughtTypes = new Set(bought.map((p) => p.productType));
+  const nextType = boughtTypes.has("jeans") || boughtTypes.has("bottoms") ? "top" : "jeans";
+  cat.filter((p) => forG(p) && (p.productType === nextType || (nextType === "jeans" && p.productType === "bottoms"))).forEach(add);
+  cat.filter((p) => forG(p) && p.productType === "accessory").forEach(add);
+  const sig = await addToSig(parentOrderId);
+  return picks.map((p) => ({ id: p.id, title: p.title, price: p.price, image: p.images[0], url: sig ? `${p.url}${p.url.includes("?") ? "&" : "?"}addto=${encodeURIComponent(parentOrderId)}&sig=${sig}` : p.url }));
+}
+__name(orderRecommendations, "orderRecommendations");
 
 // [[path]].js
 var ROUTES = {
