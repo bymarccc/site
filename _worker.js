@@ -138,7 +138,9 @@ async function checkoutCreate(request, origin) {
   if (!items.length) return json(400, { error: "Empty bag" });
   const currency = String(items[0].currency || "RON").toLowerCase();
   const c = body.customer || {};
-  const order_id = String(body.order_id || "").slice(0, 100);
+  let order_id;
+  try { order_id = await assignOrderNumber(body.order_id, "card"); }
+  catch (e) { console.error("order number failed", String(e && e.message || e)); return json(503, { error: "ORDER_NUMBER_FAILED" }); }
   const metaBase = {
     order_id,
     full_name: String(c.full_name || "").slice(0, 200),
@@ -153,7 +155,7 @@ async function checkoutCreate(request, origin) {
   };
   const addTo = await verifyAddTo(body.addto).catch(() => null);
   const shipping = addTo ? 0 : Number(env("SHIPPING_RON", "20")) || 0;
-  if (addTo) metaBase.add_to = addTo;
+  if (addTo) metaBase.add_to = addTo.id;
   const shippingMinor = shipping > 0 ? Math.round(shipping * 100) : 0;
   // Server-side total, in minor units (bani) — never trust a client-sent total for what gets charged.
   const itemsTotalMinor = items.slice(0, 50).reduce((sum, it) => {
@@ -209,7 +211,7 @@ async function checkoutCreate(request, origin) {
           }
         }
       });
-      return json(200, { url: session.url, id: session.id });
+      return json(200, { url: session.url, id: session.id, order_id });
     } catch (e) {
       return json(e.status || 500, { error: "STRIPE_ERROR", detail: env("ASSISTANT_DEBUG") ? String(e.message) : void 0 });
     }
@@ -245,12 +247,39 @@ async function checkoutCreate(request, origin) {
         metadata: metaBase
       }
     });
-    return json(200, { url: session.url, id: session.id });
+    return json(200, { url: session.url, id: session.id, order_id });
   } catch (e) {
     return json(e.status || 500, { error: "STRIPE_ERROR", detail: env("ASSISTANT_DEBUG") ? String(e.message) : void 0 });
   }
 }
 __name(checkoutCreate, "checkoutCreate");
+// Order numbers — bymarccc-3120, bymarccc-3121, … assigned ONLY here, never in the browser. D1 binding ORDERS_DB.
+// The browser sends a temporary id (client_ref); the same client_ref always gets the same number (retries are safe).
+// n is an INTEGER PRIMARY KEY: SQLite gives each new row max(n)+1 inside the write, so two orders can never share a
+// number. A seed row (n = 3119) makes the first real order bymarccc-3120. Without the binding the temporary id is kept.
+var ORDER_NO_START = 3120;
+var ORDER_NO_RE = /^bymarccc-\d{4,9}$/;
+var orderTableReady = null;
+var ordersDb = /* @__PURE__ */ __name(() => ENV.ORDERS_DB && typeof ENV.ORDERS_DB.prepare === "function" ? ENV.ORDERS_DB : null, "ordersDb");
+async function assignOrderNumber(clientRef, kind) {
+  const ref = String(clientRef || "").replace(/[^A-Za-z0-9-]/g, "").slice(0, 60);
+  const db = ordersDb();
+  if (!db) { if (!ref) throw new Error("missing order ref"); console.error("ORDERS_DB not bound - keeping the temporary order id"); return ref; }
+  if (ref.length < 6 || ORDER_NO_RE.test(ref)) throw new Error("invalid order ref");
+  if (!orderTableReady) orderTableReady = db.batch([
+    db.prepare("CREATE TABLE IF NOT EXISTS order_numbers (n INTEGER PRIMARY KEY, client_ref TEXT NOT NULL UNIQUE, kind TEXT, created_at TEXT NOT NULL)"),
+    db.prepare("INSERT OR IGNORE INTO order_numbers (n, client_ref, kind, created_at) VALUES (?1, '__seed__', 'seed', ?2)").bind(ORDER_NO_START - 1, (/* @__PURE__ */ new Date()).toISOString())
+  ]).catch((e) => { orderTableReady = null; throw e; });
+  await orderTableReady;
+  const res = await db.batch([
+    db.prepare("INSERT INTO order_numbers (client_ref, kind, created_at) VALUES (?1, ?2, ?3) ON CONFLICT(client_ref) DO NOTHING").bind(ref, kind, (/* @__PURE__ */ new Date()).toISOString()),
+    db.prepare("SELECT n FROM order_numbers WHERE client_ref = ?1").bind(ref)
+  ]);
+  const n = res && res[1] && res[1].results && res[1].results[0] && res[1].results[0].n;
+  if (!Number.isInteger(n) || n < ORDER_NO_START) throw new Error("no order number");
+  return "bymarccc-" + n;
+}
+__name(assignOrderNumber, "assignOrderNumber");
 async function recordPendingInstallment(session) {
   // Called once, right after the FIRST (deposit) payment is confirmed paid. Saves what the
   // scheduled cron-charge-installments job needs to charge the remaining 50% automatically in
@@ -287,7 +316,12 @@ async function recordPendingInstallment(session) {
 __name(recordPendingInstallment, "recordPendingInstallment");
 async function checkoutSession(request) {
   if (request.method !== "GET") return json(405, { error: "Method not allowed" });
-  if (!checkOrigin(request)) return json(403, { error: "Forbidden origin" });
+  // Browsers send no Origin header on a same-origin GET, so this one also accepts the Referer's origin
+  // (the thank-you page calls it right after Stripe sends the customer back).
+  let refOrigin = "";
+  try { refOrigin = new URL(request.headers.get("referer") || "").origin; } catch {}
+  const viaReferer = !request.headers.get("origin") && refOrigin && checkOrigin(new Request(request.url, { headers: { origin: refOrigin } }));
+  if (!checkOrigin(request) && !viaReferer) return json(403, { error: "Forbidden origin" });
   if (!env("STRIPE_SECRET_KEY")) return json(503, { error: "STRIPE_NOT_CONFIGURED" });
   const url = new URL(request.url);
   const id = url.searchParams.get("id") || "";
@@ -1172,8 +1206,6 @@ async function orderSubmit(request) {
   if (!b) return json(400, { error: "Invalid JSON" });
   const o = cleanOrder(b), c = o.customer;
   o.lang = "en";   // customer e-mails are always in English
-  const addTo = await verifyAddTo(b.addto).catch(() => null);
-  if (addTo && addTo !== o.order_id) o.addToParent = addTo;
   if (!o.order_id || !o.items.length) return json(400, { error: "Invalid order" });
   let pay = "cod", totalOverride = null;
   if (o.session_id) {
@@ -1185,15 +1217,21 @@ async function orderSubmit(request) {
   } else {
     const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email);
     if (!c.full_name || !c.phone || !c.address || !c.city || !okEmail) return json(400, { error: "Missing customer details" });
+    // COD: the order number is assigned here, from the browser's temporary id (a retry gets the same number)
+    try { o.order_id = await assignOrderNumber(o.order_id, "cod"); }
+    catch (e) { console.error("order number failed", String(e && e.message || e)); return json(503, { error: "ORDER_NUMBER_FAILED" }); }
   }
+  const addTo = await verifyAddTo(b.addto).catch(() => null);
+  if (addTo && addTo.id !== o.order_id) o.addToParent = addTo.id;
+  // "You might also like" (e-mail + thank-you page): add-on links point at the parent order when this is itself an add-on
+  o.recs = await orderRecommendations(b.items, o.addToParent || o.order_id, 3, o.addToParent ? addTo.t : Math.floor(Date.now() / 1e3)).catch(() => []);
   // once per order: KV when bound (survives restarts), memory otherwise
   const store = kv(), key = `ordermail:${o.order_id}`;
-  if (sentOrders.has(key) || (store && await store.get(key))) return json(200, { ok: true, duplicate: true });
+  if (sentOrders.has(key) || (store && await store.get(key))) return json(200, { ok: true, duplicate: true, order_id: o.order_id, recs: o.recs });
   const sub = o.items.reduce((a, it) => a + it.price * it.qty, 0);
   const ship = o.addToParent ? 0 : Number(env("SHIPPING_RON", "20")) || 0;
   const totals = { sub, ship, total: totalOverride != null && pay === "card" && !b.installments ? totalOverride : sub + ship };
   const chk = await goatifyItemCheck(b.items).catch(() => ({ extras: [], notes: "" }));
-  o.recs = await orderRecommendations(b.items, o.addToParent || o.order_id).catch(() => []);
   const m = orderEmails(o, pay, totals, chk.extras.map((e) => e && e.image), CURRENT_ORIGIN || "https://bymarccc.com");
   const from = env("ORDER_EMAIL_FROM");
   try {
@@ -1212,7 +1250,7 @@ async function orderSubmit(request) {
   } catch (e) { console.error("GOATIFY forward error", String(e && e.message || e)); }
   let customerMail = "skipped";
   if (c.email) { try { await resendSend({ from, to: [c.email], reply_to: env("ORDER_NOTIFY_TO").split(",")[0].trim() || void 0, subject: m.customer.subject, html: m.customer.html, text: m.customer.text }); customerMail = "sent"; } catch { customerMail = "failed"; } }
-  return json(200, { ok: true, customerMail });
+  return json(200, { ok: true, order_id: o.order_id, customerMail, recs: o.recs });
 }
 __name(orderSubmit, "orderSubmit");
 
@@ -1300,31 +1338,40 @@ async function goatifyItemCheck(rawItems) {
 __name(goatifyItemCheck, "goatifyItemCheck");
 
 // "Add to order": signed link from the confirmation e-mail → product page → checkout, same parcel, no extra shipping.
-// The signature ties the link to ONE order id (HMAC, server secret) and it is valid for ADDON_DAYS after that order.
+// The signature ties the link to ONE order id AND the time the order was placed (t, unix seconds) — HMAC with a server
+// secret, so neither can be changed — and the link is valid for ADDON_DAYS after t. Links: ?addto=<id>&t=<t>&sig=<sig>.
 var ADDON_DAYS = 7;
-async function addToSig(orderId) {
+async function addToSig(orderId, t) {
   const secret = env("ORDER_LINK_SECRET") || env("RESEND_API_KEY");
   if (!secret) return "";
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("addto:" + orderId));
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(t === void 0 ? "addto:" + orderId : `addto:${orderId}:${t}`));
   return [...new Uint8Array(sig)].map((x) => x.toString(16).padStart(2, "0")).join("").slice(0, 24);
 }
 __name(addToSig, "addToSig");
+// → { id, t } or null
 async function verifyAddTo(a) {
   if (!a || typeof a !== "object") return null;
   const id = String(a.order_id || ""), sig = String(a.sig || "");
+  if (!/^[0-9a-f]{24}$/.test(sig)) return null;
+  if (ORDER_NO_RE.test(id)) {
+    const t = Number(a.t), age = Date.now() / 1e3 - t;
+    if (!Number.isInteger(t) || t <= 0 || age < -300 || age > ADDON_DAYS * 86400) return null;
+    return sig === await addToSig(id, t) ? { id, t } : null;
+  }
+  // links in e-mails sent before the new order numbers (BYM-YYYYMMDD-XXXX, date inside the id)
   const m = /^BYM-(\d{4})(\d{2})(\d{2})-[A-Z0-9]{2,10}$/.exec(id);
-  if (!m || !/^[0-9a-f]{24}$/.test(sig)) return null;
+  if (!m) return null;
   const placed = Date.UTC(+m[1], +m[2] - 1, +m[3]);
   if (!(Date.now() - placed <= (ADDON_DAYS + 1) * 864e5)) return null;
-  return sig === await addToSig(id) ? id : null;
+  return sig === await addToSig(id) ? { id, t: Math.floor(placed / 1e3) } : null;
 }
 __name(verifyAddTo, "verifyAddTo");
 // Up to 3 suggestions from catalog.json, based on what was bought: a women's top → the Delulu blazer first; then
 // accessories (caps, bags) for the same gender; then another jeans/top. Never something already in the order.
 // Photos for catalogue items that have none in catalog.json yet (the product page has them in its own gallery).
 var REC_IMAGES = { "w-hg-delulu-blazer": "assets/img/gallery/delulu-blazer-1-73460abe.webp" };
-async function orderRecommendations(rawItems, parentOrderId, max = 3) {
+async function orderRecommendations(rawItems, parentOrderId, max = 3, parentT = Math.floor(Date.now() / 1e3)) {
   const base = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN || "https://bymarccc.com").replace(/\/$/, "");
   const cat = (await loadCatalog().catch(() => [])).map((p) => ({ ...p,
     images: (p.images || []).length ? p.images : REC_IMAGES[p.id] ? [`${base}/${REC_IMAGES[p.id]}`] : [],
@@ -1343,8 +1390,10 @@ async function orderRecommendations(rawItems, parentOrderId, max = 3) {
   const nextType = boughtTypes.has("jeans") || boughtTypes.has("bottoms") ? "top" : "jeans";
   cat.filter((p) => forG(p) && (p.productType === nextType || (nextType === "jeans" && p.productType === "bottoms"))).forEach(add);
   cat.filter((p) => forG(p) && p.productType === "accessory").forEach(add);
-  const sig = await addToSig(parentOrderId);
-  return picks.map((p) => ({ id: p.id, title: p.title, price: p.price, image: p.images[0], url: sig ? `${p.url}${p.url.includes("?") ? "&" : "?"}addto=${encodeURIComponent(parentOrderId)}&sig=${sig}` : p.url }));
+  const legacy = !ORDER_NO_RE.test(parentOrderId);   // no ORDERS_DB yet → old-style id, old-style link
+  const sig = await addToSig(parentOrderId, legacy ? void 0 : parentT);
+  const q = `addto=${encodeURIComponent(parentOrderId)}${legacy ? "" : `&t=${parentT}`}&sig=${sig}`;
+  return picks.map((p) => ({ id: p.id, title: p.title, price: p.price, image: p.images[0], url: sig ? `${p.url}${p.url.includes("?") ? "&" : "?"}${q}` : p.url }));
 }
 __name(orderRecommendations, "orderRecommendations");
 

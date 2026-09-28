@@ -180,6 +180,24 @@
   .ty-updates h3, .ty-details__h{ margin:0 0 6px; font-size:19px; font-weight:700; letter-spacing:-.005em; }
   .ty-updates p{ margin:0; font-size:15px; line-height:1.5; color:#3d3d3b; }
   .ty-details .co-ty__sec:first-of-type{ border-top:0; padding-top:8px; }
+  /* "You might also like" — same three picks as the confirmation e-mail (from /api/order-submit) */
+  .ty-recs{ padding:36px clamp(16px,4vw,48px) 56px; border-top:1px solid var(--line); }
+  .ty-recs[hidden]{ display:none; }
+  .ty-recs__h{ margin:0 0 4px; font-size:clamp(20px,2.4vw,26px); font-weight:500; letter-spacing:.01em; }
+  .ty-recs__sub{ margin:0 0 20px; font-size:14px; color:var(--sub); }
+  .ty-recs__list{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(10px,2vw,24px); max-width:1100px; }
+  @media (max-width:640px){ .ty-recs__list{ grid-template-columns:1fr; gap:14px; } }
+  .ty-rec{ display:flex; flex-direction:column; background:#fff; border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+  @media (max-width:640px){ .ty-rec{ flex-direction:row; align-items:center; } }
+  .ty-rec__img{ display:block; aspect-ratio:3/4; background:var(--bg); }
+  @media (max-width:640px){ .ty-rec__img{ flex:0 0 108px; } }
+  .ty-rec__img img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .ty-rec__body{ display:flex; flex-direction:column; gap:4px; padding:14px 16px 16px; min-width:0; flex:1; }
+  .ty-rec__title{ margin:0; font-size:14px; font-weight:500; line-height:1.35; color:var(--ink); text-decoration:none; }
+  .ty-rec__price{ margin:0 0 8px; font-size:14px; color:var(--sub); }
+  .ty-rec__btn{ display:inline-flex; align-items:center; justify-content:center; align-self:flex-start; height:40px; padding:0 20px; border-radius:999px; background:var(--ink); color:#fff; text-decoration:none; font:600 11px/1 inherit; letter-spacing:.16em; text-transform:uppercase; }
+  /* phones: the floating AI-stylist button must never sit on top of the order summary */
+  @media (max-width:899px){ #coThankYou{ padding-bottom:96px; } }
   .co-ty__continue{ display:inline-flex; align-items:center; justify-content:center; height:48px; padding:0 28px; margin-top:28px; border-radius:999px; background:var(--ink); color:#fff; text-decoration:none; font:600 11px/1 inherit; letter-spacing:.2em; text-transform:uppercase; }
 </style>
 </head>
@@ -212,7 +230,7 @@
         <input type="radio" name="coPayment" id="coPayCod" checked>
         <div class="co-opt__body"><div class="co-opt__text"><b data-i18n="payCod">Cash on delivery</b></div></div>
       </label>
-      <p class="co-note" id="coCardNote" style="display:none; margin-top:8px;" data-i18n="cardRedirectNote">You’ll enter your address and card details on the secure Stripe payment page after this step.</p>
+      <p class="co-note" id="coCardNote" style="display:none; margin-top:8px;" data-i18n="cardRedirectNote">You’ll enter your card details on the secure Stripe payment page after this step.</p>
 
       <div id="coSplitWrap" style="display:none; margin-top:10px;">
         <label class="co-opt is-selected" id="coSplitFullOpt">
@@ -345,6 +363,11 @@
       </div>
     </aside>
   </div>
+  <section class="ty-recs" id="coTyRecs" aria-labelledby="coTyRecsH" hidden>
+    <h2 class="ty-recs__h" id="coTyRecsH">You might also like</h2>
+    <p class="ty-recs__sub">Add it to this order — it ships together, no extra shipping.</p>
+    <div class="ty-recs__list" id="coTyRecsList"></div>
+  </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -369,7 +392,7 @@
   var I18N = {
     en: {
       hPayment:'Payment', secureNote:'All transactions are secure and encrypted.', payCard:'Credit card', payCod:'Cash on delivery',
-      cardRedirectNote:'You’ll enter your address and card details on the secure Stripe payment page after this step.',
+      cardRedirectNote:'You’ll enter your card details on the secure Stripe payment page after this step.',
       hDelivery:'Delivery', countryRomania:'Romania', phFullName:'First & last name', phAddress:'Address', phApt:'Number, apartment (optional)',
       phPostal:'Postal code', phCity:'City', phPhone:'Phone', phEmail:'Email address', saveInfo:'Save this information for next time',
       hShipping:'Shipping method', shipDays:'2–3 business days', hBilling:'Billing address', billingSame:'Same as shipping address',
@@ -393,7 +416,7 @@
     },
     ro: {
       hPayment:'Plată', secureNote:'Toate tranzacțiile sunt securizate și criptate.', payCard:'Card bancar', payCod:'Plată ramburs (cash la livrare)',
-      cardRedirectNote:'Vei introduce adresa și datele cardului pe pagina securizată Stripe după acest pas.',
+      cardRedirectNote:'Vei introduce datele cardului pe pagina securizată Stripe după acest pas.',
       hDelivery:'Livrare', countryRomania:'România', phFullName:'Nume și prenume', phAddress:'Adresă', phApt:'Număr, apartament (opțional)',
       phPostal:'Cod poștal', phCity:'Oraș', phPhone:'Telefon', phEmail:'Adresă de email', saveInfo:'Salvează aceste informații pentru data viitoare',
       hShipping:'Metodă de livrare', shipDays:'2–3 zile lucrătoare', hBilling:'Adresă de facturare', billingSame:'Aceeași ca adresa de livrare',
@@ -443,9 +466,11 @@
      checks the signature; the browser only decides what to show. ---------- */
   var ADD_TO = (function(){ try {
     var qs = new URLSearchParams(location.search);
-    if (qs.get('addto') && qs.get('sig')) sessionStorage.setItem('bym.addto', JSON.stringify({ order_id: qs.get('addto'), sig: qs.get('sig'), at: Date.now() }));
+    if (qs.get('addto') && qs.get('sig')) sessionStorage.setItem('bym.addto', JSON.stringify({ order_id: qs.get('addto'), t: qs.get('t') || '', sig: qs.get('sig'), at: Date.now() }));
     var a = JSON.parse(sessionStorage.getItem('bym.addto') || 'null');
-    return a && /^BYM-\d{8}-[A-Z0-9]{2,10}$/.test(a.order_id) && /^[0-9a-f]{24}$/.test(a.sig) && Date.now() - (a.at || 0) < 7 * 864e5 ? { order_id: a.order_id, sig: a.sig } : null;
+    if (!a || !/^[0-9a-f]{24}$/.test(a.sig)) return null;
+    if (/^bymarccc-\d{4,9}$/.test(a.order_id) && /^\d{9,11}$/.test(String(a.t)) && Date.now() / 1000 - Number(a.t) < 7 * 86400) return { order_id: a.order_id, t: Number(a.t), sig: a.sig };
+    return /^BYM-\d{8}-[A-Z0-9]{2,10}$/.test(a.order_id) && Date.now() - (a.at || 0) < 7 * 864e5 ? { order_id: a.order_id, sig: a.sig } : null;
   } catch(e){ return null; } })();
   var clearAddTo = function(){ try { sessionStorage.removeItem('bym.addto'); } catch(e){} };
   (function showAddTo(){ if (!ADD_TO) return; var h = document.querySelector('.co-summary .co-h');
@@ -505,9 +530,8 @@
   splitFull.addEventListener('change', updateSplitView); splitTwoRadio.addEventListener('change', updateSplitView);
   function updatePaymentView(){
     var isCard = payCard.checked;
-    codExtra.style.display = isCard ? 'none' : '';
     cardNote.style.display = isCard ? '' : 'none';
-    codFields.forEach(function(f){ f.required = !isCard; });
+    codFields.forEach(function(f){ f.required = true; });   // delivery details are needed for card orders too (Stripe only takes the card)
     splitWrap.style.display = isCard ? '' : 'none';
     if (!isCard) { splitFull.checked = true; splitFull.closest('.co-opt').classList.add('is-selected'); splitTwoRadio.closest('.co-opt').classList.remove('is-selected'); splitConsent.checked = false; }
     updateSplitView();
@@ -550,6 +574,32 @@
     $('coTySubtotal').textContent = fmt(sub); $('coTyShipping').textContent = fmt(ship); $('coTyTotal').textContent = fmt(sub + ship);
     loadShipMap(d);
   }
+
+  /* ---------- thank you: "You might also like" (picks + signed add-to-order links come from the server) ---------- */
+  function renderRecs(recs){
+    var box = $('coTyRecs'), list = $('coTyRecsList');
+    recs = (Array.isArray(recs) ? recs : []).filter(function(r){ return r && r.title && /^https?:\/\//.test(String(r.url || '')); }).slice(0, 3);
+    if (!recs.length) { box.hidden = true; list.innerHTML = ''; return; }
+    list.innerHTML = recs.map(function(r){
+      var price = typeof r.price === 'number' ? (Math.round(r.price * 100) / 100).toLocaleString('en-GB') + ' RON' : '';
+      // target="_top" = a normal page load (not the in-page router): the router would bring back this cached
+      // thank-you screen instead of a fresh checkout after the item is added to the bag.
+      return '<article class="ty-rec"><a class="ty-rec__img" href="' + esc(r.url) + '" target="_top">' + (r.image ? '<img src="' + esc(r.image) + '" alt="' + esc(r.title) + '" loading="lazy">' : '') + '</a>' +
+        '<div class="ty-rec__body"><a class="ty-rec__title" href="' + esc(r.url) + '" target="_top">' + esc(r.title) + '</a><p class="ty-rec__price">' + esc(price) + '</p>' +
+        '<a class="ty-rec__btn" href="' + esc(r.url) + '" target="_top">Add to order</a></div></article>';
+    }).join('');
+    box.hidden = false;
+  }
+  (function guardAiLaunch(){
+    var totals = document.querySelector('#coThankYou .co-totals');
+    if (!totals || !('IntersectionObserver' in window)) return;
+    var phone = window.matchMedia('(max-width: 899px)');
+    new IntersectionObserver(function(entries){
+      var l = document.getElementById('aiLaunch'); if (!l) return;
+      var on = entries[0].isIntersecting && phone.matches && $('coThankYou').style.display === 'block';
+      l.classList.toggle('is-hidden', on);
+    }, { rootMargin: '0px 0px 0px 0px', threshold: 0 }).observe(totals);
+  })();
 
   /* ---------- order confirmation: shipping-destination map ----------
      The location comes ONLY from the shipping address the customer entered for this order
@@ -599,6 +649,10 @@
       setTimeout(function(){ if (tyMap) { tyMap.invalidateSize(); tyMap.setView([g.lat, g.lon], g.zoom || 11, { animate: false }); tyMap.panBy([0, -34], { animate: false }); } }, 80);
     }).catch(fail);
   }
+  // temporary id for one checkout attempt — the real number (bymarccc-3120, …) is assigned by the server.
+  // Kept across retries of the same attempt so a retry never gets a second number.
+  var pendingRef = null;
+  function orderRef(){ return pendingRef || (pendingRef = orderId()); }
   function orderId(){
     var d = new Date(), pad = function(n){ return (n < 10 ? '0' : '') + n; };
     return ORDER_PREFIX + '-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -625,7 +679,7 @@
     if (phoneDigits.length < 10) { setStatus(t('errPhone'), 'is-error'); $('coPhone').focus(); return; }
     var wantsSplit = splitTwoRadio.checked;
     if (wantsSplit && !splitConsent.checked) { setStatus(t('errSplitConsent'), 'is-error'); splitConsent.focus(); return; }
-    var items = BAG.items.slice(), customer = collectCustomer(), oid = orderId();
+    var items = BAG.items.slice(), customer = collectCustomer(), oid = orderRef();
     persistSavedInfo();
     try { sessionStorage.setItem('bym.pendingOrder', JSON.stringify({ order_id: oid, customer: customer, items: items, language: LANG, installments: wantsSplit ? 2 : 1, addto: ADD_TO || null })); } catch(e){}
     var lines = items.map(function(it){ return (it.quantity || 1) + ' × ' + it.name + (it.variant ? ' (' + it.variant + ')' : ''); });
@@ -635,6 +689,7 @@
       body: JSON.stringify({ order_id: oid, items: items, shipping: shippingFor(), items_summary: lines.join('\n'), customer: customer, installments: wantsSplit ? 2 : 1, addto: ADD_TO || undefined })
     }).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); }).then(function(res){
       if (!res.ok || !res.d || !res.d.url) { setStatus(t('errNoService'), 'is-error'); submitBtn.disabled = false; return; }
+      try { var pend = JSON.parse(sessionStorage.getItem('bym.pendingOrder') || 'null'); if (pend && res.d.order_id) { pend.order_id = res.d.order_id; sessionStorage.setItem('bym.pendingOrder', JSON.stringify(pend)); } } catch(e){}
       window.location.href = res.d.url;
     }).catch(function(){ setStatus(t('errNoService'), 'is-error'); submitBtn.disabled = false; });
   }
@@ -674,9 +729,11 @@
         address: customer.address || '', apartment: customer.apartment || '', city: customer.city || '',
         postal_code: customer.postal_code || '', country: customer.country || '', billing: customer.billing || '',
         language: (pending && pending.language) || LANG,
-        installment: d.installment || null
+        installment: d.installment || null,
+        shipping_amount: ship
       };
       sendOrderMail({ order_id: params.order_id, session_id: sid, customer: customer, items: items, language: params.language, addto: (pending && pending.addto) || undefined })
+        .then(function(res){ renderRecs(res && res.recs); })
         .catch(function(err){ console.error('Order e-mail failed:', err); });
       BAG.clear(); clearAddTo(); try { sessionStorage.removeItem('bym.pendingOrder'); } catch(e){}
       showThankYou(params, items); setStatus('', '');
@@ -694,7 +751,7 @@
     var items = BAG.items.slice();
     var lines = items.map(function(it){ return (it.quantity || 1) + ' × ' + it.name + (it.variant ? ' (' + it.variant + ')' : '') + ' — ' + fmt((it.price || 0) * (it.quantity || 1), it.currency); });
     var params = {
-      order_id: orderId(),
+      order_id: orderRef(),
       product_name: lines.join('\n'),               // every bag line, one per row
       items_count: String(BAG.count()),
       quantity: String(BAG.count()),
@@ -705,13 +762,16 @@
       address: $('coAddress').value.trim(), apartment: $('coApt').value.trim(), city: $('coCity').value.trim(),
       postal_code: $('coPostal').value.trim(), country: $('coCountry').value,
       billing: document.querySelector('input[name="coBilling"]').checked ? t('billingSame') : t('billingDiffShort'),
-      language: LANG
+      language: LANG,
+      shipping_amount: shippingFor()
     };
     try { if ($('coSave').checked) { var o = {}; FIELDS.forEach(function(id){ o[id] = $(id).value; }); localStorage.setItem('bym.checkout', JSON.stringify(o)); } else localStorage.removeItem('bym.checkout'); } catch(e){}
 
     submitBtn.disabled = true; setStatus(t('statusSending'), 'is-sending');
-    sendOrderMail({ order_id: params.order_id, customer: collectCustomer(), items: items, language: LANG, addto: ADD_TO || undefined }).then(function(){
-      BAG.clear(); clearAddTo(); showThankYou(params, items); setStatus('', ''); submitBtn.disabled = false;
+    sendOrderMail({ order_id: params.order_id, customer: collectCustomer(), items: items, language: LANG, addto: ADD_TO || undefined }).then(function(res){
+      if (res && res.order_id) params.order_id = res.order_id;
+      pendingRef = null;
+      BAG.clear(); clearAddTo(); showThankYou(params, items); renderRecs(res && res.recs); setStatus('', ''); submitBtn.disabled = false;
     }, function(err){
       console.error('Order send failed:', err); setStatus(t(err && err.code === 503 ? 'errNoService' : 'errSendFailed'), 'is-error'); submitBtn.disabled = false;
     });
