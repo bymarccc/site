@@ -179,10 +179,6 @@
   @media (prefers-reduced-motion:reduce){ .ty-pin svg, .ty-map.is-loading .ty-map__canvas{ animation:none; } }
   .ty-updates h3, .ty-details__h{ margin:0 0 6px; font-size:19px; font-weight:700; letter-spacing:-.005em; }
   .ty-updates p{ margin:0; font-size:15px; line-height:1.5; color:#3d3d3b; }
-  .ty-updates__btn{ display:inline-flex; align-items:center; gap:10px; margin-top:16px; min-height:48px; padding:0 20px; border:1.5px solid var(--line); border-radius:14px; background:#fff; color:var(--ty-blue); font:600 15px/1.2 inherit; cursor:pointer; text-align:left; }
-  .ty-updates__btn svg{ flex:0 0 auto; width:22px; height:22px; }
-  .ty-updates__btn:hover{ border-color:var(--ty-blue); }
-  .ty-updates__ok{ margin-top:14px !important; font-size:14px !important; color:var(--ink) !important; }
   .ty-details .co-ty__sec:first-of-type{ border-top:0; padding-top:8px; }
   .co-ty__continue{ display:inline-flex; align-items:center; justify-content:center; height:48px; padding:0 28px; margin-top:28px; border-radius:999px; background:var(--ink); color:#fff; text-decoration:none; font:600 11px/1 inherit; letter-spacing:.2em; text-transform:uppercase; }
 </style>
@@ -327,8 +323,6 @@
       <div class="ty-card ty-updates">
         <h3 data-i18n="tyUpdatesH">Order updates</h3>
         <p data-i18n="tyUpdatesP">You’ll get shipping and delivery updates by email.</p>
-        <button type="button" class="ty-updates__btn" id="coTyUpdatesBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg><span data-i18n="tyUpdatesBtn">Get shipping updates by email</span></button>
-        <p class="ty-updates__ok" id="coTyUpdatesOk" hidden></p>
       </div>
       <div class="ty-card ty-details">
         <h3 class="ty-details__h" data-i18n="tyDetails">Order details</h3>
@@ -336,7 +330,7 @@
         <div class="co-ty__sec"><h3 data-i18n="tyShipAddr">Shipping address</h3><p id="coTyAddress"></p></div>
         <div class="co-ty__row">
           <div class="co-ty__sec"><h3 data-i18n="hShipping">Shipping method</h3><p>Fan Courier<br><span data-i18n="shipDays">2–3 business days</span></p></div>
-          <div class="co-ty__sec"><h3 data-i18n="tyPayMethod">Payment</h3><p data-i18n="payCod">Cash on delivery</p></div>
+          <div class="co-ty__sec"><h3 data-i18n="tyPayMethod">Payment</h3><p id="coTyPay" data-i18n="payCod">Cash on delivery</p></div>
         </div>
       </div>
       <a class="co-ty__continue" href="index.html" data-i18n="continue">Continue shopping</a>
@@ -345,9 +339,9 @@
       <h2 class="co-h" data-i18n="hOrder">Order summary</h2>
       <ul class="co-items" id="coTyItems"></ul>
       <div class="co-totals">
-        <div><span data-i18n="subtotal">Subtotal</span><span data-co-subtotal>0 RON</span></div>
-        <div><span data-i18n="shipping">Shipping</span><span data-co-shipping>20 RON</span></div>
-        <div class="total"><span data-i18n="total">Total</span><span data-co-total>0 RON</span></div>
+        <div><span data-i18n="subtotal">Subtotal</span><span id="coTySubtotal">0 RON</span></div>
+        <div><span data-i18n="shipping">Shipping</span><span id="coTyShipping">0 RON</span></div>
+        <div class="total"><span data-i18n="total">Total</span><span id="coTyTotal">0 RON</span></div>
       </div>
     </aside>
   </div>
@@ -532,7 +526,12 @@
       tyInstallment.style.display = '';
     } else { tyInstallment.style.display = 'none'; tyInstallment.textContent = ''; }
     $('coGrid').style.display = 'none'; $('coThankYou').style.display = 'block'; window.scrollTo(0, 0);
-    tyLast = d; $('coTyUpdatesOk').hidden = true; $('coTyUpdatesBtn').hidden = false;
+    tyLast = d;
+    var pay = $('coTyPay'), isCard = /card|stripe/i.test(String(d.payment_method || ''));
+    pay.setAttribute('data-i18n', isCard ? 'payCard' : 'payCod'); pay.textContent = t(isCard ? 'payCard' : 'payCod');
+    var sub = items.reduce(function(a, it){ return a + (typeof it.price === 'number' ? it.price * (it.quantity || 1) : 0); }, 0);
+    var ship = typeof d.shipping_amount === 'number' ? d.shipping_amount : (items.length ? SHIPPING_RON : 0);
+    $('coTySubtotal').textContent = fmt(sub); $('coTyShipping').textContent = fmt(ship); $('coTyTotal').textContent = fmt(sub + ship);
     loadShipMap(d);
   }
 
@@ -584,11 +583,6 @@
       setTimeout(function(){ if (tyMap) { tyMap.invalidateSize(); tyMap.setView([g.lat, g.lon], g.zoom || 11, { animate: false }); tyMap.panBy([0, -34], { animate: false }); } }, 80);
     }).catch(fail);
   }
-  $('coTyUpdatesBtn').addEventListener('click', function(){
-    var d = tyLast || {}, email = String(d.email || '').trim(), ok = $('coTyUpdatesOk');
-    if (email) { ok.textContent = t('tyUpdatesOn').replace('{email}', email); ok.hidden = false; $('coTyUpdatesBtn').hidden = true; return; }
-    location.href = 'mailto:contact@bymarccc.com?subject=' + encodeURIComponent('Shipping updates — order ' + (d.order_id || ''));
-  });
   function orderId(){
     var d = new Date(), pad = function(n){ return (n < 10 ? '0' : '') + n; };
     return ORDER_PREFIX + '-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
