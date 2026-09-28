@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Your order — bymarccc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Customer order-status page — opened from the "View your order" button of the shipping e-mail.
+     Data comes only from GOATIFY (GET /order-status?t=<secure per-order token>); nothing about the order is in this file. */
+  :root{ --ink:#111; --sub:#6b6b68; --line:#e4e4e1; --bg:#F5F4F1; --blue:#1268F3; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:var(--bg); }
+  body{ font-family:"Jost","Helvetica Neue",Helvetica,Arial,sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased; }
+  a{ color:inherit; }
+  .os-top{ background:#fff; border-bottom:1px solid var(--line); padding:18px clamp(16px,4vw,48px); display:flex; align-items:center; justify-content:space-between; }
+  .os-logo{ text-decoration:none; font-weight:600; font-size:14px; letter-spacing:.28em; }
+  .os-wrap{ max-width:720px; margin:0 auto; padding:28px clamp(16px,4vw,32px) 56px; }
+  .os-head h1{ margin:0; font-size:clamp(26px,6vw,34px); font-weight:700; letter-spacing:-.01em; }
+  .os-head p{ margin:6px 0 0; color:var(--sub); font-size:15px; }
+  .os-card{ background:#fff; border:1px solid var(--line); border-radius:18px; padding:22px; margin-top:16px; }
+  .os-btn{ display:flex; align-items:center; justify-content:center; width:100%; min-height:50px; margin-top:18px; border:1.5px solid var(--line); border-radius:14px; background:#fff; color:var(--blue); font:600 16px/1.2 inherit; text-decoration:none; cursor:pointer; }
+  .os-btn--solid{ background:var(--blue); border-color:var(--blue); color:#fff; }
+  .os-btn[disabled]{ opacity:.55; cursor:default; }
+  .os-tl{ list-style:none; margin:0; padding:0; }
+  .os-tl li{ position:relative; padding:0 0 18px 30px; }
+  .os-tl li:last-child{ padding-bottom:0; }
+  .os-tl li::before{ content:""; position:absolute; left:6px; top:9px; width:8px; height:8px; border-radius:50%; background:#b9b9b5; }
+  .os-tl li:first-child::before{ left:1px; top:4px; width:18px; height:18px; background:var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") no-repeat center/12px; }
+  .os-tl li:not(:last-child)::after{ content:""; position:absolute; left:9.5px; top:24px; bottom:4px; border-left:1.5px dashed #cfcfcb; }
+  .os-tl b{ display:block; font-size:18px; font-weight:600; }
+  .os-tl span{ color:var(--sub); font-size:14px; }
+  .os-track{ margin:16px 0 0; padding-top:14px; border-top:1px solid var(--line); font-size:14.5px; line-height:1.6; }
+  .os-track a{ color:var(--blue); }
+  .os-items{ list-style:none; margin:0; padding:0; }
+  .os-item{ display:grid; grid-template-columns:72px 1fr auto; gap:14px; align-items:center; padding:0 0 16px; }
+  .os-item__img{ position:relative; width:72px; height:72px; border:1px solid var(--line); border-radius:12px; background:var(--bg) center/cover no-repeat; }
+  .os-item__qty{ position:absolute; top:-8px; right:-8px; min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:var(--ink); color:#fff; font-size:12px; font-weight:600; display:grid; place-items:center; }
+  .os-item__name{ font-size:16px; line-height:1.35; }
+  .os-item__var{ display:block; color:var(--sub); font-size:13.5px; }
+  .os-item__price{ font-size:15px; white-space:nowrap; }
+  .os-sum{ margin-top:6px; padding-top:14px; border-top:1px solid var(--line); }
+  .os-sum div{ display:flex; justify-content:space-between; font-size:16px; padding:5px 0; }
+  .os-sum .tot{ font-size:22px; font-weight:700; padding-top:12px; }
+  .os-sum .tot small{ font-size:12px; color:var(--sub); font-weight:500; margin-right:6px; }
+  .os-det{ display:grid; grid-template-columns:100px 1fr; gap:0 14px; }
+  .os-det dt{ color:var(--sub); font-size:15px; padding:14px 0; border-top:1px solid var(--line); }
+  .os-det dd{ margin:0; font-size:15px; line-height:1.55; padding:14px 0; border-top:1px solid var(--line); word-break:break-word; }
+  .os-det dt:first-of-type, .os-det dd:first-of-type{ border-top:0; padding-top:0; }
+  .os-foot{ margin-top:26px; text-align:center; font-size:14px; color:var(--sub); }
+  .os-foot a{ color:var(--blue); }
+  .os-msg h2{ margin:0 0 8px; font-size:20px; }
+  .os-msg p{ margin:0; font-size:15px; line-height:1.55; color:#3d3d3b; }
+  .os-skel{ height:18px; border-radius:9px; background:linear-gradient(100deg,#ecebe6 30%,#f4f3ef 50%,#ecebe6 70%) 0 0/300% 100%; animation:osSh 1.4s linear infinite; margin:10px 0; }
+  @keyframes osSh{ to{ background-position:-150% 0; } }
+  @media (prefers-reduced-motion:reduce){ .os-skel{ animation:none; } }
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+<header class="os-top"><a class="os-logo" href="index.html" aria-label="bymarccc home">bymarccc</a></header>
+<main class="os-wrap" id="os" aria-live="polite">
+  <div class="os-card" id="osLoading"><div class="os-skel" style="width:40%"></div><div class="os-skel" style="width:70%"></div><div class="os-skel" style="width:55%"></div></div>
+</main>
+<script>
+(function(){
+  'use strict';
+  /* GOATIFY API base — the order data lives in GOATIFY. Change this ONE line if the API domain differs. */
+  var GOATIFY_API = window.BYMARCCC_GOATIFY_API || 'https://goatify-api.fly.dev/api/v1';
+
+  var root = document.getElementById('os');
+  var token = new URLSearchParams(location.search).get('t') || '';
+  var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); };
+  var money = function(n, cur){ return (cur === 'RON' ? 'lei ' : '') + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (cur && cur !== 'RON' ? ' ' + cur : ''); };
+  var day = function(iso){ var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
+  var STATUS = { confirmed: 'Confirmed', partially_shipped: 'Partially shipped', on_its_way: 'On its way', cancelled: 'Cancelled' };
+  var COUNTRY = { RO: 'Romania' };
+  var safeHttps = function(u){ return typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u) ? u : null; };
+
+  function contactLine(store){
+    var e = store && store.contactEmail;
+    return e ? 'Need help? <a href="mailto:' + esc(e) + '">Contact us</a>' : '';
+  }
+  function message(title, text, extra){
+    root.innerHTML = '<div class="os-card os-msg"><h2>' + esc(title) + '</h2><p>' + text + '</p>' + (extra || '') + '</div>';
+  }
+
+  function renderOrder(o){
+    document.title = 'Order ' + o.name + ' — bymarccc';
+    var tl = o.timeline.map(function(e){ return '<li><b>' + esc(STATUS[e.status] || e.status) + '</b><span>' + esc(day(e.at)) + '</span></li>'; }).join('');
+    var ships = (o.shipments || []).filter(function(s){ return s.carrier || s.trackingNumber; }).map(function(s){
+      var url = safeHttps(s.trackingUrl);
+      return '<div class="os-track">' + (s.carrier ? 'Carrier: <b>' + esc(s.carrier) + '</b><br>' : '') + (s.trackingNumber ? 'Tracking number: <b>' + esc(s.trackingNumber) + '</b><br>' : '') + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">Track your parcel</a>' : '') + '</div>';
+    }).join('');
+    var items = o.items.map(function(it){
+      var img = safeHttps(it.image);
+      return '<li class="os-item"><div class="os-item__img"' + (img ? ' style="background-image:url(\'' + esc(img) + '\')"' : '') + '><span class="os-item__qty">' + esc(it.qty) + '</span></div>' +
+        '<div class="os-item__name">' + esc(it.name) + (it.variant ? '<span class="os-item__var">' + esc(it.variant) + '</span>' : '') + '</div>' +
+        '<div class="os-item__price">' + esc(money(it.total, o.currency)) + '</div></li>';
+    }).join('');
+    var s = o.shipTo || {};
+    var shipTo = [s.name, s.line1, [s.postcode, s.city].filter(Boolean).join(' '), COUNTRY[s.country] || s.country].filter(Boolean).map(esc).join('<br>');
+    var pay = o.payment.method === 'cod' ? 'Cash on delivery' + (o.payment.status === 'paid' ? ' · paid' : '') : 'Card' + (o.payment.status === 'paid' ? ' · paid' : '');
+    var home = (o.store && safeHttps(o.store.url)) || 'index.html';
+    root.innerHTML =
+      '<div class="os-head"><h1>Order ' + esc(o.name) + '</h1><p>Confirmed ' + esc(day(o.placedAt)) + '</p></div>' +
+      '<a class="os-btn" href="' + esc(home) + '">Continue shopping</a>' +
+      '<section class="os-card" aria-label="Order status"><ol class="os-tl">' + tl + '</ol>' + ships + '</section>' +
+      '<section class="os-card" aria-label="Products"><ul class="os-items">' + items + '</ul><div class="os-sum">' +
+        '<div><span>Subtotal</span><span>' + esc(money(o.subtotal, o.currency)) + '</span></div>' +
+        '<div><span>Shipping</span><span>' + esc(money(o.shipping, o.currency)) + '</span></div>' +
+        (o.discount ? '<div><span>Discount</span><span>−' + esc(money(o.discount, o.currency)) + '</span></div>' : '') +
+        '<div class="tot"><span>Total</span><span><small>' + esc(o.currency) + '</small>' + esc(money(o.total, o.currency)) + '</span></div></div></section>' +
+      '<section class="os-card" aria-label="Order details"><dl class="os-det">' +
+        '<dt>Contact</dt><dd>' + esc(o.contact.email || o.contact.phone || '—') + '</dd>' +
+        '<dt>Ship to</dt><dd>' + (shipTo || '—') + '</dd>' +
+        '<dt>Method</dt><dd>' + esc(o.method || '—') + '</dd>' +
+        '<dt>Payment</dt><dd>' + esc(pay) + '</dd></dl></section>' +
+      '<p class="os-foot">' + contactLine(o.store) + '</p>';
+  }
+
+  function renderExpired(store){
+    message('Link expired', 'To view your order details, send a new link to the email used at checkout.',
+      '<button type="button" class="os-btn os-btn--solid" id="osNewLink">Send new link</button><p class="os-foot" id="osSent" hidden></p>' + (contactLine(store) ? '<p class="os-foot">' + contactLine(store) + '</p>' : ''));
+    var btn = document.getElementById('osNewLink');
+    btn.addEventListener('click', function(){
+      btn.disabled = true; btn.textContent = 'Sending…';
+      fetch(GOATIFY_API + '/order-status/new-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: token }) })
+        .then(function(){ btn.hidden = true; var p = document.getElementById('osSent'); p.textContent = 'If this order exists, we’ve sent a new link to the email used at checkout.'; p.hidden = false; })
+        .catch(function(){ btn.disabled = false; btn.textContent = 'Send new link'; });
+    });
+  }
+
+  if (!/^[A-Za-z0-9_-]{32,64}$/.test(token)) { message('Link not valid', 'Please open the link from your order email again.'); return; }
+  fetch(GOATIFY_API + '/order-status?t=' + encodeURIComponent(token), { headers: { 'Accept': 'application/json' } })
+    .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return { status: r.status, j: j }; }); })
+    .then(function(res){
+      if (res.status === 200 && res.j.order) return renderOrder(res.j.order);
+      if (res.status === 410) return renderExpired(res.j.store);
+      if (res.status === 404) return message('Link not valid', 'Please open the link from your order email again.');
+      message('We couldn’t load your order', 'Please try again in a moment.');
+    })
+    .catch(function(){ message('We couldn’t load your order', 'Please check your connection and try again.'); });
+})();
+</script>
+</body>
+</html>
