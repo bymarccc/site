@@ -1090,13 +1090,36 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const configured = VIDEOS.filter(v => v.src && !/^VIDEO_URL_/.test(v.src));
   const list = configured.length ? configured : VIDEOS;   // placeholders still render the UI so you can see the layout
 
+  /* ---------- background sound: the music video's OWN soundtrack plays from an <audio> twin ----------
+     iPhone Safari stops every <video> the moment you leave the site (home screen, other apps, lock
+     screen) — but it lets <audio> keep playing. So while a music video plays, its sound comes from a
+     twin <audio> fed with the SAME upload (Cloudinary serves the video's audio track as .m4a, same
+     timeline) and the picture is muted and kept in sync. Leaving the site → the picture stops, the
+     song keeps going with lock-screen controls; coming back → the picture jumps to where the song is.
+     If the twin can't load, or while it is still buffering, the video's own sound is used instead. */
+  const snd = new Audio(); snd.preload = 'auto'; snd.setAttribute('playsinline', ''); snd.setAttribute('webkit-playsinline', '');
+  let sndOn = false, sndBroken = false, bgPlay = false, userMuted = false, lastSndSaveT = 0;
+  const sndUrl = v => { const u = (v && (v.raw || v.src)) || ''; const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/[^?#]+)\.(?:mp4|mov|webm)(?:[?#].*)?$/i.exec(u); return m ? m[1] + m[2] + '.m4a' : ''; };
+  const applySound = () => { if (sndOn) { video.muted = true; snd.muted = userMuted; } else { video.muted = userMuted; } };
+  const sndSync = () => { if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.3) { try { snd.currentTime = video.currentTime || 0; } catch {} } };
+  function sndLoad(v) { sndOn = false; sndBroken = false; snd.pause(); const u = sndUrl(v); if (u) snd.src = u; else { snd.removeAttribute('src'); sndBroken = true; } applySound(); }
+  function sndPlay() {
+    if (sndBroken || !snd.getAttribute('src') || bgPlay) return;
+    if (!snd.paused) { sndSync(); return; }
+    try { snd.currentTime = video.currentTime || 0; } catch {}
+    const p = snd.play(); if (p) p.catch(() => {});
+  }
+  snd.addEventListener('playing', () => { if (bgPlay) return; if (video.paused) { snd.pause(); return; } sndSync(); sndOn = true; applySound(); });
+  snd.addEventListener('waiting', () => { if (bgPlay || !sndOn) return; sndOn = false; applySound(); });   // twin buffering → video's own sound meanwhile
+  snd.addEventListener('error', () => { if (!snd.getAttribute('src')) return; sndBroken = true; sndOn = false; applySound(); });
+
   /* ---------- playlist ---------- */
   let idx = 0, userStarted = false;
   const ICON_PLAY = 'M8 5v14l11-7z', ICON_PAUSE = 'M7 5h4v14H7zM13 5h4v14h-4z';
   const ICON_SOUND = 'M4 9v6h4l5 5V4L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z';
   const ICON_MUTED = 'M4 9v6h4l5 5V4L8 9H4zm13.3 3l2.2-2.2-1.4-1.4-2.2 2.2-2.2-2.2-1.4 1.4 2.2 2.2-2.2 2.2 1.4 1.4 2.2-2.2 2.2 2.2 1.4-1.4z';
   const setPlayIcon = playing => { icon.querySelector('path').setAttribute('d', playing ? ICON_PAUSE : ICON_PLAY); btnPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play'); big.hidden = playing; };
-  const setMuteIcon = () => { muteIcon.querySelector('path').setAttribute('d', video.muted ? ICON_MUTED : ICON_SOUND); btnMute.setAttribute('aria-label', video.muted ? 'Unmute' : 'Mute'); const ov = $('vpMuteOvIcon'); if (ov) ov.setAttribute('d', video.muted ? ICON_MUTED : ICON_SOUND); $('vpMuteOv')?.setAttribute('aria-label', video.muted ? 'Unmute' : 'Mute'); };
+  const setMuteIcon = () => { muteIcon.querySelector('path').setAttribute('d', userMuted ? ICON_MUTED : ICON_SOUND); btnMute.setAttribute('aria-label', userMuted ? 'Unmute' : 'Mute'); const ov = $('vpMuteOvIcon'); if (ov) ov.setAttribute('d', userMuted ? ICON_MUTED : ICON_SOUND); $('vpMuteOv')?.setAttribute('aria-label', userMuted ? 'Unmute' : 'Mute'); };
   function load(i, { autoplay = false } = {}) {
     idx = (i + list.length) % list.length;
     const v = list[idx];
@@ -1110,6 +1133,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     video.preload = 'metadata';
     delete video.dataset.triedRaw;
     video.src = v.src;
+    sndLoad(v);
     title.textContent = v.title || `MUSIC VIDEO ${String(idx + 1).padStart(2, '0')}`;
     count.textContent = `${idx + 1} / ${list.length}`;
     status.textContent = `Video ${idx + 1} of ${list.length}: ${title.textContent}`;
@@ -1119,6 +1143,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   async function tryPlay() {
     // Always the small mini player. Fullscreen ONLY when the fullscreen button is tapped.
     vp.classList.remove('is-ended');
+    sndPlay();
     try { await video.play(); userStarted = true; }
     catch {
       // Autoplay-with-sound blocked (no fresh user gesture, e.g. right after a cross-page
@@ -1164,10 +1189,21 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   let lastVSaveT = 0;
   video.addEventListener('timeupdate', () => {
     if (video.duration && !vSeeking) prog.style.width = (video.currentTime / video.duration * 100) + '%';
+    if (!bgPlay && sndOn && !video.paused) sndSync();
     if (!video.paused) { const now = Date.now(); if (now - lastVSaveT > 3000) { lastVSaveT = now; saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: false }); } }
   });
+  video.addEventListener('play', () => { if (!bgPlay) sndPlay(); });
+  video.addEventListener('playing', () => { if (!bgPlay) sndPlay(); });
+  video.addEventListener('waiting', () => { if (!bgPlay && sndOn) snd.pause(); });
+  video.addEventListener('seeked', () => { if (!bgPlay && snd.getAttribute('src')) { try { snd.currentTime = video.currentTime || 0; } catch {} } });
+  video.addEventListener('ended', () => { if (!bgPlay) snd.pause(); });
+  snd.addEventListener('timeupdate', () => {
+    if (!bgPlay || snd.paused) return;
+    const now = Date.now(); if (now - lastSndSaveT > 3000) { lastSndSaveT = now; saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: snd.currentTime || 0, paused: false }); }
+  });
   video.addEventListener('play', () => { setPlayIcon(true); setPP(true); vp.classList.remove('is-ended'); showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: false }); });
-  video.addEventListener('pause', () => { setPlayIcon(false); setPP(false); if (!video.ended) showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: true }); });
+  video.addEventListener('pause', () => { if (bgPlay || document.hidden) return; snd.pause(); });
+  video.addEventListener('pause', () => { if (bgPlay) return; setPlayIcon(false); setPP(false); if (!video.ended) showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: true }); });
   // end of the song: black card with Replay / Next — nothing auto-plays
   video.addEventListener('ended', () => { hideCtrls(); vp.classList.add('is-ended'); if (docked) undock(); clearNow(); });
   $('vpReplay').addEventListener('click', () => { video.currentTime = 0; tryPlay(); });
@@ -1188,7 +1224,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   // tap on the video surface toggles play (handled at pointerup so it does not fight the drag)
   btnPrev.addEventListener('click', () => load(idx - 1, { autoplay: userStarted }));
   btnNext.addEventListener('click', () => load(idx + 1, { autoplay: userStarted }));
-  btnMute.addEventListener('click', () => { video.muted = !video.muted; setMuteIcon(); });
+  btnMute.addEventListener('click', () => { userMuted = !userMuted; applySound(); setMuteIcon(); });
   btnFull.addEventListener('click', () => {
     if (document.fullscreenElement) { document.exitFullscreen?.(); return; }
     if (video.requestFullscreen) video.requestFullscreen().catch(() => {});
@@ -1197,7 +1233,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   /* ---------- open / close ---------- */
   function open() { vp.hidden = false; tab.hidden = true; store.set(KEY_OPEN, true); if (docked) undock(); clampToViewport(); showCtrls(); }
-  function close() { video.pause(); vp.hidden = true; vp.classList.remove('is-ended', 'is-docked'); docked = false; setTab('reopen'); tab.hidden = false; store.set(KEY_OPEN, false); clearNow(); }
+  function close() { video.pause(); snd.pause(); bgPlay = false; vp.hidden = true; vp.classList.remove('is-ended', 'is-docked'); docked = false; setTab('reopen'); tab.hidden = false; store.set(KEY_OPEN, false); clearNow(); }
   /* --- dock: dragged off the LEFT edge → keeps playing, only a small arrow tab stays --- */
   let docked = false;
   const setTab = mode => { tab.classList.toggle('is-dock', mode === 'dock'); tab.querySelector('.vp-tab__i').toggleAttribute('hidden', mode === 'dock'); tab.querySelector('.vp-tab__c').toggleAttribute('hidden', mode !== 'dock');   /* SVG has no .hidden property */ tab.setAttribute('aria-label', mode === 'dock' ? 'Show video' : 'Show music videos'); };
@@ -1400,13 +1436,17 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const ART = [{ src: new URL('assets/img/lockscreen-alien-512.jpg', location.href).href, sizes: '512x512', type: 'image/jpeg' }, { src: new URL('assets/img/lockscreen-alien.jpg', location.href).href, sizes: '1024x1024', type: 'image/jpeg' }];
     const vMeta = () => { try { navigator.mediaSession.metadata = new MediaMetadata({ title: title.textContent || 'bymarccc', artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
     const vHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
-      set('play', () => video.play().catch(() => {})); set('pause', () => video.pause());
-      set('seekbackward', d => { video.currentTime = Math.max(0, video.currentTime - (d.seekOffset || 10)); });
-      set('seekforward', d => { video.currentTime = Math.min(video.duration || 0, video.currentTime + (d.seekOffset || 10)); });
-      set('seekto', d => { if (typeof d.seekTime === 'number') video.currentTime = d.seekTime; });
-      set('nexttrack', () => load(idx + 1, { autoplay: true })); set('previoustrack', () => load(idx - 1, { autoplay: true })); };
+      const M = () => bgPlay ? snd : video;
+      const bgJump = d => { load(idx + d); try { snd.currentTime = 0; } catch {} snd.play().catch(() => {}); };
+      set('play', () => M().play().catch(() => {})); set('pause', () => M().pause());
+      set('seekbackward', d => { const m = M(); m.currentTime = Math.max(0, m.currentTime - (d.seekOffset || 10)); });
+      set('seekforward', d => { const m = M(); m.currentTime = Math.min(m.duration || 0, m.currentTime + (d.seekOffset || 10)); });
+      set('seekto', d => { if (typeof d.seekTime === 'number') M().currentTime = d.seekTime; });
+      set('nexttrack', () => bgPlay ? bgJump(1) : load(idx + 1, { autoplay: true })); set('previoustrack', () => bgPlay ? bgJump(-1) : load(idx - 1, { autoplay: true })); };
+    snd.addEventListener('play', () => { if (bgPlay) navigator.mediaSession.playbackState = 'playing'; });
+    snd.addEventListener('pause', () => { if (bgPlay) navigator.mediaSession.playbackState = 'paused'; });
     video.addEventListener('play', () => { vMeta(); vHandlers(); navigator.mediaSession.playbackState = 'playing'; });
-    video.addEventListener('pause', () => { if (vp.dataset.mode === 'video') navigator.mediaSession.playbackState = 'paused'; });
+    video.addEventListener('pause', () => { if (!bgPlay && vp.dataset.mode === 'video') navigator.mediaSession.playbackState = 'paused'; });
     // ...and the same for plain music, so lock-screen / CarPlay controls and background
     // playback work for audio too, not just music videos.
     const aMediaMeta = () => { try { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle?.textContent || '').replace(/^.*? - /, '') || 'bymarccc'; navigator.mediaSession.metadata = new MediaMetadata({ title: t, artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
@@ -1426,7 +1466,18 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   document.addEventListener('visibilitychange', () => {
     const cur = list[idx] && (window.BYMARCCC_PLAYLIST || []).find(t => t.video === list[idx].src);
     if (document.hidden) {
+      // the twin is already playing the song → just let the picture stop; the song carries on
+      if (!video.paused && !video.ended && sndOn && !snd.paused) { bgPlay = true; video.pause(); return; }
       if (!video.paused && !video.ended && cur && cur.src && window.BYMARCCC?.audioTrack) { const at = video.currentTime; video.pause(); if (window.BYMARCCC.audioTrack.play(cur, at)) handedOff = cur; }
+    } else if (bgPlay) {
+      // back on the site: the picture jumps to where the song is now
+      bgPlay = false;
+      const at = snd.currentTime || 0;
+      if (snd.ended) { snd.pause(); try { video.currentTime = video.duration || at; } catch {} setPlayIcon(false); setPP(false); hideCtrls(); vp.classList.add('is-ended'); clearNow(); return; }
+      try { video.currentTime = at; } catch {}
+      sndOn = !snd.paused; applySound();
+      if (!snd.paused) video.play().catch(() => {});
+      else { setPlayIcon(false); setPP(false); showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: at, paused: true }); }
     } else if (handedOff && A) {
       const at = A.currentTime, wasPlaying = !A.paused; handedOff = null; A.pause();
       setMode('video'); video.currentTime = at; if (wasPlaying) video.play().catch(() => {});
