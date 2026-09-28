@@ -3694,6 +3694,8 @@ body.pdp .ai-launch{--ai-offset:92px}
 }
 .vp[hidden] { display: none; }
 .vp.is-dragging { touch-action: none; }
+.vp { touch-action: none; }   /* the PiP owns touches on itself: a finger on it never scrolls the page (which resized Safari's toolbars and made the player jump) */
+.vp.is-settling { transition: transform .6s cubic-bezier(.25,.8,.25,1), opacity .3s var(--ease, ease); }   /* calm glide to the nearest corner after release */
 .vp.is-dragging, .vp.is-dragging * { cursor: grabbing; }
 .vp[data-orient="portrait"] { width: clamp(150px, 11vw, 180px); }
 @media (min-width: 900px) {
@@ -4125,6 +4127,10 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       docked = false; tab.hidden = true; vp.hidden = false; vp.classList.remove('is-docked', 'is-snapping');
       y = Math.min(bounds().maxY, Math.max(0, e.clientY - vp.offsetHeight / 2)); apply();
     }
+    if (!fromTab && (vp.classList.contains('is-settling') || vp.classList.contains('is-snapping'))) {   // caught mid-glide: hold it right where it is
+      const lr = vp.parentElement.getBoundingClientRect(), r = vp.getBoundingClientRect();
+      vp.classList.remove('is-settling', 'is-snapping'); clearTimeout(settleT); x = r.left - lr.left; y = r.top - lr.top; apply();
+    }
     drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: x, oy: y, moved: false, tab: !!fromTab, surface };
     vp.classList.add('is-dragging'); document.documentElement.classList.add('is-vp-drag');
     if (typeof e.pointerId === 'number') surface.setPointerCapture?.(e.pointerId);   // real Pointer Events only — the touch-sentinel id below has no pointer capture
@@ -4142,14 +4148,13 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const endDrag = e => {
     if (!drag || (e && e.pointerId !== drag.id)) return;
     const wasTap = !drag.moved, fromTab = drag.tab, surface = drag.surface; drag = null; vp.classList.remove('is-dragging'); document.documentElement.classList.remove('is-vp-drag');
-    if (wasTap) { if (fromTab) { undock(true); } else if (e && e.type === 'pointerup' && surface === handle) toggleCtrls(); return; }
+    if (wasTap) { if (fromTab) { undock(true); } else { if (e && e.type === 'pointerup' && surface === handle) toggleCtrls(); settleToCorner(); } return; }   // a tap never moves it — except finishing a glide it interrupted
     const w = vp.offsetWidth, W = vw();
     // release: how much of the player is still on screen decides — less than 40% → glide out and dock; otherwise glide back fully inside
     const visible = Math.min(x + w, W) - Math.max(x, 0);
     if (x < 0 && visible < w * 0.4) { dock('left'); return; }
     if (x + w > W && visible < w * 0.4) { dock('right'); return; }
-    const b = bounds();
-    if (x < 0 || x > b.maxX) { vp.classList.add('is-snapping'); x = Math.min(b.maxX, Math.max(0, x)); apply(); setTimeout(() => vp.classList.remove('is-snapping'), 480); }
+    settleToCorner();                                          // free drag while held; only after release it glides to the nearest corner
     store.set(KEY_POS, { x, y });                             // remembered across refreshes
   };
   const audioCard = $('vpAudio');
@@ -4192,7 +4197,23 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   };
   tab.addEventListener('touchend', tabTouchEnd, { passive: false });
   tab.addEventListener('touchcancel', tabTouchEnd, { passive: false });
-  addEventListener('resize', clampToViewport, { passive: true });
+  /* Nearest corner, kept inside the visible screen (12px margin, below the iPhone notch/status bar). */
+  let settleT = 0;
+  function settleToCorner() {
+    if (vp.hidden || docked) return;
+    const b = bounds(), M = 12;
+    const sat = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
+    const minX = Math.min(b.maxX, M), maxX = Math.max(minX, b.maxX - M);
+    const minY = Math.min(b.maxY, Math.max(M, sat + 8)), maxY = Math.max(minY, b.maxY - M);
+    const tx = x + vp.offsetWidth / 2 < vw() / 2 ? minX : maxX;
+    const ty = y + vp.offsetHeight / 2 < innerHeight / 2 ? minY : maxY;
+    if (Math.abs(tx - x) < 0.5 && Math.abs(ty - y) < 0.5) return;
+    vp.classList.remove('is-snapping'); vp.classList.add('is-settling');
+    x = tx; y = ty; apply();
+    clearTimeout(settleT); settleT = setTimeout(() => vp.classList.remove('is-settling'), 650);
+  }
+  // screen size changes (e.g. Safari's bars showing/hiding): glide back into the nearest corner instead of jumping
+  addEventListener('resize', () => { if (drag || vp.hidden || docked) return; settleToCorner(); store.set(KEY_POS, { x, y }); }, { passive: true });
   addEventListener('orientationchange', () => setTimeout(clampToViewport, 250), { passive: true });
 
   /* ---------- boot ---------- */
