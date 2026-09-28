@@ -29,6 +29,7 @@
   .os-tl{ list-style:none; margin:0; padding:0; }
   .os-tl li{ position:relative; padding:0 0 18px 30px; }
   .os-tl li:last-child{ padding-bottom:0; }
+  .os-tl-msg{ margin:4px 0 0; font-size:14px; line-height:1.45; color:#555; overflow-wrap:anywhere; }
   .os-tl li::before{ content:""; position:absolute; left:6px; top:9px; width:8px; height:8px; border-radius:50%; background:#b9b9b5; }
   .os-tl li:first-child::before{ left:1px; top:4px; width:18px; height:18px; background:var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") no-repeat center/12px; }
   .os-tl li:not(:last-child)::after{ content:""; position:absolute; left:9.5px; top:24px; bottom:4px; border-left:1.5px dashed #cfcfcb; }
@@ -77,7 +78,7 @@
   var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); };
   var money = function(n, cur){ return (cur === 'RON' ? 'lei ' : '') + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (cur && cur !== 'RON' ? ' ' + cur : ''); };
   var day = function(iso){ var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
-  var STATUS = { confirmed: 'Confirmed', partially_shipped: 'Partially shipped', on_its_way: 'On its way', cancelled: 'Cancelled' };
+  var STATUS = { confirmed: 'Confirmed', partially_shipped: 'Partially shipped', on_its_way: 'On its way', cancelled: 'Cancelled', out_for_delivery: 'Out for delivery', delivered: 'Delivered', delayed: 'Delayed', update: 'Update' };
   var COUNTRY = { RO: 'Romania' };
   var safeHttps = function(u){ return typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u) ? u : null; };
 
@@ -91,7 +92,7 @@
 
   function renderOrder(o){
     document.title = 'Order ' + o.name + ' — bymarccc';
-    var tl = o.timeline.map(function(e){ return '<li><b>' + esc(STATUS[e.status] || e.status) + '</b><span>' + esc(day(e.at)) + '</span></li>'; }).join('');
+    var tl = o.timeline.map(function(e){ return '<li><b>' + esc(STATUS[e.status] || e.status) + '</b><span>' + esc(day(e.at)) + '</span>' + (e.message ? '<p class="os-tl-msg">' + esc(e.message).replace(/\n/g, '<br>') + '</p>' : '') + '</li>'; }).join('');
     var ships = (o.shipments || []).filter(function(s){ return s.carrier || s.trackingNumber; }).map(function(s){
       var url = safeHttps(s.trackingUrl);
       return '<div class="os-track">' + (s.carrier ? 'Carrier: <b>' + esc(s.carrier) + '</b><br>' : '') + (s.trackingNumber ? 'Tracking number: <b>' + esc(s.trackingNumber) + '</b><br>' : '') + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">Track your parcel</a>' : '') + '</div>';
