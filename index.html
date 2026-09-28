@@ -3961,26 +3961,38 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   function fitBars(v) {
     const apply = z => { if (list[idx] === v) video.style.setProperty('--vz', String(z || 1)); };
     video.style.removeProperty('--vz');
-    const src = v && (v.poster || posterOf(v)); if (!src || !/^https:\/\/res\.cloudinary\.com\//.test(src)) return;
-    if (barZoom.has(src)) { apply(barZoom.get(src)); return; }
-    const img = new Image(); img.crossOrigin = 'anonymous'; img.decoding = 'async';
-    img.onload = () => {
-      try {
-        const W = 64, H = Math.max(8, Math.round(64 * img.naturalHeight / img.naturalWidth));
-        const c = document.createElement('canvas'); c.width = W; c.height = H;
-        const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, W, H);
-        const d = g.getImageData(0, 0, W, H).data;
-        const dark = y => { let s = 0, mx = 0; for (let x = 0; x < W; x++) { const i = (y * W + x) * 4, l = (d[i] * 3 + d[i + 1] * 6 + d[i + 2]) / 10; s += l; if (l > mx) mx = l; } return s / W < 14 && mx < 40; };
-        let top = 0; while (top < H / 2 && dark(top)) top++;
-        let bot = 0; while (bot < H / 2 && dark(H - 1 - bot)) bot++;
-        const f = (H - top - bot) / H, A = img.naturalWidth / img.naturalHeight;
-        let z = 1;
+    const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/[^?#]+)\.(?:mp4|mov|webm)/.exec((v && (v.raw || v.src)) || '');
+    if (!m) return;
+    const key = m[2];
+    if (barZoom.has(key)) { apply(barZoom.get(key)); return; }
+    // three frames (25/50/75% in) — a dark scene can look like a bar in one frame, never in all three
+    const scan = p => new Promise(res => {
+      const img = new Image(); img.crossOrigin = 'anonymous'; img.decoding = 'async';
+      img.onload = () => {
+        try {
+          const W = 64, H = Math.max(8, Math.round(64 * img.naturalHeight / img.naturalWidth));
+          const c = document.createElement('canvas'); c.width = W; c.height = H;
+          const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, W, H);
+          const d = g.getImageData(0, 0, W, H).data;
+          const dark = y => { let s = 0, mx = 0; for (let x = 0; x < W; x++) { const i = (y * W + x) * 4, l = (d[i] * 3 + d[i + 1] * 6 + d[i + 2]) / 10; s += l; if (l > mx) mx = l; } return s / W < 24 && mx < 40; };
+          let top = 0; while (top < H / 2 && dark(top)) top++;
+          let bot = 0; while (bot < H / 2 && dark(H - 1 - bot)) bot++;
+          res({ top, bot, H, A: img.naturalWidth / img.naturalHeight });
+        } catch { res(null); }
+      };
+      img.onerror = () => res(null);
+      img.src = `${m[1]}so_${p},w_160,q_auto,f_jpg/${m[2]}.jpg`;
+    });
+    Promise.all(['25p', '50p', '75p'].map(scan)).then(rs => {
+      rs = rs.filter(Boolean);
+      let z = 1;
+      if (rs.length === 3) {
+        const H = rs[0].H, A = rs[0].A;
+        const f = (H - Math.min(...rs.map(r => r.top)) - Math.min(...rs.map(r => r.bot))) / H;
         if (f < 0.97 && f > 0.5) z = Math.min(1.6, 1 / (f * Math.max(1, (16 / 9) / A)));
-        barZoom.set(src, z); apply(z);
-      } catch { barZoom.set(src, 1); }
-    };
-    img.onerror = () => barZoom.set(src, 1);
-    img.src = src;
+      }
+      barZoom.set(key, z); apply(z);
+    });
   }
 
   /* ---------- background sound: the music video's OWN soundtrack plays from an <audio> twin ----------
