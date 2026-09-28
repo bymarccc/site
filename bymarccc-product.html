@@ -155,6 +155,7 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; padding: 2px; background: transparent; }
 .pdp-swatch i { display: block; width: 100%; height: 100%; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
 .pdp-swatch[aria-checked="true"] { border-color: #111; }
+.pdp-swatch[data-c="white"] i { box-shadow: inset 0 0 0 1.5px #111; }   /* white swatch: black outline so it reads on white */
 .pdp-sizes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .pdp-size { min-width: 52px; height: 32px; padding: 0 16px; border: 1px solid var(--line); background: #fff; border-radius: 10px; font-size: 13px; letter-spacing: .04em; }
 .pdp-size[aria-checked="true"] { background: #111; color: #fff; border-color: #111; }
@@ -800,11 +801,11 @@ body.is-custom-bag-page #gallery { display: none; }
     { id: 'red',    name: 'Red',    hex: '#890712' },
     { id: 'blue',   name: 'Blue',   hex: '#057CA7' },
     { id: 'brown',  name: 'Brown',  hex: '#422A10' },
-    { id: 'purple', name: 'Purple', hex: '#26003E' },
-    { id: 'pink',   name: 'Pink',   hex: '#9B4178' },
+    { id: 'purple', name: 'Purple', hex: '#8B4FD8' },
+    { id: 'pink',   name: 'Pink',   hex: '#E57BBE' },
     { id: 'green',  name: 'Green',  hex: '#144E13' },
     { id: 'orange', name: 'Orange', hex: '#BC5200' },
-    { id: 'white',  name: 'White',  hex: '#999999' },
+    { id: 'white',  name: 'White',  hex: '#FFFFFF' },
   ];
   const SKINNY_COLOURS = ['green', 'blue', 'white', 'purple', 'grey', 'red', 'pink', 'orange', 'brown'].map(id => JEANS_COLOURS.find(c => c.id === id));
   const BLACK_ONLY = [{ id: 'black', name: 'Black', hex: '#111111' }];
@@ -851,7 +852,7 @@ body.is-custom-bag-page #gallery { display: none; }
       shipping: SHIPPING + ' Made-to-measure length adjustments are final sale.',
       collections: ['bottoms', 'denim'],
       unavailable: [], colours: JEANS_COLOURS, chart: JEANS_CHART('jeans-relaxed'),
-      gallery: [{ src: 'assets/img/gallery/relaxed-1-7aa50bd0.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-2-47784fca.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-3-995b1e83.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-4-d9e67009.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-5-5a3391cf.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-6-e2a821c1.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-7-03adb86e.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-8-3dfeee87.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-9-e567b794.webp', w: 1024, h: 1536 }],
+      gallery: [{ src: 'assets/img/gallery/relaxed-1-7aa50bd0.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-3-995b1e83.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-7-03adb86e.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-4-d9e67009.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-2-47784fca.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-6-e2a821c1.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-9-e567b794.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-8-3dfeee87.webp', w: 1024, h: 1536 }, { src: 'assets/img/gallery/relaxed-5-5a3391cf.webp', w: 1024, h: 1536 }],
     },
         'm-burgundy-hoodie': { designs: ['Logo', 'Cross', 'Frequency'], designImages: { 'cross': 0, 'logo': 1, 'frequency': 2 }, gender: 'men', model: APPAREL_MODEL, id: 'bymarccc:burgundy-hoodie', title: 'Burgundy Hoodie', price: 350, currency: 'RON', cut: 'Oversized', collections: ['tops'],
       details: ['Oversized fit, dropped shoulder', 'Several print designs available (Logo, Cross, Frequency)', 'Burgundy', 'All clothing is custom made.', '100% Organic Cotton'],
