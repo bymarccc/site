@@ -1147,11 +1147,102 @@ async function orderSubmit(request) {
   }
   sentOrders.add(key);
   if (store) await store.put(key, "1", { expirationTtl: 60 * 60 * 24 * 60 }).catch(() => {});
+  // GOATIFY: forward the accepted order (no-op unless GOATIFY_FORWARDING=on). Never changes the answer to the customer.
+  try {
+    const chk = await goatifyItemCheck(b.items);
+    const fo = { ...o, items: o.items.map((it, i) => ({ ...it, ...(chk.extras[i] || {}) })) };
+    const notes = [chk.notes, b.installments && pay === "card" ? "Pay in 2: first instalment paid by card, second charged automatically later." : ""].filter(Boolean).join("\n");
+    const g = await forwardToGoatify(fo, { pay, totals: { sub: totals.sub, ship: totals.ship }, placedAt: new Date().toISOString(), notes, sourceUrl: CURRENT_ORIGIN ? CURRENT_ORIGIN + "/checkout.html" : void 0 }, (k) => env(k));
+    if (!g.forwarded && g.reason !== "off") console.error("GOATIFY forward failed", JSON.stringify(g));
+  } catch (e) { console.error("GOATIFY forward error", String(e && e.message || e)); }
   let customerMail = "skipped";
   if (c.email) { try { await resendSend({ from, to: [c.email], reply_to: env("ORDER_NOTIFY_TO").split(",")[0].trim() || void 0, subject: m.customer.subject, html: m.customer.html, text: m.customer.text }); customerMail = "sent"; } catch { customerMail = "failed"; } }
   return json(200, { ok: true, customerMail });
 }
 __name(orderSubmit, "orderSubmit");
+
+// lib/goatify.js — forwards each accepted order to GOATIFY (orders, fulfilment, invoicing). Generated from
+// goatify-backend/integrations/bymarccc/cloudflare/goatify-forward.js (tested there: test/bymarccc-cloudflare.test.js).
+// Sends NOTHING unless GOATIFY_FORWARDING=on. Env (Cloudflare Pages → Settings → Variables and Secrets):
+//   GOATIFY_API_URL (e.g. https://goatify.goatagency.us/api/v1) · GOATIFY_SITE_KEY=bymarccc · GOATIFY_SITE_SECRET (secret) · GOATIFY_FORWARDING
+// Signed server-side (HMAC-SHA256) — the secret never reaches the browser. Never blocks or fails the customer's order.
+const G_COUNTRIES = { romania: 'RO', 'românia': 'RO', moldova: 'MD', 'republica moldova': 'MD', 'united kingdom': 'GB', uk: 'GB', 'great britain': 'GB', england: 'GB',
+  italy: 'IT', italia: 'IT', spain: 'ES', 'españa': 'ES', germany: 'DE', deutschland: 'DE', france: 'FR', austria: 'AT', hungary: 'HU', 'ungaria': 'HU', bulgaria: 'BG',
+  netherlands: 'NL', belgium: 'BE', ireland: 'IE', poland: 'PL', portugal: 'PT', greece: 'GR', czechia: 'CZ', 'czech republic': 'CZ', slovakia: 'SK', denmark: 'DK', sweden: 'SE' };
+function gCountryCode(v) {
+  const s = String(v || '').trim(); if (/^[A-Za-z]{2}$/.test(s)) return s.toUpperCase();
+  return G_COUNTRIES[s.toLowerCase()] || null;
+}
+const gCents = (n) => Math.round(Number(n || 0) * 100);
+const gHttps = (u) => (typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u) ? u : undefined);
+
+/** Builds the GOATIFY site-order payload (pure; throws on data GOATIFY would reject). */
+function toGoatifyOrder(o, { pay, totals = null, siteKey = 'bymarccc', placedAt = new Date().toISOString(), sourceUrl, notes } = {}) {
+  const c = o.customer || {};
+  const country = gCountryCode(c.country); if (!country) throw Object.assign(new Error('Unsupported country: ' + c.country), { code: 'COUNTRY_UNSUPPORTED' });
+  if (!o.order_id) throw Object.assign(new Error('Missing order_id'), { code: 'NO_ORDER_ID' });
+  const items = (o.items || []).map(it => ({ ...(it.sku ? { sku: String(it.sku).slice(0, 64) } : {}), name: it.name, ...(it.variant ? { variant: it.variant } : {}), qty: Number(it.qty) || 1, price: gCents(it.price) / 100, ...(gHttps(it.image) ? { image: gHttps(it.image) } : {}) }));
+  const sub = items.reduce((a, it) => a + gCents(it.price) * it.qty, 0);
+  if (totals && gCents(totals.sub) !== sub) throw Object.assign(new Error('Subtotal does not match the items'), { code: 'TOTALS_MISMATCH' });
+  const ship = gCents(totals ? totals.ship : 0);
+  return {
+    site: siteKey, idempotencyKey: 'bym_' + String(o.order_id).replace(/[^A-Za-z0-9._:-]/g, ''),
+    customer: { name: c.full_name, email: String(c.email || '').toLowerCase(), phone: c.phone, lang: o.lang === 'ro' ? 'ro' : 'en' },
+    shippingAddress: { line1: c.address, ...(c.apartment ? { line2: c.apartment } : {}), city: c.city, postcode: c.postal_code, country },
+    items, subtotal: sub / 100, shipping: ship / 100, discount: 0, total: (sub + ship) / 100, currency: 'RON',
+    payment: pay === 'card' ? { method: 'card', status: 'paid', ...(o.session_id ? { reference: String(o.session_id).slice(0, 120) } : {}) } : { method: 'cod' },
+    ...(gHttps(sourceUrl) ? { sourceUrl: gHttps(sourceUrl) } : {}), ...(notes ? { notes: String(notes).slice(0, 1000) } : {}), placedAt,
+  };
+}
+
+async function gHmacHex(secret, data) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * @param env  (name) => value  — the worker's env getter
+ * @returns {Promise<{forwarded:true, duplicate:boolean, number:number} | {forwarded:false, reason:string, status?:number, error?:string}>}  never throws
+ */
+async function forwardToGoatify(o, { pay, totals, sourceUrl, placedAt, notes } = {}, env, { fetchImpl = fetch } = {}) {
+  if (String(env('GOATIFY_FORWARDING') || '').toLowerCase() !== 'on') return { forwarded: false, reason: 'off' };
+  const api = String(env('GOATIFY_API_URL') || '').replace(/\/+$/, ''), siteKey = env('GOATIFY_SITE_KEY') || 'bymarccc', secret = env('GOATIFY_SITE_SECRET');
+  if (!/^https?:\/\//.test(api) || !secret) return { forwarded: false, reason: 'not_configured' };
+  let raw;
+  try { raw = JSON.stringify(toGoatifyOrder(o, { pay, totals, siteKey, sourceUrl, notes, ...(placedAt ? { placedAt } : {}) })); } catch (e) { return { forwarded: false, reason: 'invalid', error: e.code || e.message }; }
+  const ts = String(Math.floor(Date.now() / 1000)); const signature = await gHmacHex(secret, `${ts}.${raw}`);
+  for (let attempt = 1; attempt <= 3; attempt++) {   // same body + key each time → GOATIFY dedupes
+    try {
+      const r = await fetchImpl(api + '/site-orders', { method: 'POST', body: raw, headers: { 'content-type': 'application/json', 'x-goatify-site': siteKey, 'x-goatify-timestamp': ts, 'x-goatify-signature': signature } });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) return { forwarded: true, duplicate: !!j.duplicate, number: j.order?.number };
+      if (r.status < 500 && r.status !== 429) return { forwarded: false, reason: 'rejected', status: r.status, error: j.error?.code || '' };
+    } catch (e) { if (attempt === 3) return { forwarded: false, reason: 'network', error: String(e.message || e).slice(0, 200) }; }
+    await new Promise(res => setTimeout(res, 400 * attempt));
+  }
+  return { forwarded: false, reason: 'unavailable' };
+}
+
+// Server-side check of the bag lines against catalog.json (the browser sends its own prices). Prices are not changed;
+// a line that is not in the catalogue or has another price is flagged in the GOATIFY order note, so it is seen before
+// the parcel leaves / cash is collected. Adds the catalogue id (sku) and main photo to each line.
+async function goatifyItemCheck(rawItems) {
+  const cat = await loadCatalog().catch(() => []);
+  const byId = new Map(cat.map((p) => [String(p.id), p]));
+  const extras = [], warn = [];
+  for (const it of (Array.isArray(rawItems) ? rawItems : []).slice(0, 50)) {
+    const name = String(it?.name ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, 160);
+    if (!name) continue;   // same filter as cleanOrder(), so indexes line up
+    const p = byId.get(String(it.id || "").split(":")[0]);
+    const price = Math.max(0, Math.round(Number(it.price || 0) * 100) / 100);
+    const ok = p && (p.price === price || (p.variants || []).some((v) => v.price === price));
+    if (!ok) warn.push(name + (p ? ` (catalogue ${p.price} RON, bag ${price} RON)` : " (not in catalogue)"));
+    extras.push({ ...(p ? { sku: String(p.id).slice(0, 64) } : {}), ...(p && p.images && p.images[0] ? { image: p.images[0] } : {}) });
+  }
+  return { extras, notes: warn.length ? "⚠ Price not verified against catalog.json: " + warn.join("; ") : "" };
+}
+__name(goatifyItemCheck, "goatifyItemCheck");
 
 // [[path]].js
 var ROUTES = {
