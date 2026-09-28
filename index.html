@@ -943,6 +943,14 @@
               </button>
             </div>
 
+            <form class="music__search" id="musicSearch" role="search" novalidate>
+              <label for="musicQuery" class="visually-hidden">Search playlist</label>
+              <input class="music__input" id="musicQuery" type="search" placeholder="SEARCH PLAYLIST" autocomplete="off" enterkeyhint="search" inputmode="search">
+              <button class="music__go" type="submit" aria-label="Search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              </button>
+            </form>
+
             <div class="music__tabs" role="tablist" aria-label="Result type">
               <button class="music__tab" id="tabVideo" type="button" role="tab" aria-selected="false" aria-controls="musicList" data-tab="video">MUSIC VIDEO</button>
               <button class="music__tab" id="tabMusic" type="button" role="tab" aria-selected="true" aria-controls="musicList" data-tab="music">MUSIC</button>
@@ -2438,7 +2446,8 @@
       rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790437537/Dave_-_Raindance_ft._Tems_1.mp4',
       thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790437537/Dave_-_Raindance_ft._Tems_1.jpg' },
     { id: 'billie-birds', title: 'Billie Eilish - Birds of a Feather', channel: '', duration: '',
-      src:   CLD + 'v1790439185/Billie_Eilish_-_BIRDS_OF_A_FEATHER.m4a' },
+      src:   CLD + 'v1790439185/Billie_Eilish_-_BIRDS_OF_A_FEATHER.m4a',
+      thumb: 'assets/img/thumb-billie-birds.jpg' },
       /* no `video` on purpose — audio-only, per instructions; no local thumbnail supplied yet */
     /* added 2026-09-28 — files uploaded to Cloudinary that day; durations read from the MP3s themselves */
     { id: 'bieber-sorry', title: 'Justin Bieber - Sorry', channel: '', duration: '3:19',
@@ -2450,17 +2459,21 @@
       src:   CLD + 'v1790597396/Central_Cee_ft._Nemzzz_No_Talking.mp3',
       video: CLD + 'q_auto,f_auto/v1790597773/Central_Cee_ft._Nemzzz_No_Talking_Music_Video.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790597773/Central_Cee_ft._Nemzzz_No_Talking_Music_Video.jpg',
       rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790597773/Central_Cee_ft._Nemzzz_No_Talking_Music_Video.mp4',
-      thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790597773/Central_Cee_ft._Nemzzz_No_Talking_Music_Video.jpg' },
+      thumb: 'assets/img/thumb-madness.jpg' },
     { id: 'sade-never-as-good', title: 'Sade - Never As Good As The First Time', channel: '', duration: '3:55',
       src:   CLD + 'v1790597400/Sade_-_Never_As_Good_As_The_First_Time.mp3',
       video: CLD + 'q_auto,f_auto/v1790597739/Sade_-_Never_As_Good_As_The_First_Time_-_Official_-_1986.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790597739/Sade_-_Never_As_Good_As_The_First_Time_-_Official_-_1986.jpg',
       rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790597739/Sade_-_Never_As_Good_As_The_First_Time_-_Official_-_1986.mp4',
-      thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790597739/Sade_-_Never_As_Good_As_The_First_Time_-_Official_-_1986.jpg' },
+      thumb: 'assets/img/thumb-sade-paradise.jpg' },
     { id: 'sade-love-is-found', title: 'Sade - Love Is Found', channel: '', duration: '4:11',
-      src:   CLD + 'v1790595819/Sade_-_Love_Is_Found_Audio_1.mp3' },
+      src:   CLD + 'v1790595819/Sade_-_Love_Is_Found_Audio_1.mp3',
+      thumb: 'assets/img/thumb-sade-paradise.jpg' },
     { id: 'sade-your-love-is-king', title: 'Sade - Your Love Is King', channel: '', duration: '3:40',
-      src:   CLD + 'v1790595835/Your_Love_Is_King.mp3' }
+      src:   CLD + 'v1790595835/Your_Love_Is_King.mp3',
+      thumb: 'assets/img/thumb-sade-paradise.jpg' }
   ];
+  /* playlist shown A→Z by title (MUSIC and MUSIC VIDEO lists, and the player's next/prev order) */
+  SEED.sort((a, b) => a.title.localeCompare(b.title, 'en', { sensitivity: 'base' }));
   window.BYMARCCC_PLAYLIST = SEED;
 
   /* Local tracks attached to the CD object. Put the files in assets/audio/
