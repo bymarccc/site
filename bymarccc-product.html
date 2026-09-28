@@ -3753,5 +3753,6 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
    same parcel, no extra shipping. The server checks the signature and the 7-day window. */
 (function(){ try { var q = new URLSearchParams(location.search); if (q.get('addto') && q.get('sig')) sessionStorage.setItem('bym.addto', JSON.stringify({ order_id: q.get('addto'), t: q.get('t') || '', sig: q.get('sig'), at: Date.now() })); } catch(e){} })();
 </script>
+<script src="/assets/gv.js" defer></script>
 </body>
 </html>
