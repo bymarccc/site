@@ -1056,6 +1056,103 @@ async function geocodeAddress(request) {
 }
 __name(geocodeAddress, "geocodeAddress");
 
+// lib/orders.js — order e-mails sent by the server (Resend), replacing the unconfigured browser EmailJS send.
+//   POST /api/order-submit
+//     cash on delivery: { order_id, items, customer, language }                → the order is only accepted once the owner e-mail went out
+//     card (after Stripe): { session_id, order_id, items, customer, language }  → verified paid with Stripe first; sent once per order
+//   Two e-mails: the order for the shop owner (ORDER_NOTIFY_TO) and a confirmation for the customer.
+//   Env (Cloudflare Pages → Settings → Variables and Secrets): RESEND_API_KEY (secret), ORDER_NOTIFY_TO, ORDER_EMAIL_FROM.
+var ORDER_T = {
+  en: { subj: (id) => `Order confirmed — ${id}`, hi: (n) => `Thank you${n ? ", " + n : ""}!`, intro: "Your order is confirmed. We'll e-mail you again when it ships.",
+    order: "Order", items: "Items", subtotal: "Subtotal", shipping: "Shipping", total: "Total", pay: "Payment", cod: "Cash on delivery", card: "Card (paid)",
+    ship: "Shipping address", help: "Questions? Just reply to this e-mail." },
+  ro: { subj: (id) => `Comandă confirmată — ${id}`, hi: (n) => `Mulțumim${n ? ", " + n : ""}!`, intro: "Comanda ta este confirmată. Îți scriem din nou când o expediem.",
+    order: "Comanda", items: "Produse", subtotal: "Subtotal", shipping: "Livrare", total: "Total", pay: "Plată", cod: "Ramburs (cash la livrare)", card: "Card (plătit)",
+    ship: "Adresă de livrare", help: "Întrebări? Răspunde la acest e-mail." }
+};
+var oesc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var ofmt = (n) => (Math.round(n * 100) / 100).toFixed(2) + " RON";
+var sentOrders = /* @__PURE__ */ new Set();
+async function resendSend(msg) {
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env("RESEND_API_KEY")}`, "Content-Type": "application/json" },
+    body: JSON.stringify(msg)
+  });
+  if (!r.ok) { const t = await r.text().catch(() => ""); const e = new Error(`Resend ${r.status}: ${t.slice(0, 200)}`); e.status = r.status; throw e; }
+  return r.json().catch(() => ({}));
+}
+__name(resendSend, "resendSend");
+function cleanOrder(b) {
+  const str = (v, n) => String(v ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
+  const c = b.customer || {};
+  const customer = { full_name: str(c.full_name, 120), email: str(c.email, 200), phone: str(c.phone, 40), address: str(c.address, 200), apartment: str(c.apartment, 100),
+    city: str(c.city, 80), postal_code: str(c.postal_code, 20), country: str(c.country, 60), billing: str(c.billing, 80) };
+  const items = (Array.isArray(b.items) ? b.items : []).slice(0, 50).map((it) => ({
+    name: str(it.name, 160), variant: str(it.variant, 120),
+    qty: Math.max(1, Math.min(99, Math.round(Number(it.quantity || it.qty || 1)))),
+    price: Math.max(0, Math.round(Number(it.price || 0) * 100) / 100)
+  })).filter((it) => it.name);
+  return { order_id: str(b.order_id, 60).replace(/[^A-Za-z0-9-]/g, ""), customer, items, lang: b.language === "ro" ? "ro" : "en", session_id: str(b.session_id, 200) };
+}
+__name(cleanOrder, "cleanOrder");
+function orderEmails(o, pay, totals) {
+  const t = ORDER_T[o.lang], c = o.customer;
+  const lines = o.items.map((it) => `${it.qty} × ${it.name}${it.variant ? " (" + it.variant + ")" : ""} — ${ofmt(it.price * it.qty)}`);
+  const addr = [c.full_name, c.address + (c.apartment ? ", " + c.apartment : ""), `${c.postal_code} ${c.city}`.trim(), c.country].filter(Boolean);
+  const payLabel = pay === "card" ? t.card : t.cod;
+  const rows = o.items.map((it) => `<tr><td style="padding:6px 0">${it.qty} × ${oesc(it.name)}${it.variant ? ` <span style="color:#888">(${oesc(it.variant)})</span>` : ""}</td><td align="right" style="padding:6px 0;white-space:nowrap">${ofmt(it.price * it.qty)}</td></tr>`).join("");
+  const sums = `<tr><td style="padding:10px 0 2px;border-top:1px solid #e5e5e5">${t.subtotal}</td><td align="right" style="padding:10px 0 2px;border-top:1px solid #e5e5e5">${ofmt(totals.sub)}</td></tr><tr><td style="padding:2px 0">${t.shipping}</td><td align="right">${ofmt(totals.ship)}</td></tr><tr><td style="padding:8px 0;font-weight:700;font-size:17px">${t.total}</td><td align="right" style="font-weight:700;font-size:17px">${ofmt(totals.total)}</td></tr>`;
+  const wrap = (inner) => `<!doctype html><html><body style="margin:0;background:#fff"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 16px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#333;font-size:15px;line-height:1.5"><tr><td style="font-size:26px;color:#555;padding-bottom:22px">BYMARCCC</td></tr><tr><td>${inner}</td></tr></table></td></tr></table></body></html>`;
+  const customerHtml = wrap(`<p style="margin:0;color:#777">${t.order.toUpperCase()} ${oesc(o.order_id)}</p><h1 style="margin:6px 0 0;font-size:24px;font-weight:400">${oesc(t.hi((c.full_name || "").split(/\s+/)[0]))}</h1><p style="margin:10px 0 22px;color:#777">${t.intro}</p><h2 style="font-size:17px;font-weight:400;margin:0 0 8px">${t.items}</h2><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}${sums}</table><p style="margin:18px 0 0"><b>${t.pay}:</b> ${payLabel}<br><b>${t.ship}:</b><br>${addr.map(oesc).join("<br>")}</p><p style="margin:22px 0 0;color:#777">${t.help}</p>`);
+  const customerText = [t.hi((c.full_name || "").split(/\s+/)[0]), "", `${t.order} ${o.order_id}`, t.intro, "", ...lines, "", `${t.subtotal}: ${ofmt(totals.sub)}`, `${t.shipping}: ${ofmt(totals.ship)}`, `${t.total}: ${ofmt(totals.total)}`, "", `${t.pay}: ${payLabel}`, `${t.ship}: ${addr.join(", ")}`, "", t.help].join("\n");
+  const ownerText = [`NEW ORDER ${o.order_id}`, `Payment: ${pay === "card" ? "Card (Stripe, paid)" : "Cash on delivery"}`, "", ...lines, "", `Subtotal: ${ofmt(totals.sub)}`, `Shipping: ${ofmt(totals.ship)}`, `TOTAL: ${ofmt(totals.total)}`, "",
+    `Name: ${c.full_name}`, `Phone: ${c.phone}`, `E-mail: ${c.email}`, `Address: ${addr.slice(1).join(", ")}`, `Billing: ${c.billing}`, `Language: ${o.lang}`].join("\n");
+  const ownerHtml = wrap(`<h1 style="margin:0 0 4px;font-size:22px">New order ${oesc(o.order_id)}</h1><p style="margin:0 0 18px;color:#777">${pay === "card" ? "Card (Stripe) — paid" : "Cash on delivery — collect on delivery"}</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}${sums}</table><p style="margin:18px 0 0"><b>${oesc(c.full_name)}</b><br>${oesc(c.phone)}<br><a href="mailto:${oesc(c.email)}">${oesc(c.email)}</a><br>${addr.slice(1).map(oesc).join("<br>")}<br>Billing: ${oesc(c.billing)} · Language: ${o.lang}</p>`);
+  return { customer: { subject: t.subj(o.order_id), html: customerHtml, text: customerText }, owner: { subject: `New order ${o.order_id} — ${ofmt(totals.total)} — ${pay === "card" ? "CARD" : "COD"}`, html: ownerHtml, text: ownerText } };
+}
+__name(orderEmails, "orderEmails");
+async function orderSubmit(request) {
+  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
+  if (!checkOrigin(request)) return json(403, { error: "Forbidden origin" });
+  if (!rateLimit(request, 10)) return json(429, { error: "Too many requests. Please wait a moment." });
+  if (!env("RESEND_API_KEY") || !env("ORDER_NOTIFY_TO") || !env("ORDER_EMAIL_FROM")) return json(503, { error: "ORDERS_EMAIL_NOT_CONFIGURED" });
+  const b = await readJson(request);
+  if (!b) return json(400, { error: "Invalid JSON" });
+  const o = cleanOrder(b), c = o.customer;
+  if (!o.order_id || !o.items.length) return json(400, { error: "Invalid order" });
+  let pay = "cod", totalOverride = null;
+  if (o.session_id) {
+    if (!/^cs_[a-zA-Z0-9_]+$/.test(o.session_id) || !env("STRIPE_SECRET_KEY")) return json(400, { error: "Invalid session" });
+    const data = await stripeRequest(`checkout/sessions/${encodeURIComponent(o.session_id)}`);
+    if (data.payment_status !== "paid" || (data.metadata?.order_id && data.metadata.order_id !== o.order_id)) return json(400, { error: "Not paid" });
+    pay = "card"; totalOverride = (data.amount_total || 0) / 100;
+    if (!c.email) c.email = data.customer_details?.email || data.customer_email || "";
+  } else {
+    const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email);
+    if (!c.full_name || !c.phone || !c.address || !c.city || !okEmail) return json(400, { error: "Missing customer details" });
+  }
+  // once per order: KV when bound (survives restarts), memory otherwise
+  const store = kv(), key = `ordermail:${o.order_id}`;
+  if (sentOrders.has(key) || (store && await store.get(key))) return json(200, { ok: true, duplicate: true });
+  const sub = o.items.reduce((a, it) => a + it.price * it.qty, 0);
+  const ship = Number(env("SHIPPING_RON", "20")) || 0;
+  const totals = { sub, ship, total: totalOverride != null && pay === "card" && !b.installments ? totalOverride : sub + ship };
+  const m = orderEmails(o, pay, totals);
+  const from = env("ORDER_EMAIL_FROM");
+  try {
+    await resendSend({ from, to: env("ORDER_NOTIFY_TO").split(",").map((x) => x.trim()).filter(Boolean), reply_to: c.email || void 0, subject: m.owner.subject, html: m.owner.html, text: m.owner.text });
+  } catch (e) {
+    return json(502, { error: "ORDER_EMAIL_FAILED", detail: env("ASSISTANT_DEBUG") ? String(e.message) : void 0 });
+  }
+  sentOrders.add(key);
+  if (store) await store.put(key, "1", { expirationTtl: 60 * 60 * 24 * 60 }).catch(() => {});
+  let customerMail = "skipped";
+  if (c.email) { try { await resendSend({ from, to: [c.email], reply_to: env("ORDER_NOTIFY_TO").split(",")[0].trim() || void 0, subject: m.customer.subject, html: m.customer.html, text: m.customer.text }); customerMail = "sent"; } catch { customerMail = "failed"; } }
+  return json(200, { ok: true, customerMail });
+}
+__name(orderSubmit, "orderSubmit");
+
 // [[path]].js
 var ROUTES = {
   "assistant-chat": assistantChat,
@@ -1070,6 +1167,7 @@ var ROUTES = {
   "checkout-create": checkoutCreate,
   "checkout-session": checkoutSession,
   "geocode": geocodeAddress,
+  "order-submit": orderSubmit,
   "cron-charge-installments": cronChargeInstallments
 };
 async function onRequest(context) {

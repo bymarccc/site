@@ -623,6 +623,15 @@
     }).catch(function(){ setStatus(t('errNoService'), 'is-error'); submitBtn.disabled = false; });
   }
 
+  /* ---------- order e-mails (owner + customer) are sent server-side via /api/order-submit (Resend) ---------- */
+  function sendOrderMail(order){
+    return fetch('/api/order-submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) })
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(d){
+        if (!r.ok || !d || !d.ok) { var e = new Error((d && d.error) || ('HTTP ' + r.status)); e.code = r.status; throw e; }
+        return d;
+      }); });
+  }
+
   /* ---------- after returning from Stripe: confirm the payment, then show the same thank-you screen ---------- */
   function handleStripeReturn(){
     var qs = new URLSearchParams(location.search);
@@ -651,9 +660,8 @@
         language: (pending && pending.language) || LANG,
         installment: d.installment || null
       };
-      if (window.emailjs && !/^PUNE_AICI/.test(EMAILJS_PUBLIC_KEY)) {
-        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params).catch(function(err){ console.error('EmailJS send failed:', err); });
-      }
+      sendOrderMail({ order_id: params.order_id, session_id: sid, customer: customer, items: items, language: params.language })
+        .catch(function(err){ console.error('Order e-mail failed:', err); });
       BAG.clear(); try { sessionStorage.removeItem('bym.pendingOrder'); } catch(e){}
       showThankYou(params, items); setStatus('', '');
     }).catch(function(){ setStatus(t('errSendFailed'), 'is-error'); });
@@ -666,7 +674,6 @@
     var phoneDigits = $('coPhone').value.replace(/\D/g, '');
     if (!$('coForm').checkValidity()) { setStatus(t('errFields'), 'is-error'); $('coForm').reportValidity(); return; }
     if (phoneDigits.length < 10) { setStatus(t('errPhone'), 'is-error'); $('coPhone').focus(); return; }
-    if (!window.emailjs || /^PUNE_AICI/.test(EMAILJS_PUBLIC_KEY)) { setStatus(t('errNoService'), 'is-error'); return; }
 
     var items = BAG.items.slice();
     var lines = items.map(function(it){ return (it.quantity || 1) + ' × ' + it.name + (it.variant ? ' (' + it.variant + ')' : '') + ' — ' + fmt((it.price || 0) * (it.quantity || 1), it.currency); });
@@ -687,10 +694,10 @@
     try { if ($('coSave').checked) { var o = {}; FIELDS.forEach(function(id){ o[id] = $(id).value; }); localStorage.setItem('bym.checkout', JSON.stringify(o)); } else localStorage.removeItem('bym.checkout'); } catch(e){}
 
     submitBtn.disabled = true; setStatus(t('statusSending'), 'is-sending');
-    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params).then(function(){
+    sendOrderMail({ order_id: params.order_id, customer: collectCustomer(), items: items, language: LANG }).then(function(){
       BAG.clear(); showThankYou(params, items); setStatus('', ''); submitBtn.disabled = false;
     }, function(err){
-      console.error('EmailJS send failed:', err); setStatus(t('errSendFailed'), 'is-error'); submitBtn.disabled = false;
+      console.error('Order send failed:', err); setStatus(t(err && err.code === 503 ? 'errNoService' : 'errSendFailed'), 'is-error'); submitBtn.disabled = false;
     });
   });
 
