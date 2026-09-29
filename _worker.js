@@ -1276,14 +1276,7 @@ async function assistantTryon(request) {
   const pid = sep === -1 ? String(raw) : String(raw).slice(0, sep);
   const wanted = sep === -1 ? null : slugify(String(raw).slice(sep + 2)) || null;
   const items = await loadCatalog();
-  let p = items.find((it) => it.id === pid || it.handle === pid);
-  // TEMPORARY dev-only pipeline check with clearly-marked placeholder assets (tests/fixtures/try-on). Never listed in
-  // the catalogue or shown to customers; removed again after the end-to-end verification.
-  if (!p && pid === "__tryon_test__") {
-    const base = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "");
-    p = { id: pid, handle: pid, title: "TEST PLACEHOLDER crop top", productType: "top", gender: ["women"], tags: ["tops"], url: base + "/", price: null, currency: "RON", description: "Development placeholder, not a product.", images: [], variants: [], designs: [],
-      tryOnResolved: [{ design: "Test print", slug: "test-print", garment: { id: "test", type: "womens_crop_top", label: "women's black cropped T-shirt (short sleeves, round neck, cropped just above the navel)", category: "tops", colour: "black", fabric: "#141414", printPlacement: "centred on the chest, a little below the neckline", printWidth: 0.55 }, garmentViews: [base + "/tests/fixtures/try-on/garment.png"], print: base + "/tests/fixtures/try-on/print.png", reference: null, mode: "print", ok: true }] };
-  }
+  const p = items.find((it) => it.id === pid || it.handle === pid);
   if (!p) return tryErr(404, "PRODUCT_NOT_FOUND", "That product couldn’t be found.");
   const n = normalizeProduct(p);
   const all = p.tryOnResolved || [];
