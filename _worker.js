@@ -58,6 +58,7 @@ async function openai(path, body, { timeoutMs = 6e4, form = null } = {}) {
       const msg = data?.error?.message || `OpenAI ${r.status}`;
       const e = new Error(msg);
       e.status = r.status;
+      e.code = data?.error?.code || null;
       throw e;
     }
     return data;
@@ -615,7 +616,8 @@ function normalizeProduct(p) {
     featured_image: images[0] || null, images,
     // AI try-on works from a garment photo: explicit try-on asset first, else the product photo for garments (not for accessories)
     try_on_image: tryOn ? (/^https?:/.test(tryOn) ? tryOn : `${(env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "")}/${tryOn}`) : (["tops", "bottoms", "jeans", "outerwear"].includes(category) ? images[0] || null : null),
-    print_overlay_image: null, _raw: p };
+    // optional exact artwork for the print (transparent PNG): catalog `printOverlayImage` (or the first of `printOverlays`)
+    print_overlay_image: (() => { const o = p.printOverlayImage || p.printOverlays && Object.values(p.printOverlays)[0]; return o ? (/^https?:/.test(o) ? o : `${(env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "")}/${o}`) : null; })(), _raw: p };
 }
 // free text + tool args → structured filters
 function parseStylistIntent(args = {}) {
@@ -964,29 +966,88 @@ async function assistantRealtimeToken(request) {
 }
 __name(assistantRealtimeToken, "assistantRealtimeToken");
 var MAX_BYTES = 6 * 1024 * 1024;
-var PROMPT = /* @__PURE__ */ __name((products) => {
-  const list = products.map((p) => p.design ? `${p.title} (${p.design} design)` : p.title).join("; ");
-  const authoritativeNote = products.some((p) => p.isDesignAuthoritative) ? " Where a product reference image is a plain product photo (no person in it), it is the single, authoritative source for that garment's exact color, silhouette, neckline, sleeves, proportions, seams and any printed or embroidered graphic together with its exact placement on the garment \u2014 reproduce that graphic exactly as shown, and never invent, rewrite, resize, reposition or reinterpret it." : "";
-  return `You are editing a real photograph, not generating a new image from scratch. The FIRST supplied image is the customer's own photograph \u2014 this is the base image and the sole source of identity: keep the customer's exact face, facial features, skin tone, hair, body shape and proportions, pose, hands, background, camera angle, framing and lighting unchanged. Do not beautify, reshape, slim, enlarge or otherwise modify the person's face or body, and do not alter the background or add unrelated garments, accessories, text or logos. Change ONLY the clothing being tried on. The remaining supplied image(s) are product reference image(s) for: ${list}.${authoritativeNote} If any product reference image instead shows the garment worn by another model, use it only to understand fit, cropped length, sleeve length, neckline and how the garment drapes on a body \u2014 never copy that model's face, body, skin tone or identity into the result. Fit the garment naturally to the customer's pose, with realistic fabric drape, folds, perspective, occlusion, lighting and shadows. Produce a realistic fashion visualization, not an exact sizing or fit guarantee.`;
+var TRYON_MIN_SIDE = 256;
+// ---- Virtual Try-On (separate from catalogue search: one selected product -> one edited photo) ----
+// Nothing here is persisted: the customer photo lives only in PHOTO_STORE (in-memory, single use,
+// 5 min TTL) or in the request body, and the generated image is returned to the browser and never stored.
+var tryErr = /* @__PURE__ */ __name((status, code, message) => json(status, { error: code, code, message }), "tryErr");
+function tryOnRegion(n) {
+  if (n.category === "bottoms" || n.category === "jeans") return "the lower-body garment (trousers / jeans / shorts / skirt)";
+  if (n.category === "outerwear") return "the outer layer (jacket / blazer / coat), worn over the customer's existing top";
+  return "the upper-body garment (top / t-shirt / shirt / hoodie / sweatshirt)";
+}
+__name(tryOnRegion, "tryOnRegion");
+var PROMPT = /* @__PURE__ */ __name((n, o) => {
+  const meta = [`Title: ${n.title}`, `Type: ${[n.category, n.subcategory, n.product_type].filter(Boolean).join(" / ")}`, n.colors.length ? `Colour: ${n.colors.join(", ")}` : "", n.fit ? `Fit: ${n.fit}` : "", o.design ? `Print/design: ${o.design}` : "", n.description ? `Description: ${n.description.replace(/\s+/g, " ").slice(0, 350)}` : ""].filter(Boolean).join("\n");
+  const ref = o.cutout ? "a cut-out of the garment on a transparent background" : "a product photo of the garment";
+  const print = o.hasOverlay
+    ? "IMAGE 3 is the exact print/graphic artwork used on this garment and is the authoritative reference for it."
+    : "Any print, graphic, embroidery, lettering or logo visible on the garment in IMAGE 2 is authoritative.";
+  return `You are editing a real photograph, not generating a new image from scratch.
+
+IMAGE 1 is the customer's own photo: it is the base image and the only source of identity. Keep exactly: identity, face and facial features, skin tone, hair, body shape and proportions, pose, hands, camera angle, framing, lighting and background (change the background only where the new garment physically covers or reveals it). Do not beautify, slim, reshape or retouch the person.
+
+Replace ONLY ${tryOnRegion(n)} with the BYMARCCC product below. Keep every other clothing item, accessory and detail unchanged.
+
+PRODUCT
+${meta}
+
+IMAGE 2 is ${ref}. It is the authoritative source for garment type, silhouette, cut, proportions and length, colour, material and fabric appearance, collar/neckline, sleeves, seams, pockets, trims, hardware and every visible construction detail. Reproduce it faithfully; do not simplify, restyle, recolour or add details. If a person appears in IMAGE 2, ignore that person completely and never copy their face, body or skin.
+
+PRINT FIDELITY: ${print} Reproduce the same artwork, typography and spelling, logo geometry, placement on the garment, relative scale and colours. Do not redesign, reinterpret, re-letter or replace it with similar-looking artwork, and do not add text or graphics that are not in the reference.
+
+Do NOT paste the reference flat over the photo. Re-render the garment as actually worn by this customer: conforming in 3D to their body, pose and posture, with realistic drape, folds, stretch and tension, correct perspective, natural occlusion (arms, hands or hair in front where appropriate) and the photo's own lighting and shadows. The print follows the same folds, curvature and perspective as the fabric while staying recognisably the same supplied artwork.
+
+Output one photorealistic image: the same person in the same photo, now wearing this garment. It is a visualisation, not a sizing guarantee.`;
 }, "PROMPT");
-function dataUrlToBlob(u) {
-  const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(u || "");
-  if (!m) return null;
-  const bin = atob(m[2]);
-  if (bin.length > MAX_BYTES) return "TOO_LARGE";
+// Sniff the real format + pixel size from the bytes (never trust the data-URL mime).
+function readImageInfo(b) {
+  const u16 = (i) => b[i] << 8 | b[i + 1];
+  if (b.length > 3 && b[0] === 255 && b[1] === 216 && b[2] === 255) {
+    let i = 2;
+    while (i + 9 < b.length) {
+      if (b[i] !== 255) { i++; continue; }
+      const m = b[i + 1];
+      if (m >= 192 && m <= 207 && m !== 196 && m !== 200 && m !== 204) return { type: "image/jpeg", h: u16(i + 5), w: u16(i + 7) };
+      if (m === 216 || m === 1 || m >= 208 && m <= 215) { i += 2; continue; }
+      i += 2 + u16(i + 2);
+    }
+    return { type: "image/jpeg", w: 0, h: 0 };
+  }
+  if (b.length > 24 && b[0] === 137 && b[1] === 80 && b[2] === 78 && b[3] === 71) return { type: "image/png", w: (b[16] << 24 | b[17] << 16 | b[18] << 8 | b[19]) >>> 0, h: (b[20] << 24 | b[21] << 16 | b[22] << 8 | b[23]) >>> 0 };
+  const str = (i, n) => String.fromCharCode(...b.slice(i, i + n));
+  if (b.length > 30 && str(0, 4) === "RIFF" && str(8, 4) === "WEBP") {
+    const c = str(12, 4);
+    if (c === "VP8 ") return { type: "image/webp", w: (b[26] | b[27] << 8) & 16383, h: (b[28] | b[29] << 8) & 16383 };
+    if (c === "VP8L") return { type: "image/webp", w: 1 + ((b[22] & 63) << 8 | b[21]), h: 1 + ((b[24] & 15) << 10 | b[23] << 2 | (b[22] & 192) >> 6) };
+    if (c === "VP8X") return { type: "image/webp", w: 1 + (b[24] | b[25] << 8 | b[26] << 16), h: 1 + (b[27] | b[28] << 8 | b[29] << 16) };
+    return { type: "image/webp", w: 0, h: 0 };
+  }
+  if (b.length > 12 && str(4, 4) === "ftyp") return { type: "image/heic", unsupported: true };
+  if (b.length > 6 && str(0, 3) === "GIF") return { type: "image/gif", unsupported: true };
+  return null;
+}
+__name(readImageInfo, "readImageInfo");
+function decodePhoto(u) {
+  const m = /^data:([\w./+-]+);base64,(.+)$/.exec(typeof u === "string" ? u : "");
+  if (!m) return { status: 400, code: "INVALID_IMAGE", message: "That file isn’t a readable image." };
+  let bin;
+  try { bin = atob(m[2]); } catch { return { status: 400, code: "INVALID_IMAGE", message: "That file isn’t a readable image." }; }
+  if (bin.length > MAX_BYTES) return { status: 413, code: "IMAGE_TOO_LARGE", message: "Photo too large (max 6 MB)." };
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new Blob([bytes], { type: m[1] });
+  const info = readImageInfo(bytes);
+  if (!info) return { status: 400, code: "INVALID_IMAGE", message: "That file isn’t a readable image." };
+  if (info.unsupported) return { status: 415, code: "UNSUPPORTED_IMAGE", message: "Unsupported photo format. Use JPG, PNG or WEBP." };
+  if (info.w && info.h && Math.min(info.w, info.h) < TRYON_MIN_SIDE) return { status: 400, code: "IMAGE_TOO_SMALL", message: `Photo resolution too low (min ${TRYON_MIN_SIDE}px).` };
+  return { blob: new Blob([bytes], { type: info.type }), info };
 }
-__name(dataUrlToBlob, "dataUrlToBlob");
+__name(decodePhoto, "decodePhoto");
 // `user_image_file_id` (the value returned by assistant-upload-photo and passed back into
 // assistant-tryon / the generate_try_on tool) is OUR OWN transient token: a crypto.randomUUID()
 // key into this in-memory PHOTO_STORE Map, valid for PHOTO_TTL_MS and deleted after first use.
 // It is NOT an OpenAI file id and is never sent to OpenAI or stored by OpenAI — this Worker never
-// calls OpenAI's Files API. When a try-on request resolves this id, it looks up the stored data
-// URL here and sends the RAW IMAGE BYTES (as multipart form data) to OpenAI's images/edits
-// endpoint directly; OpenAI never sees this id or any id at all. Do not confuse this with an
-// OpenAI-side identifier of any kind.
+// calls OpenAI's Files API. The raw image bytes go to OpenAI's images/edits endpoint directly.
 var PHOTO_STORE = /* @__PURE__ */ new Map();
 var PHOTO_TTL_MS = 5 * 60 * 1e3;
 function purgePhotoStore() {
@@ -1001,10 +1062,9 @@ async function assistantUploadPhoto(request) {
   const g = guard(request);
   if (g) return g;
   const b = await readJson(request);
-  if (!b) return json(400, { error: "Bad JSON" });
-  const check = dataUrlToBlob(b.photo);
-  if (check === "TOO_LARGE") return json(413, { error: "Photo too large (max 6 MB)." });
-  if (!check) return json(400, { error: "Unsupported photo format. Use JPG, PNG or WEBP." });
+  if (!b) return tryErr(400, "BAD_REQUEST", "Bad JSON");
+  const ph = decodePhoto(b.photo);
+  if (ph.code) return tryErr(ph.status, ph.code, ph.message);
   purgePhotoStore();
   const id = crypto.randomUUID();
   PHOTO_STORE.set(id, { dataUrl: b.photo, t: Date.now() });
@@ -1012,75 +1072,100 @@ async function assistantUploadPhoto(request) {
   return json(200, { user_image_file_id: id, expires_in: Math.round(PHOTO_TTL_MS / 1e3) });
 }
 __name(assistantUploadPhoto, "assistantUploadPhoto");
-async function assistantTryon(request, siteOrigin) {
+async function fetchTryOnAsset(url) {
+  const base = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "");
+  const abs = /^https?:/.test(url) ? url : `${base}/${String(url).replace(/^\//, "")}`;
+  let r = null;
+  try {
+    if (ENV.ASSETS && typeof ENV.ASSETS.fetch === "function" && abs.startsWith(base)) r = await ENV.ASSETS.fetch(new Request(abs));
+    if (!r || !r.ok) r = await fetch(abs);
+  } catch { return null; }
+  if (!r || !r.ok) return null;
+  // re-type from the real bytes so OpenAI gets a correct mime (jpeg/png/webp only)
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  const info = bytes.length ? readImageInfo(bytes) : null;
+  if (!info || info.unsupported) return null;
+  return new File([bytes], `ref.${info.type.split("/")[1]}`, { type: info.type });
+}
+__name(fetchTryOnAsset, "fetchTryOnAsset");
+async function assistantTryon(request) {
   const g = guard(request);
   if (g) return g;
-  if (!rateLimit(request, Number(env("ASSISTANT_TRYON_RATE_LIMIT_PER_MIN", "6")))) return json(429, { error: "Too many try-on requests. Please wait a moment." });
+  if (!rateLimit(request, Number(env("ASSISTANT_TRYON_RATE_LIMIT_PER_MIN", "6")))) return tryErr(429, "RATE_LIMITED", "Too many try-on requests. Please wait a moment.");
   const b = await readJson(request);
-  if (!b) return json(400, { error: "Bad JSON" });
-  if (b.consent !== true) return json(400, { error: "CONSENT_REQUIRED" });
-  const ids = Array.isArray(b.productIds) ? b.productIds.filter((x) => typeof x === "string" && x.trim()).slice(0, 3) : [];
-  if (!ids.length) return json(400, { error: "Select at least one product." });
+  if (!b) return tryErr(400, "BAD_REQUEST", "Bad JSON");
+  if (b.consent !== true) return tryErr(400, "CONSENT_REQUIRED", "Consent is required to process the photo.");
+  // Try-On transforms ONE selected product (catalogue search/recommendation lives elsewhere).
+  const raw = typeof b.productId === "string" && b.productId.trim() ? b.productId.trim() : Array.isArray(b.productIds) ? b.productIds.find((x) => typeof x === "string" && x.trim()) : null;
+  if (!raw) return tryErr(400, "PRODUCT_REQUIRED", "Select a product to try on.");
   let photoDataUrl = null;
   if (typeof b.userImageFileId === "string" && b.userImageFileId) {
     purgePhotoStore();
     const entry = PHOTO_STORE.get(b.userImageFileId);
-    if (!entry) return json(410, { error: "PHOTO_EXPIRED", message: "That photo reference has expired. Please upload the photo again." });
-    photoDataUrl = entry.dataUrl;
-    PHOTO_STORE.delete(b.userImageFileId);
-  } else if (typeof b.photo === "string" && b.photo) {
-    photoDataUrl = b.photo;
-  } else {
-    return json(400, { error: "Photo required." });
+    if (entry) { photoDataUrl = entry.dataUrl; PHOTO_STORE.delete(b.userImageFileId); }
+    else if (!(typeof b.photo === "string" && b.photo)) return tryErr(410, "PHOTO_EXPIRED", "That photo reference has expired. Please upload the photo again.");
   }
-  const photo = dataUrlToBlob(photoDataUrl);
-  if (photo === "TOO_LARGE") return json(413, { error: "Photo too large (max 6 MB)." });
-  if (!photo) return json(400, { error: "Unsupported photo format. Use JPG, PNG or WEBP." });
+  if (!photoDataUrl && typeof b.photo === "string" && b.photo) photoDataUrl = b.photo;
+  if (!photoDataUrl) return tryErr(400, "PHOTO_REQUIRED", "Add a photo first.");
+  const ph = decodePhoto(photoDataUrl);
+  if (ph.code) return tryErr(ph.status, ph.code, ph.message);
+  const sep = String(raw).indexOf("::");
+  const pid = sep === -1 ? String(raw) : String(raw).slice(0, sep);
+  const design = sep === -1 ? null : String(raw).slice(sep + 2).toLowerCase() || null;
   const items = await loadCatalog();
-  const requested = ids.map((raw) => {
-    const str = String(raw);
-    const sep = str.indexOf("::");
-    return sep === -1 ? { pid: str, design: null } : { pid: str.slice(0, sep), design: str.slice(sep + 2) || null };
-  });
-  const products = requested.map(({ pid, design }) => {
-    const p = items.find((it) => it.id === pid || it.handle === pid);
-    if (!p) return null;
-    const refImage = (design && p.tryOnAssets && p.tryOnAssets[design]) || p.images[0];
-    return { ...p, __design: design, __refImage: refImage };
-  }).filter(Boolean);
-  if (!products.length) return json(404, { error: "Products not found." });
-  logEvent("assistant-tryon", { ip: (request.headers.get("cf-connecting-ip") || "").split(".").slice(0, 2).join(".") + ".x.x", products: products.map((p) => p.id) });
+  const p = items.find((it) => it.id === pid || it.handle === pid);
+  if (!p) return tryErr(404, "PRODUCT_NOT_FOUND", "That product couldn’t be found.");
+  const n = normalizeProduct(p);
+  const designAsset = design && p.tryOnAssets && p.tryOnAssets[design];
+  const garmentUrl = designAsset || n.try_on_image;
+  if (!garmentUrl) return tryErr(422, "NO_TRY_ON_IMAGE", "Virtual try-on isn’t available for this product yet.");
+  const overlayUrl = design && p.printOverlays && p.printOverlays[design] || n.print_overlay_image;
+  const garment = await fetchTryOnAsset(garmentUrl);
+  if (!garment) return tryErr(502, "GARMENT_ASSET_UNAVAILABLE", "The product image for try-on couldn’t be loaded. Please try again.");
+  const overlay = overlayUrl ? await fetchTryOnAsset(overlayUrl) : null;
+  const ip = (request.headers.get("cf-connecting-ip") || "").split(".").slice(0, 2).join(".") + ".x.x";
+  logEvent("assistant-tryon", { ip, product: n.id, design, cutout: !!(designAsset || n._raw.tryOnAssets), overlay: !!overlay });
   try {
     const mod = await openai("moderations", { model: "omni-moderation-latest", input: [{ type: "image_url", image_url: { url: photoDataUrl } }] }, { timeoutMs: 15e3 });
-    if (mod.results?.[0]?.flagged) return json(422, { error: "This photo can\u2019t be used for a try-on preview." });
+    if (mod.results?.[0]?.flagged) return tryErr(422, "PHOTO_REJECTED", "This photo can’t be used for a try-on preview. Please use a different photo.");
   } catch {
+    // moderation outage: fail open — the image model applies its own safety system below
   }
-  const form = new FormData();
-  form.append("model", env("OPENAI_IMAGE_MODEL", "gpt-image-1"));
-  form.append("prompt", PROMPT(products.map((p) => ({ title: p.title, design: p.__design, isDesignAuthoritative: !!(p.__design && p.tryOnAssets && p.tryOnAssets[p.__design]) }))));
-  form.append("size", "1024x1536");
-  form.append("quality", "medium");
-  form.append("image[]", photo, "customer.jpg");
-  const base = env("BYMARCCC_SITE_URL", siteOrigin);
-  for (const p of products) {
-    const src = p.__refImage;
-    if (!src) continue;
-    try {
-      const abs = /^https?:/.test(src) ? src : `${base}/${src}`;
-      const r = await fetch(abs);
-      if (!r.ok) continue;
-      form.append("image[]", await r.blob(), `${p.handle}.png`);
-    } catch {
-    }
-  }
+  const prompt = PROMPT(n, { design, cutout: !!(designAsset || n._raw.tryOnAssets), hasOverlay: !!overlay });
+  const build = (fidelity) => {
+    const form = new FormData();
+    form.append("model", env("OPENAI_IMAGE_MODEL", "gpt-image-1"));
+    form.append("prompt", prompt);
+    form.append("size", "1024x1536");
+    form.append("quality", env("OPENAI_IMAGE_QUALITY", "medium"));
+    if (fidelity) form.append("input_fidelity", "high");
+    form.append("image[]", ph.blob, ph.info.type === "image/png" ? "customer.png" : ph.info.type === "image/webp" ? "customer.webp" : "customer.jpg");
+    form.append("image[]", garment, `garment.${garment.type.split("/")[1]}`);
+    if (overlay) form.append("image[]", overlay, `print.${overlay.type.split("/")[1]}`);
+    return form;
+  };
+  const t0 = Date.now();
+  let out;
   try {
-    const out = await openai("images/edits", null, { form, timeoutMs: 12e4 });
-    const b64 = out.data?.[0]?.b64_json;
-    if (!b64) throw new Error("no image");
-    return json(200, { image: `data:image/png;base64,${b64}`, products: products.map((p) => ({ id: p.id, title: p.title, url: p.url, price: p.price, image: p.images[0], variants: p.variants.filter((v) => v.available).map((v) => ({ id: v.id, title: v.title })) })) });
+    try {
+      out = await openai("images/edits", null, { form: build(true), timeoutMs: 13e4 });
+    } catch (e) {
+      // models without input_fidelity support: retry once without it
+      if (e.status === 400 && /input_fidelity/i.test(e.message || "")) out = await openai("images/edits", null, { form: build(false), timeoutMs: 13e4 - (Date.now() - t0) });
+      else throw e;
+    }
   } catch (e) {
-    return json(502, { error: "Could not generate the preview right now. Please try again." });
+    const m = String(e && e.message || "");
+    logEvent("assistant-tryon-failed", { product: n.id, status: e && e.status, code: e && e.code, ms: Date.now() - t0, msg: m.slice(0, 160) });
+    if (e && e.name === "AbortError") return tryErr(504, "TIMEOUT", "The preview took too long. Please try again.");
+    if (e && (e.code === "moderation_blocked" || /safety|moderation|content policy/i.test(m))) return tryErr(422, "SAFETY_REJECTED", "The image service declined this photo. Please try a different photo.");
+    if (e && (e.status === 429 || e.status >= 500)) return tryErr(503, "GENERATION_BUSY", "The image service is busy right now. Please try again in a moment.");
+    return tryErr(502, "GENERATION_FAILED", "Could not generate the preview right now. Please try again.");
   }
+  const b64 = out && out.data && out.data[0] && out.data[0].b64_json;
+  if (!b64) return tryErr(502, "GENERATION_FAILED", "Could not generate the preview right now. Please try again.");
+  const card = { id: n.id, title: n.title, url: n.url, price: n.price, currency: n.currency, image: n.featured_image, category: n.category, variants: p.variants.filter((v) => v.available !== false).map((v) => ({ id: v.id, title: v.title })) };
+  return json(200, { image: `data:image/png;base64,${b64}`, product: card, products: [card] });
 }
 __name(assistantTryon, "assistantTryon");
 
