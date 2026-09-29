@@ -732,7 +732,7 @@ function parseStylistIntent(args = {}) {
     const st = scLook(SC_WORDS.style, w); if (st) { f.style = f.style || st; return; }
     const col = scLook(SC_WORDS.collection, w); if (col) { f.collection = col; return; }
     if (/^(xxs|xs|s|m|l|xl|xxl|\d{2})$/i.test(w) && w.length <= 3) return;   // sizes are read from args.size only
-    if (!STOPWORDS.includes(w) && w.length > 2 && !["give", "get", "got", "have", "like", "love", "please", "tonight", "today", "wearing", "suggest", "recommend", "vreau", "arata", "cauta", "ceva", "pentru", "find", "show", "want", "need", "looking", "something", "some", "any", "all", "style", "outfit", "look", "wear", "what", "should", "with", "and", "or", "the", "for", "item", "items", "piece", "pieces", "product", "products", "bymarccc", "collection", "catalogue", "catalog"].includes(w)) f.text.push(w);
+    if (!STOPWORDS.includes(w) && w.length > 2 && !["clothing", "clothes", "haine", "outfit", "outfits", "give", "get", "got", "have", "like", "love", "please", "tonight", "today", "wearing", "suggest", "recommend", "vreau", "arata", "cauta", "ceva", "pentru", "find", "show", "want", "need", "looking", "something", "some", "any", "all", "style", "outfit", "look", "wear", "what", "should", "with", "and", "or", "the", "for", "item", "items", "piece", "pieces", "product", "products", "bymarccc", "collection", "catalogue", "catalog"].includes(w)) f.text.push(w);
   };
   for (const key of ["gender", "category", "collection", "subcategory", "fit", "color", "colour", "occasion", "style", "query"]) if (args[key]) scWords(Array.isArray(args[key]) ? args[key].join(" ") : args[key]).forEach(take);
   if (args.size) f.sizes = String(args.size).split(/[,\s/]+/).filter(Boolean);
@@ -1111,7 +1111,7 @@ GARMENT FIDELITY: the result must clearly be this exact garment. Match its garme
 PRODUCT
 ${tryOnMeta(n, g, o.design)}
 
-PRINT PLACEHOLDER: the real garment carries a printed graphic that is added in a later step. Exactly where that graphic sits — ${g.printPlacement}, about ${Math.round(g.printWidth * 100)}% of the width of the garment's front, with a width:height ratio of ${o.aspect} — print a flat, solid, pure chroma-key ${o.keyName} (${o.keyHex}) rectangle instead. Treat it exactly like screen-printed ink on the fabric: it bends with the fabric's folds, curvature, stretch and perspective, takes the same lighting and shading as the fabric around it, and is hidden behind anything in front of the garment (hair, arms, hands). Keep it one uniform, fully saturated ${o.keyName} with crisp edges: no text, pattern, logo, gradient, glow, outline or border, and no ${o.keyName} anywhere else in the image. Apart from this rectangle the garment is blank.
+PRINT PLACEHOLDER: the real garment carries a printed graphic that is added in a later step. Exactly where that graphic sits — ${g.printPlacement}, about ${Math.round(g.printWidth * 100)}% of the width of the garment's front, with a width:height ratio of ${o.aspect} — print a matte, mid-tone chroma-key ${o.keyName} (${o.keyHex}) rectangle instead. Treat it exactly like screen-printed ink on the fabric: it bends with the fabric's folds, curvature, stretch and perspective, and is hidden behind anything in front of the garment (hair, arms, hands). The fabric's wrinkles, folds, shadows and highlights must stay clearly visible across the rectangle as darker and lighter shades of that same ${o.keyName}, exactly as they would on printed ink. Use no other colour in it: no text, pattern, logo, glow, outline or border, crisp edges, and no ${o.keyName} anywhere else in the image. Apart from this rectangle the garment is blank.
 
 ${TRYON_PHYSICS}
 
@@ -1319,7 +1319,7 @@ async function assistantTryon(request) {
   }
   const g = entry.garment || {};
   const keyGreen = !/green|verde/i.test(`${g.colour || ""} ${n.colors.join(" ")}`);
-  const key = keyGreen ? { name: "green", hex: "#00FF00" } : { name: "magenta", hex: "#FF00FF" };
+  const key = keyGreen ? { name: "green", hex: "#00B140" } : { name: "magenta", hex: "#C000C0" };   // mid-tone keys so folds/shadows AND highlights stay visible on the panel
   const aspect = printInfo ? `${printInfo.w}:${printInfo.h}` : null;
   const prompt = entry.mode === "print"
     ? PROMPT_GARMENT_STAGE(n, g, { design: entry.design, views: refs.length, aspect, keyName: key.name, keyHex: key.hex })
