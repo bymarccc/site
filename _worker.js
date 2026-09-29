@@ -553,6 +553,161 @@ function collectionOf(p) {
   return p.productType || "other";
 }
 __name(collectionOf, "collectionOf");
+// ---------------------------------------------------------------------------------------------------------------
+// Stylist catalogue layer — normalises catalog.json into one product shape, parses a request into filters, and
+// searches in stages: strict first, then OPTIONAL filters are relaxed one by one (never the gender the customer
+// asked for). catalog.json stays the only source of truth: nothing here invents a product, price, size or URL.
+// ---------------------------------------------------------------------------------------------------------------
+var SC_WORDS = {
+  gender: { women: "women", woman: "women", womens: "women", female: "women", ladies: "women", lady: "women", girl: "women", girls: "women", her: "women", femei: "women", femeie: "women", dama: "women", damă: "women", fete: "women",
+    men: "men", man: "men", mens: "men", male: "men", guy: "men", guys: "men", boy: "men", boys: "men", him: "men", barbati: "men", bărbați: "men", barbat: "men", bărbat: "men", baieti: "men", băieți: "men", unisex: "unisex" },
+  // word → [category, subcategory]
+  kind: { top: ["tops"], tops: ["tops"], topuri: ["tops"], tee: ["tops", "t-shirt"], tees: ["tops", "t-shirt"], tshirt: ["tops", "t-shirt"], "t-shirt": ["tops", "t-shirt"], "t-shirts": ["tops", "t-shirt"], tricou: ["tops", "t-shirt"], tricouri: ["tops", "t-shirt"],
+    shirt: ["tops"], shirts: ["tops"], camasa: ["tops"], cămașă: ["tops"], bluza: ["tops"], bluză: ["tops"], blouse: ["tops"], tank: ["tops", "tank"], tanks: ["tops", "tank"], crop: ["tops"], "long-sleeve": ["tops", "long-sleeve"], longsleeve: ["tops", "long-sleeve"],
+    hoodie: ["tops", "hoodie"], hoodies: ["tops", "hoodie"], hanorac: ["tops", "hoodie"], hanorace: ["tops", "hoodie"], sweatshirt: ["tops", "hoodie"], sweatshirts: ["tops", "hoodie"], sweater: ["tops"], jumper: ["tops"],
+    bottom: ["bottoms"], bottoms: ["bottoms"], pants: ["bottoms"], trousers: ["bottoms"], pantaloni: ["bottoms"], sweatpants: ["bottoms", "sweatpants"], joggers: ["bottoms", "sweatpants"], shorts: ["bottoms", "shorts"], short: ["bottoms", "shorts"], skirt: ["bottoms", "skirt"], skirts: ["bottoms", "skirt"], fusta: ["bottoms", "skirt"], fustă: ["bottoms", "skirt"],
+    jeans: ["jeans"], jean: ["jeans"], denim: ["jeans"], blugi: ["jeans"], blug: ["jeans"],
+    jacket: ["outerwear", "jacket"], jackets: ["outerwear", "jacket"], geaca: ["outerwear", "jacket"], geacă: ["outerwear", "jacket"], jacheta: ["outerwear", "jacket"], jachetă: ["outerwear", "jacket"], coat: ["outerwear", "coat"], coats: ["outerwear", "coat"], palton: ["outerwear", "coat"], blazer: ["outerwear", "blazer"], blazers: ["outerwear", "blazer"], outerwear: ["outerwear"],
+    bag: ["accessories", "bag"], bags: ["accessories", "bag"], geanta: ["accessories", "bag"], geantă: ["accessories", "bag"], duffle: ["accessories", "bag"], cap: ["accessories", "cap"], caps: ["accessories", "cap"], hat: ["accessories", "cap"], sapca: ["accessories", "cap"], șapcă: ["accessories", "cap"], accessory: ["accessories"], accessories: ["accessories"], accesorii: ["accessories"], jewelry: ["accessories"], jewellery: ["accessories"] },
+  fit: { skinny: "skinny", slim: "skinny", relaxed: "relaxed", loose: "relaxed", straight: "straight", oversized: "oversized", baggy: "oversized", wide: "wide", "wide-leg": "wide" },
+  color: { black: "black", negru: "black", neagra: "black", white: "white", alb: "white", alba: "white", grey: "grey", gray: "grey", gri: "grey", blue: "blue", albastru: "blue", red: "red", rosu: "red", roșu: "red", pink: "pink", roz: "pink", purple: "purple", mov: "purple", green: "green", verde: "green",
+    orange: "orange", brown: "brown", maro: "brown", burgundy: "burgundy", fuchsia: "fuchsia", silver: "silver", argintiu: "silver", yellow: "yellow", galben: "yellow", beige: "beige", bej: "beige" },
+  occasion: { party: "party", parties: "party", petrecere: "party", club: "party", clubbing: "party", night: "party", nightout: "party", date: "party", birthday: "party", casual: "casual", everyday: "casual", daily: "casual", weekend: "casual", work: "smart", office: "smart", smart: "smart", dinner: "smart", event: "smart" },
+  collection: { sale: "sale", sales: "sale", reduceri: "sale", reducere: "sale", discount: "sale" }
+};
+var SC_CAT_BROADER = { jeans: "bottoms" };   // relaxing "jeans" widens to all bottoms
+function scNorm(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’']/g, ""); }
+function scWords(s) { return scNorm(s).replace(/night out/g, "nightout").replace(/long sleeve/g, "long-sleeve").replace(/wide leg/g, "wide-leg").replace(/t shirt/g, "t-shirt").split(/[^a-z0-9-]+/).filter(Boolean).map((w) => w.replace(/s$/, (m) => ["tops", "jeans", "shorts", "pants", "trousers", "sweatpants", "joggers", "accessories", "bottoms", "mens", "womens", "boys", "girls", "guys", "ladies", "tees", "tanks", "sales"].includes(w) ? m : "")); }
+function scLook(dict, w) { return dict[w] ?? dict[scNorm(w)] ?? dict[w + "s"]; }
+// catalog.json product → the stylist's normalised product shape
+function normalizeProduct(p) {
+  const tags = (p.tags || []).map((t) => scNorm(t));
+  const title = scNorm(p.title), desc = scNorm(p.description), type = scNorm(p.productType);
+  const text = ` ${title} ${tags.join(" ")} ${type} `;
+  const has = (...ws) => ws.some((w) => text.includes(` ${w} `) || text.includes(` ${w}s `));
+  let category, subcategory = null;
+  if (type === "jeans" || tags.includes("jeans")) category = "jeans";
+  else if (type === "jacket" || has("jacket", "blazer", "coat")) { category = "outerwear"; subcategory = has("blazer") ? "blazer" : has("coat") ? "coat" : "jacket"; }
+  else if (type === "accessory" || has("bag", "cap", "accessory", "accessories")) { category = "accessories"; subcategory = has("bag", "duffle") ? "bag" : has("cap") ? "cap" : null; }
+  else if (type === "top" || has("top", "tops", "t-shirt", "tee", "hoodie", "shirt", "tank")) category = "tops";
+  else if (type === "bottoms" || has("bottoms", "skirt", "shorts", "sweatpants", "pants")) category = "bottoms";
+  else if (/skirt|shorts|sweatpants|pants|trousers/.test(title)) category = "bottoms";
+  else category = "other";
+  if (!subcategory) {
+    if (category === "tops") subcategory = has("hoodie", "sweatshirt") ? "hoodie" : /tank/.test(title) ? "tank" : /long sleeve/.test(title) ? "long-sleeve" : /blazer/.test(title) ? "blazer" : has("t-shirt", "tee") || /tee|t-shirt/.test(title) ? "t-shirt" : /baby top/.test(title) ? "baby-top" : null;
+    else if (category === "bottoms") subcategory = /skirt/.test(title) ? "skirt" : /short/.test(title) ? "shorts" : /sweatpants|jogger/.test(title) ? "sweatpants" : null;
+  }
+  const colors = [...new Set([...(p.variants || []).map((v) => scNorm(v.colour)).filter((c) => c && c !== "as shown"), ...tags.filter((t) => Object.values(SC_WORDS.color).includes(t)), ...Object.values(SC_WORDS.color).filter((c) => title.includes(c))])];
+  const sizes = [...new Set((p.variants || []).filter((v) => v.available !== false && v.size).map((v) => v.size))];
+  const fit = ["skinny", "relaxed", "straight", "oversized", "wide"].find((f) => tags.includes(f) || title.includes(f) || desc.startsWith(f)) || null;
+  // occasions: derived from what the piece is (sequins/blazers/statement pieces → party), never invented per product
+  const occasions = [];
+  if (/sequin|diamond|rocks|silver|blazer|delulu|muse|mini skirt|baby top|coat/.test(title) || tags.includes("holographic")) occasions.push("party");
+  if (/blazer|coat|long sleeve/.test(title)) occasions.push("smart");
+  if (["tops", "jeans", "bottoms", "accessories"].includes(category) && !/sequin|diamond/.test(title)) occasions.push("casual");
+  if (category === "jeans") occasions.push("party");   // statement hand-painted denim is BYMARCCC's night-out signature
+  const available = (p.variants || []).some((v) => v.available !== false);
+  const tryOn = p.tryOnAssets && Object.values(p.tryOnAssets)[0];
+  const images = p.images || [];
+  return { id: p.id, title: p.title, handle: p.handle || p.id, url: p.url, description: p.description || "", gender: p.gender || [], category, subcategory, product_type: p.productType || null,
+    tags: p.tags || [], colors, sizes, fit, style: tags.filter((t) => ["oversized", "printed", "logo", "denim", "holographic"].includes(t)), occasions: [...new Set(occasions)],
+    price: typeof p.price === "number" ? p.price : null, compare_at_price: p.compareAtPrice || null, currency: p.currency || "RON", available, inventory_status: available ? "in_stock" : "out_of_stock",
+    featured_image: images[0] || null, images,
+    // AI try-on works from a garment photo: explicit try-on asset first, else the product photo for garments (not for accessories)
+    try_on_image: tryOn ? (/^https?:/.test(tryOn) ? tryOn : `${(env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "")}/${tryOn}`) : (["tops", "bottoms", "jeans", "outerwear"].includes(category) ? images[0] || null : null),
+    print_overlay_image: null, _raw: p };
+}
+// free text + tool args → structured filters
+function parseStylistIntent(args = {}) {
+  const f = { gender: null, category: null, subcategory: null, colors: [], sizes: [], fit: null, occasion: null, collection: null, min_price: null, max_price: null, text: [] };
+  const take = (w) => {
+    const g = scLook(SC_WORDS.gender, w); if (g) { f.gender = f.gender || g; return; }
+    const k = scLook(SC_WORDS.kind, w); if (k) { if (!f.category || f.category === SC_CAT_BROADER[k[0]] || (k[0] === "jeans")) f.category = k[0]; if (k[1]) f.subcategory = k[1]; return; }
+    const fi = scLook(SC_WORDS.fit, w); if (fi) { f.fit = fi; return; }
+    const c = scLook(SC_WORDS.color, w); if (c) { if (!f.colors.includes(c)) f.colors.push(c); return; }
+    const o = scLook(SC_WORDS.occasion, w); if (o) { f.occasion = f.occasion || o; return; }
+    const col = scLook(SC_WORDS.collection, w); if (col) { f.collection = col; return; }
+    if (/^(xxs|xs|s|m|l|xl|xxl|\d{2})$/i.test(w) && w.length <= 3) return;   // sizes are read from args.size only
+    if (!STOPWORDS.includes(w) && w.length > 2 && !["find", "show", "want", "need", "looking", "something", "some", "any", "all", "style", "outfit", "look", "wear", "what", "should", "with", "and", "or", "the", "for", "item", "items", "piece", "pieces", "product", "products", "bymarccc", "collection", "catalogue", "catalog"].includes(w)) f.text.push(w);
+  };
+  for (const key of ["gender", "category", "collection", "subcategory", "fit", "color", "colour", "occasion", "style", "query"]) if (args[key]) scWords(Array.isArray(args[key]) ? args[key].join(" ") : args[key]).forEach(take);
+  if (args.size) f.sizes = String(args.size).split(/[,\s/]+/).filter(Boolean);
+  // prices: ignore 0 / negative / non-numbers (models often send 0 for "no limit")
+  const num = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; };
+  f.max_price = num(args.max_price); f.min_price = num(args.min_price);
+  return f;
+}
+function scMatch(p, f, skip) {
+  if (f.gender && !skip.has("gender")) { if (f.gender === "unisex" ? p.gender.length < 2 : !p.gender.includes(f.gender)) return false; }
+  if (f.category && !skip.has("category")) { const cat = skip.has("category_narrow") ? (SC_CAT_BROADER[f.category] || f.category) : f.category; if (!(p.category === cat || (cat === "bottoms" && p.category === "jeans"))) return false; }
+  if (f.subcategory && !skip.has("subcategory") && p.subcategory !== f.subcategory) return false;
+  if (f.fit && !skip.has("fit") && p.fit !== f.fit) return false;
+  if (f.colors.length && !skip.has("color") && !f.colors.some((c) => p.colors.includes(c))) return false;
+  if (f.sizes.length && !skip.has("size") && !f.sizes.some((s) => p.sizes.map(String).map((x) => x.toLowerCase()).includes(s.toLowerCase()))) return false;
+  if (f.occasion && !skip.has("occasion") && !p.occasions.includes(f.occasion)) return false;
+  if (f.collection === "sale" && !skip.has("collection") && !(p.compare_at_price || p.tags.map(scNorm).some((t) => t === "sale" || t === "sales"))) return false;
+  if (f.text.length && !skip.has("keywords") && !f.category && !f.subcategory && !f.occasion && !f.collection) { const hay = scNorm(`${p.title} ${p.tags.join(" ")} ${p.description}`); if (!f.text.some((w) => hay.includes(w))) return false; }
+  if (f.max_price && !skip.has("price") && !(p.price != null && p.price <= f.max_price)) return false;
+  if (f.min_price && !skip.has("price") && !(p.price != null && p.price >= f.min_price)) return false;
+  return true;
+}
+function scScore(p, f) {
+  let s = p.available ? 5 : 0;
+  const hay = scNorm(`${p.title} ${p.tags.join(" ")} ${p.description}`);
+  for (const w of f.text) if (hay.includes(w)) s += scNorm(p.title).includes(w) ? 4 : 1;
+  if (f.fit && p.fit === f.fit) s += 2; if (f.colors.some((c) => p.colors.includes(c))) s += 2;
+  return s;
+}
+// staged search → { products, applied_filters, relaxed_filters, stages }
+function stylistSearch(items, args = {}) {
+  const f = parseStylistIntent(args);
+  const catalog = items.map(normalizeProduct);
+  // relax order: least important first; gender is never relaxed when the customer gave it
+  const steps = [["keywords"], ["color"], ["size"], ["occasion"], ["fit"], ["subcategory"], ["category_narrow"], ["price"], ["collection"], ["category"]];
+  const skip = new Set(), relaxed = [], stages = [];
+  const applicable = { keywords: f.text.length, color: f.colors.length, size: f.sizes.length, occasion: f.occasion, fit: f.fit, subcategory: f.subcategory, category_narrow: f.category && SC_CAT_BROADER[f.category], price: f.max_price || f.min_price, collection: f.collection, category: f.category };
+  let res = catalog.filter((p) => scMatch(p, f, skip));
+  stages.push({ stage: "strict", matches: res.length });
+  for (const [k] of steps) {
+    if (res.length) break;
+    if (!applicable[k]) continue;
+    skip.add(k); relaxed.push(k === "category_narrow" ? `${f.category} → ${SC_CAT_BROADER[f.category]}` : k === "keywords" ? `"${f.text.join(" ")}"` : k);
+    res = catalog.filter((p) => scMatch(p, f, skip));
+    stages.push({ stage: `without ${k}`, matches: res.length });
+  }
+  if (args.in_stock === true && res.some((p) => p.available)) res = res.filter((p) => p.available);
+  res.sort((a, b) => scScore(b, f) - scScore(a, f));
+  const { text, ...shown } = f;
+  const applied = Object.fromEntries(Object.entries(shown).filter(([, v]) => v != null && !(Array.isArray(v) && !v.length)));
+  return { products: res, catalog_count: catalog.length, applied_filters: applied, relaxed_filters: relaxed, stages };
+}
+// outfit: one real piece per slot, same gender, suited to the occasion when possible
+function stylistOutfit(items, args = {}) {
+  const f = parseStylistIntent(args);
+  const catalog = items.map(normalizeProduct).filter((p) => p.available && (!f.gender || p.gender.includes(f.gender)));
+  const slots = [["top", (p) => p.category === "tops"], ["bottom", (p) => p.category === "jeans" || p.category === "bottoms"], ["outerwear", (p) => p.category === "outerwear"], ["accessory", (p) => p.category === "accessories"]];
+  const exclude = new Set([].concat(args.exclude_ids || []).map(String));
+  const look = [], missing = [];
+  for (const [slot, test] of slots) {
+    let pool = catalog.filter((p) => test(p) && !exclude.has(p.id));
+    const byOcc = f.occasion ? pool.filter((p) => p.occasions.includes(f.occasion)) : pool;
+    const byColor = f.colors.length ? byOcc.filter((p) => f.colors.some((c) => p.colors.includes(c))) : byOcc;
+    pool = byColor.length ? byColor : byOcc.length ? byOcc : pool;
+    if (!pool.length) { if (slot !== "outerwear") missing.push(slot); continue; }
+    pool.sort((a, b) => scScore(b, f) - scScore(a, f));
+    look.push({ slot, product: pool[Math.floor((Number(args.variation) || 0) % Math.min(pool.length, 3))] || pool[0] });
+  }
+  return { look, missing, gender: f.gender, occasion: f.occasion, catalog_count: catalog.length };
+}
+function stylistCard(p) {   // what the chat renders
+  return { id: p.id, handle: p.handle, title: p.title, url: p.url, image: p.featured_image, price: p.price, compareAtPrice: p.compare_at_price, currency: p.currency, available: p.available, inStock: p.available,
+    availableSizes: p.sizes, gender: p.gender, type: p.category, tags: p.tags.slice(0, 8), tryOnImage: p.try_on_image || null, priceNote: p.price == null ? "not priced yet - tell the customer to ask on the site" : null };
+}
+function stylistModelView(p) {   // what the LLM sees — every field comes from the catalogue
+  return { product_id: p.id, product_name: p.title, category: p.category, subcategory: p.subcategory, gender: p.gender.length > 1 ? "unisex" : p.gender[0] || null, fit: p.fit, colors: p.colors, occasions: p.occasions,
+    price: p.price, currency: p.currency, stock_status: p.inventory_status, sizes: p.sizes, product_url: p.url, try_on_available: !!p.try_on_image };
+}
+function stylistLog(event, data) { if (env("ASSISTANT_DEBUG")) console.log(JSON.stringify({ at: "stylist", event, ...data })); }   // dev only, never sent to customers
 var CATALOG_SYNONYMS = { blugi: "jeans", blug: "jeans", jean: "jeans", rochie: "dress", tricou: "t-shirt", tricouri: "t-shirt", tshirt: "t-shirt", tee: "t-shirt", tees: "t-shirt", hanorac: "hoodie", hanorace: "hoodie", sapca: "cap", șapcă: "cap", geaca: "jacket", geacă: "jacket", jacheta: "jacket", jachetă: "jacket", pantaloni: "bottoms", geanta: "bag", geantă: "bag", top: "top", topuri: "top", bluza: "top", bluză: "top", barbati: "men", bărbați: "men", barbat: "men", mens: "men", man: "men", femei: "women", femeie: "women", womens: "women", woman: "women", reduceri: "sale", reducere: "sale", oferte: "sale" };
 var STOPWORDS = ["men", "women", "for", "de", "pentru", "a", "an", "the", "un", "o", "niste", "niște", "vreau", "want", "show", "me", "arata", "arată", "cauta", "caută", "toate", "toti", "toți", "produsele"];
 function specSummarize(p) {
@@ -572,7 +727,8 @@ function specSummarize(p) {
 }
 __name(specSummarize, "specSummarize");
 var TOOL_DEFS = [
-  { type: "function", name: "search_products", description: "Search the real BYMARCCC catalogue — the ONLY source of truth for products, prices, stock and sizes. Never invent or recall products from anywhere else. Pass gender/collection/category to narrow, in_stock to only return available items, and set a high limit (e.g. 50) when the customer asks for ALL products in a collection.", parameters: { type: "object", properties: { query: { type: "string", description: "Free text search terms (Romanian or English)." }, gender: { type: "string", enum: ["women", "men", "unisex"] }, collection: { type: "string", description: "e.g. tops, jeans, jackets, hoodie, bag, accessories, bottoms, sales" }, category: { type: "string", description: "Product type, e.g. jeans, top, jacket, accessory, bottoms" }, in_stock: { type: "boolean" }, max_price: { type: "number" }, limit: { type: "number" } } } },
+  { type: "function", name: "search_products", description: "Search the real BYMARCCC catalogue — the ONLY source of truth for products, prices, stock, sizes and URLs. Understands natural language (e.g. 'women tops', 'men skinny jeans', 'party', colours, Romanian). If there is no exact match it relaxes optional filters (colour, fit, subcategory…) but never the gender, and says so in `note` and `relaxed_filters`.", parameters: { type: "object", properties: { query: { type: "string", description: "The customer's request in their own words (Romanian or English)." }, gender: { type: "string", description: "women, men or unisex — only when the customer said it." }, category: { type: "string", description: "tops, bottoms, jeans, outerwear, accessories (synonyms OK: tees, hoodies, skirts, bags…)" }, subcategory: { type: "string", description: "e.g. t-shirt, hoodie, tank, skirt, shorts, blazer, bag, cap" }, fit: { type: "string", description: "skinny, relaxed, straight, oversized, wide" }, color: { type: "string" }, size: { type: "string" }, occasion: { type: "string", description: "party, casual, smart" }, collection: { type: "string", description: "sale" }, min_price: { type: "number" }, max_price: { type: "number", description: "Only when the customer gave a budget." }, in_stock: { type: "boolean" }, limit: { type: "number" } } } },
+  { type: "function", name: "build_outfit", description: "Build a complete look from REAL catalogue pieces (top + bottom, plus outerwear and an accessory when they exist) for styling requests like 'style me for a party', 'build me an outfit', 'what should I wear'. Returns the pieces and which slots the catalogue can't fill.", parameters: { type: "object", properties: { gender: { type: "string", description: "women or men (ask with askGenderChoice first if unknown)" }, occasion: { type: "string" }, color: { type: "string" }, query: { type: "string" }, exclude_ids: { type: "array", items: { type: "string" }, description: "product ids already shown, for a different look" }, variation: { type: "number" } } } },
   { type: "function", name: "get_product", description: "Full details for exactly one BYMARCCC product by its product_id.", parameters: { type: "object", properties: { product_id: { type: "string" } }, required: ["product_id"] } },
   { type: "function", name: "generate_try_on", description: "Generate a virtual try-on preview of one BYMARCCC product on the customer's own uploaded photo. Ask the customer to choose a single product first if it isn't already clear. Always pass product_id and language explicitly; pass user_image_file_id only if this conversation already told you the customer's uploaded photo's reference id — never invent one. If the customer named a specific print/embroidery design of that product (from get_product's data) and it is available, pass its exact design slug (lowercase, hyphenated, e.g. 'boys-lie') as design — this lets the app use that design's own reference artwork instead of the product's default photo; never invent a slug that wasn't given to you by the product data.", parameters: { type: "object", properties: { product_id: { type: "string" }, design: { type: "string", description: "Optional design/print slug (lowercase, hyphenated) taken only from this product's own known designs — omit if the customer didn't name one or it isn't in the data." }, user_image_file_id: { type: "string", description: "The exact photo reference id this conversation already gave you (e.g. from a ‘Photo uploaded, reference id: ...’ line). Omit entirely if none was given — never invent a value." }, language: { type: "string", enum: ["ro", "en"] } }, required: ["product_id", "language"] } },
   { type: "function", name: "getProductImages", description: "Image URLs for a product.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
@@ -595,36 +751,27 @@ async function runTool(name, args = {}) {
   const find = /* @__PURE__ */ __name((id) => items.find((p) => p.id === String(id) || p.handle === String(id) || p.title.toLowerCase() === String(id).toLowerCase()), "find");
   switch (name) {
     case "search_products": {
-      const raw = (args.query || "").toLowerCase();
-      const terms = raw.split(/[^\p{L}\p{N}-]+/u).filter(Boolean).map((t) => CATALOG_SYNONYMS[t] || t);
-      let gender = (args.gender || "").toLowerCase();
-      if (!gender) gender = terms.includes("men") ? "men" : terms.includes("women") ? "women" : "";
-      const words = terms.filter((t) => !STOPWORDS.includes(t));
-      let res = items.slice();
-      if (gender) res = res.filter((p) => gender === "unisex" ? (p.gender || []).length > 1 : (p.gender || ["men"]).includes(gender));
-      const collectionArg = (args.collection || args.category || "").toLowerCase();
-      if (collectionArg) {
-        const norm = CATALOG_SYNONYMS[collectionArg] || collectionArg;
-        res = res.filter((p) => collectionOf(p) === norm || (p.tags || []).includes(norm) || (p.productType || "").toLowerCase() === norm);
-      }
-      if (words.length) {
-        res = res.map((p) => {
-          const title = p.title.toLowerCase(), tags = p.tags.join(" ").toLowerCase(), type = (p.productType || "").toLowerCase(), desc = (p.description || "").toLowerCase();
-          let score = 0;
-          for (const t of words) { if (title.includes(t)) score += 4; if (type === t || type.includes(t)) score += 3; if (tags.includes(t)) score += 2; if (desc.includes(t)) score += 1; }
-          return [score, p];
-        }).filter(([s]) => s > 0).sort((a, b) => b[0] - a[0]).map(([, p]) => p);
-      }
-      if (typeof args.max_price === "number") res = res.filter((p) => typeof p.price === "number" && p.price <= args.max_price);
-      if (args.in_stock === true) res = res.filter((p) => p.variants.some((v) => v.available));
-      const total = res.length;
-      const limited = res.slice(0, Math.min(Math.max(Number(args.limit) || 10, 1), 50));
-      return { modelResult: { products: limited.map(specSummarize), total, gender: gender || "any" }, uiProducts: limited.map(summarize) };
+      const r = stylistSearch(items, args);
+      const limit = Math.min(Math.max(Number(args.limit) || 8, 1), 50);
+      const shown = r.products.slice(0, limit);
+      stylistLog("search", { query: args, parsed: r.applied_filters, catalog: r.catalog_count, stages: r.stages, relaxed: r.relaxed_filters, returned: shown.map((p) => p.id) });
+      const note = !r.catalog_count ? "CATALOGUE_UNAVAILABLE: the catalogue could not be loaded — tell the customer to try again in a moment; do not claim products don't exist."
+        : !shown.length ? "NO_MATCH: nothing in the catalogue matches, even after relaxing optional filters. Only now may you say BYMARCCC doesn't carry it; suggest a related category."
+        : r.relaxed_filters.length ? `CLOSEST_MATCHES: no exact match for [${r.relaxed_filters.join(", ")}]; these are the closest real products. Say plainly which constraint you relaxed, then present them.`
+        : "EXACT_MATCHES";
+      return { modelResult: { note, total: r.products.length, applied_filters: r.applied_filters, relaxed_filters: r.relaxed_filters, products: shown.map(stylistModelView) }, uiProducts: shown.map(stylistCard) };
+    }
+    case "build_outfit": {
+      const o = stylistOutfit(items, args);
+      stylistLog("outfit", { query: args, gender: o.gender, occasion: o.occasion, catalog: o.catalog_count, pieces: o.look.map((x) => `${x.slot}:${x.product.id}`), missing: o.missing });
+      return { modelResult: { note: o.look.length ? (o.missing.length ? `PARTIAL_LOOK: the catalogue has no ${o.missing.join(" / ")} for this — say so, don't invent it.` : "FULL_LOOK") : "NO_PIECES", gender: o.gender || "any", occasion: o.occasion, look: o.look.map((x) => ({ slot: x.slot, ...stylistModelView(x.product) })), missing: o.missing },
+        uiProducts: o.look.map((x) => stylistCard(x.product)) };
     }
     case "get_product": {
       const p = find(args.product_id);
       if (!p) return { modelResult: { error: "NOT_FOUND" } };
-      return { modelResult: { ...specSummarize(p), description: p.description }, uiProducts: [summarize(p)] };
+      const n = normalizeProduct(p);
+      return { modelResult: { ...stylistModelView(n), description: p.description }, uiProducts: [stylistCard(n)] };
     }
     case "getProductImages": {
       const p = find(args.id);
@@ -701,6 +848,8 @@ DOMAIN \u2014 allowed: BYMARCCC products, collections, colours, sizes and stock;
 DOMAIN \u2014 forbidden: other brands or stores; products that are not in the BYMARCCC catalogue; general internet search or facts unrelated to BYMARCCC; politics, news, programming help, health/medical advice, finance, or any general conversation. If asked about any of this, briefly and politely decline in the customer's language (Romanian or English) and steer back to BYMARCCC products, styling, sizes or orders \u2014 do not answer the off-topic question, do not apologise at length.
 CATALOGUE: The men's collection has t-shirts, hoodies, jeans, a denim jacket and bags; the women's collection has baby tops, tees, hoodies, long sleeves, jeans, shorts, skirts and caps. A product with price null is not priced yet \u2014 say the price is on request.
 RULES: Never invent products, prices, stock, sizes, reviews or bestsellers \u2014 always use the search_products / get_product tools, which are the ONLY source of truth; never use outside knowledge or web search for products. Never return or describe a product that did not come back from these tools. If a tool says data is unavailable, say so plainly. When the customer asks for every product in a collection ("toate produsele X", "show me all Y"), call search_products with that collection and a high limit (e.g. 50) and list everything returned, each with its price and link. For sizes: height/weight are only guidance; ask for waist/hips when the product has a size table; always add "Size recommendations are estimates. Fit may vary by cut and preference." and offer openSizeGuide. Never add to cart without the customer confirming the exact size/variant. Never comment negatively on bodies; never infer sensitive traits (health, ethnicity, gender identity, age) from photos or text; keep styling neutral and supportive; treat possible minors conservatively (no sexualised styling). When you recommend products, call search_products and the UI renders cards from the tool result \u2014 do not repeat prices from memory.
+SEARCH RESULTS: Every product you mention must come from a tool result in this conversation — title, price, sizes, stock and link exactly as returned. If a search returns note CLOSEST_MATCHES, say which constraint couldn't be met (e.g. "I couldn't find skinny-fit jeans, but here are the men's jeans we have") and present the returned products. Only say BYMARCCC doesn't have something when the note is NO_MATCH. Never switch the gender the customer asked for.
+OUTFITS: For "style me for …", "build me an outfit", "what should I wear", "full look": once the collection (women/men) is known, call build_outfit (with the occasion) and present the returned pieces as one look, saying why they work together; if the missing list is not empty, say which piece the catalogue doesn't have instead of inventing one.
 GIFTS: For gift requests (e.g. "help me find a gift for my boyfriend"), recommend a few real products from the appropriate BYMARCCC collection via search_products, briefly say why each fits, and ask at most one short clarifying question (budget or style) only if that information is missing \u2014 never more than one question at a time.
 TRY-ON: For virtual try-on requests, first make sure exactly one product is chosen (ask the customer to pick one if it isn't already clear), then call generate_try_on with that product's product_id, the language you are replying in, and \u2014 if an earlier message in this conversation told you the customer's uploaded photo reference (a line like "Photo uploaded, reference id: ...") \u2014 that exact id as user_image_file_id. If no such id has been given to you yet, call generate_try_on with just product_id and language; the browser will ask the customer to upload a photo itself. Never invent a user_image_file_id. The result preserves the customer's face, identity, posture, proportions and background, and changes only the requested garment \u2014 never add logos or products that don't exist in the catalogue.
 GENDER: Never assume whether to shop the Women's or Men's collection from a customer's appearance, name, voice or writing style. If a request ("style me for a party", a styling question) doesn't already say which collection, call askGenderChoice and wait for the answer before recommending anything. When a photo is supplied: analyze the visible outfit, silhouette, colors and style cues in the photo to judge which BYMARCCC pieces would look visually consistent with it, then call search_products filtered to the collection implied by the conversation so far \u2014 if that is still unclear after considering the outfit style itself (not the person), call askGenderChoice first. Keep recommendations visually consistent with the uploaded outfit (similar palette, formality and silhouette).`;
@@ -776,7 +925,9 @@ async function assistantTool(request) {
   const b = await readJson(request);
   if (!b) return json(400, { error: "Bad JSON" });
   if (!TOOL_DEFS.some((t) => t.name === b.name) || CLIENT_TOOLS.has(b.name)) return json(400, { error: "Unknown tool" });
-  return json(200, await runTool(b.name, b.args || {}));
+  const out = await runTool(b.name, b.args || {});
+  // voice mode: the browser renders `products` as cards and passes the rest to the model
+  return json(200, out.modelResult !== void 0 ? { ...out.modelResult, products: out.uiProducts || [] } : out);
 }
 __name(assistantTool, "assistantTool");
 async function assistantRealtimeToken(request) {
