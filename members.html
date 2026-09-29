@@ -1159,6 +1159,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   let seq = 0, curId = 0;
 
   function snapshotCurrent(id) {
+    const scrollY = window.scrollY;   // remembered so Back returns to the same spot (e.g. the WOMEN section), not the top
     // #mini (the persistent mini audio bar) must never be detached during
     // SPA navigation, even though it happens to live inside <section
     // id="crumble"> (which IS swapped as content) — removing a playing
@@ -1179,16 +1180,19 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     // product page rendering with an unstyled grey Add to Bag button, no gallery
     // layout, and the account icon stuck in its homepage-only floating style,
     // after navigating back to a cached page).
-    cache.set(id, { nodes, title: document.title, bodyClass: document.body.className });
+    cache.set(id, { nodes, title: document.title, bodyClass: document.body.className, scrollY });
   }
-  function restore(id) {
+  function restore(id, keepScroll) {
     const entry = cache.get(id);
     if (!entry) return false;
     const anchor = document.body.firstChild;
     entry.nodes.forEach(n => document.body.insertBefore(n, anchor));
     document.title = entry.title;
     document.body.className = entry.bodyClass || '';
-    window.scrollTo(0, 0);
+    // Back/Forward: land where the visitor left that page; a fresh link click still starts at the top.
+    const y = keepScroll ? (entry.scrollY || 0) : 0;
+    window.scrollTo(0, y);
+    if (y) { requestAnimationFrame(() => window.scrollTo(0, y)); setTimeout(() => { if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y); }, 120); }
     return true;
   }
   // ---- Per-page stylesheet isolation ----
@@ -1420,7 +1424,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     releaseAssistantLock();
     ensureInitialStyles();
     snapshotCurrent(curId);
-    if (!restore(st.bymId)) { lastHref = location.href; navigate(location.href, { push: false }); return; }
+    if (!restore(st.bymId, true)) { lastHref = location.href; navigate(location.href, { push: false }); return; }
     curId = st.bymId;
     applyPageStyles(curId);
     lastHref = location.href;
