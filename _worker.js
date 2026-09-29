@@ -59,6 +59,7 @@ async function openai(path, body, { timeoutMs = 6e4, form = null } = {}) {
       const e = new Error(msg);
       e.status = r.status;
       e.code = data?.error?.code || null;
+      e.param = data?.error?.param || null;
       throw e;
     }
     return data;
@@ -472,18 +473,111 @@ __name(cronChargeInstallments, "cronChargeInstallments");
 // lib/catalog.js
 var cache = { t: 0, items: [] };
 var CURRENT_ORIGIN = "";
+// ---- Catalogue: ONE source of truth = /assets/catalog.js (the same file the website renders from).
+// The block between /*BEGIN-JSON*/ and /*END-JSON*/ in that file is strict JSON; we parse it here and
+// derive the flat item shape used by the stylist, recommendations and the order price check.
+function catalogProductType(p) {
+  const t = String(p.title || "").toLowerCase(), c = p.collections || [];
+  if (c.includes("accessories") || c.includes("bags") || /\b(bag|cap|hat)\b/.test(t)) return "accessory";
+  if (c.includes("jackets") || /\bjacket\b/.test(t)) return "jacket";
+  if (c.includes("denim") || /\bjeans?\b/.test(t)) return "jeans";
+  if (c.includes("bottoms") || /sweatpants|pants|trousers|shorts|skirt/.test(t)) return "bottoms";
+  if (c.includes("tops") || /hoodie|\btee\b|top|blazer|shirt|sleeve|turtleneck|pardesiu|coat/.test(t)) return "top";
+  return "other";
+}
+__name(catalogProductType, "catalogProductType");
+// Try-On config → one entry per try-on-able design: { design, garment, garmentViews[], print, reference, ok }
+//   product.tryOn = { garment: "<id in tryOnGarments>", print: "<png>" }            single design
+//   product.tryOn = { garment: "<id>", designs: { "<design name>": "<png>", ... } }  several designs
+//   product.tryOnAssets = { "<design-slug>": "<png of the garment WITH its print>" }  legacy single-image reference
+var slugify = /* @__PURE__ */ __name((x) => String(x || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""), "slugify");
+function resolveTryOn(p, garments, abs) {
+  const out = [];
+  const t = p.tryOn;
+  if (t && t.garment) {
+    const g = typeof t.garment === "string" ? garments[t.garment] : t.garment;
+    const gid = typeof t.garment === "string" ? t.garment : "inline";
+    const views = g && g.views ? ["front", "three-quarter", "side", "back"].map((v) => g.views[v]).filter(Boolean).map(abs) : [];
+    const garment = g ? { id: gid, type: g.type || null, label: g.label || null, category: g.category || null, colour: g.colour || null, fabric: g.fabric || null, printPlacement: g.print && g.print.placement || "centred on the chest, a little below the neckline", printWidth: Number(g.print && g.print.width) || 0.5 } : null;
+    const designs = t.designs && typeof t.designs === "object" ? Object.entries(t.designs) : [[null, t.print]];
+    for (const [design, print] of designs) out.push({ design, slug: design ? slugify(design) : null, garment, garmentViews: views, print: print ? abs(print) : null, reference: null, mode: "print", ok: !!(garment && views.length && print) });
+  } else if (p.tryOnAssets && typeof p.tryOnAssets === "object") {
+    for (const [slug, img] of Object.entries(p.tryOnAssets)) {
+      const design = (p.designs || []).find((d) => slugify(d) === slug) || slug;
+      out.push({ design, slug, garment: null, garmentViews: [], print: null, reference: abs(img), mode: "reference", ok: true });
+    }
+  }
+  return out;
+}
+__name(resolveTryOn, "resolveTryOn");
+function siteCatalogToItems(D, base) {
+  const abs = (s) => (/^https?:/.test(s) ? s : `${base}/${String(s).replace(/^\//, "")}`);
+  const jeans = (D.palettes && D.palettes.jeans) || [];
+  const palette = (v) => (typeof v === "string" ? ((D.palettes || {})[v] || []).map((c) => (typeof c === "string" ? jeans.find((j) => j.id === c) : c)).filter(Boolean) : Array.isArray(v) ? v : []);
+  const sizesOf = (ch) => (ch === "one-size" ? ["One size"] : typeof ch === "string" && ch.startsWith("jeans-") ? ["32", "34", "36", "38", "40", "42", "44"] : Array.isArray(ch) ? ch.map(String) : []);
+  return Object.entries(D.products || {}).map(([key, p]) => {
+    const productType = catalogProductType(p);
+    const gender = Array.isArray(p.genders) ? p.genders : [p.gender || "men"];
+    const colours = palette(p.colours);
+    const sizes = p.noSize ? ["Made to measure"] : sizesOf(p.chart);
+    const onSale = typeof p.salePrice === "number";
+    const price = onSale ? p.salePrice : typeof p.price === "number" ? p.price : null;
+    const unavailable = new Set(p.unavailable || []);
+    const variants = [];
+    for (const c of colours.length ? colours : [{ id: "as shown", name: "As shown" }])
+      for (const s of sizes.length ? sizes : ["One size"])
+        variants.push({ id: `${key}:${c.id}:${s}`, title: `${c.name} / ${s}`, colour: c.name, size: s, price, available: !p.soldOut && !unavailable.has(`${c.id}:${s}`) });
+    const words = (s) => String(s || "").toLowerCase().split(/[^a-z0-9-]+/).filter((w) => w.length > 2);
+    const tags = [...new Set([...(p.collections || []), ...gender, productType, ...words(p.cut), ...colours.map((c) => c.id), ...(p.designs || []).map((d) => String(d).toLowerCase()), ...(onSale || (p.collections || []).includes("sales") ? ["sale"] : []), ...(/pardesiu|coat/i.test(p.title) ? ["coat"] : [])])];
+    return {
+      id: key, handle: key, title: p.title, productType, gender, tags,
+      url: `${base}/bymarccc-product.html?p=${encodeURIComponent(key)}`,
+      price, compareAtPrice: onSale && typeof p.price === "number" ? p.price : null, currency: p.currency || "RON",
+      description: [p.cut, p.description].filter(Boolean).join(" "),
+      details: p.details || [],
+      images: (p.gallery || []).map((g) => abs(g.src)),
+      options: ["Colour", "Size"], variants,
+      sizeChart: typeof p.chart === "string" && p.chart.startsWith("jeans-") ? p.chart : null,
+      needsBody: !!p.needsBody,
+      designs: p.designs || [], designImages: p.designImages || {},
+      tryOnResolved: resolveTryOn(p, D.tryOnGarments || {}, abs)
+    };
+  });
+}
+__name(siteCatalogToItems, "siteCatalogToItems");
+var CATALOG_DATA = { t: 0, data: null };
+async function loadCatalogData() {
+  if (Date.now() - CATALOG_DATA.t < 5 * 6e4 && CATALOG_DATA.data) return CATALOG_DATA.data;
+  const base = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "");
+  try {
+    const url = `${base}/assets/catalog.js`;
+    const r = ENV.ASSETS && typeof ENV.ASSETS.fetch === "function" ? await ENV.ASSETS.fetch(new Request(url)) : await fetch(url);
+    if (r.ok) {
+      const src = await r.text();
+      const a = src.indexOf("/*BEGIN-JSON*/"), b = src.indexOf("/*END-JSON*/");
+      if (a !== -1 && b > a) CATALOG_DATA = { t: Date.now(), data: JSON.parse(src.slice(a + 14, b)) };
+    }
+  } catch (e) {
+    stylistLog && stylistLog("catalog-parse-failed", { error: String(e && e.message || e).slice(0, 200) });
+  }
+  return CATALOG_DATA.data;
+}
+__name(loadCatalogData, "loadCatalogData");
 async function loadCatalog() {
   if (Date.now() - cache.t < 5 * 6e4 && cache.items.length) return cache.items;
   const base = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "");
-  let items = [];
-  try {
-    const url = `${base}/catalog.json`;
-    const r = ENV.ASSETS && typeof ENV.ASSETS.fetch === "function" ? await ENV.ASSETS.fetch(new Request(url)) : await fetch(url);
-    if (r.ok) {
-      const j = await r.json();
-      items = (j.items || []).map((p) => ({ ...p, tags: p.tags || [], variants: p.variants || [], images: (p.images || []).map((s) => /^https?:/.test(s) ? s : `${base}/${s}`), url: /^https?:/.test(p.url) ? p.url : `${base}/${p.url}` }));
-    }
-  } catch {
+  const D = await loadCatalogData();
+  const items = D ? siteCatalogToItems(D, base) : [];
+  // a TRY ON button must never appear for a garment/print file that isn't actually deployed
+  const urls = [...new Set(items.flatMap((p) => p.tryOnResolved.filter((d) => d.ok).flatMap((d) => [...d.garmentViews, d.print, d.reference].filter(Boolean))))];
+  const exists = new Map(await Promise.all(urls.map(async (u) => {
+    try { const r = ENV.ASSETS && typeof ENV.ASSETS.fetch === "function" && u.startsWith(base) ? await ENV.ASSETS.fetch(new Request(u, { method: "HEAD" })) : await fetch(u, { method: "HEAD" }); return [u, r.ok]; } catch { return [u, false]; }
+  })));
+  for (const p of items) for (const d of p.tryOnResolved) {
+    if (!d.ok) { stylistLog("tryon-config-incomplete", { product: p.id, design: d.design, garment: !!d.garment, garmentViews: d.garmentViews.length, print: !!d.print }); continue; }
+    const missing = [d.garmentViews[0], d.print, d.reference].filter((u) => u && !exists.get(u));
+    d.garmentViews = d.garmentViews.filter((u, i) => i === 0 || exists.get(u));   // optional extra views (side/back…) are simply skipped when absent
+    if (missing.length) { d.ok = false; d.missing = missing; stylistLog("tryon-asset-missing", { product: p.id, design: d.design, missing }); }
   }
   if (items.length) cache = { t: Date.now(), items };
   return cache.items;
@@ -555,16 +649,16 @@ function collectionOf(p) {
 }
 __name(collectionOf, "collectionOf");
 // ---------------------------------------------------------------------------------------------------------------
-// Stylist catalogue layer — normalises catalog.json into one product shape, parses a request into filters, and
+// Stylist catalogue layer — normalises the catalogue (assets/catalog.js) into one product shape, parses a request into filters, and
 // searches in stages: strict first, then OPTIONAL filters are relaxed one by one (never the gender the customer
-// asked for). catalog.json stays the only source of truth: nothing here invents a product, price, size or URL.
+// asked for). assets/catalog.js stays the only source of truth: nothing here invents a product, price, size or URL.
 // ---------------------------------------------------------------------------------------------------------------
 var SC_WORDS = {
   gender: { women: "women", woman: "women", womens: "women", female: "women", ladies: "women", lady: "women", girl: "women", girls: "women", her: "women", femei: "women", femeie: "women", dama: "women", damă: "women", fete: "women",
     men: "men", man: "men", mens: "men", male: "men", guy: "men", guys: "men", boy: "men", boys: "men", him: "men", barbati: "men", bărbați: "men", barbat: "men", bărbat: "men", baieti: "men", băieți: "men", unisex: "unisex" },
   // word → [category, subcategory]
   kind: { top: ["tops"], tops: ["tops"], topuri: ["tops"], tee: ["tops", "t-shirt"], tees: ["tops", "t-shirt"], tshirt: ["tops", "t-shirt"], "t-shirt": ["tops", "t-shirt"], "t-shirts": ["tops", "t-shirt"], tricou: ["tops", "t-shirt"], tricouri: ["tops", "t-shirt"],
-    shirt: ["tops"], shirts: ["tops"], camasa: ["tops"], cămașă: ["tops"], bluza: ["tops"], bluză: ["tops"], blouse: ["tops"], tank: ["tops", "tank"], tanks: ["tops", "tank"], crop: ["tops"], "long-sleeve": ["tops", "long-sleeve"], longsleeve: ["tops", "long-sleeve"],
+    shirt: ["tops"], shirts: ["tops"], camasa: ["tops"], cămașă: ["tops"], bluza: ["tops"], bluză: ["tops"], blouse: ["tops"], tank: ["tops", "tank"], tanks: ["tops", "tank"], crop: ["tops", "baby-top"], cropped: ["tops", "baby-top"], "crop-top": ["tops", "baby-top"], croptop: ["tops", "baby-top"], baby: ["tops", "baby-top"], "long-sleeve": ["tops", "long-sleeve"], longsleeve: ["tops", "long-sleeve"],
     hoodie: ["tops", "hoodie"], hoodies: ["tops", "hoodie"], hanorac: ["tops", "hoodie"], hanorace: ["tops", "hoodie"], sweatshirt: ["tops", "hoodie"], sweatshirts: ["tops", "hoodie"], sweater: ["tops"], jumper: ["tops"],
     bottom: ["bottoms"], bottoms: ["bottoms"], pants: ["bottoms"], trousers: ["bottoms"], pantaloni: ["bottoms"], sweatpants: ["bottoms", "sweatpants"], joggers: ["bottoms", "sweatpants"], shorts: ["bottoms", "shorts"], short: ["bottoms", "shorts"], skirt: ["bottoms", "skirt"], skirts: ["bottoms", "skirt"], fusta: ["bottoms", "skirt"], fustă: ["bottoms", "skirt"],
     jeans: ["jeans"], jean: ["jeans"], denim: ["jeans"], blugi: ["jeans"], blug: ["jeans"],
@@ -574,13 +668,14 @@ var SC_WORDS = {
   color: { black: "black", negru: "black", neagra: "black", white: "white", alb: "white", alba: "white", grey: "grey", gray: "grey", gri: "grey", blue: "blue", albastru: "blue", red: "red", rosu: "red", roșu: "red", pink: "pink", roz: "pink", purple: "purple", mov: "purple", green: "green", verde: "green",
     orange: "orange", brown: "brown", maro: "brown", burgundy: "burgundy", fuchsia: "fuchsia", silver: "silver", argintiu: "silver", yellow: "yellow", galben: "yellow", beige: "beige", bej: "beige" },
   occasion: { party: "party", parties: "party", petrecere: "party", club: "party", clubbing: "party", night: "party", nightout: "party", date: "party", birthday: "party", casual: "casual", everyday: "casual", daily: "casual", weekend: "casual", work: "smart", office: "smart", smart: "smart", dinner: "smart", event: "smart" },
+  style: { streetwear: "streetwear", street: "streetwear", urban: "streetwear", hiphop: "streetwear", skate: "streetwear", elegant: "elegant", classy: "elegant", chic: "elegant", tailored: "elegant", formal: "elegant", eleganta: "elegant", elegantă: "elegant", statement: "statement", bold: "statement", edgy: "statement", artistic: "statement", minimal: "minimal", minimalist: "minimal", basic: "minimal", basics: "minimal", simple: "minimal", clean: "minimal", essentials: "minimal" },
   collection: { sale: "sale", sales: "sale", reduceri: "sale", reducere: "sale", discount: "sale" }
 };
 var SC_CAT_BROADER = { jeans: "bottoms" };   // relaxing "jeans" widens to all bottoms
 function scNorm(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’']/g, ""); }
 function scWords(s) { return scNorm(s).replace(/night out/g, "nightout").replace(/long sleeve/g, "long-sleeve").replace(/wide leg/g, "wide-leg").replace(/t shirt/g, "t-shirt").split(/[^a-z0-9-]+/).filter(Boolean).map((w) => w.replace(/s$/, (m) => ["tops", "jeans", "shorts", "pants", "trousers", "sweatpants", "joggers", "accessories", "bottoms", "mens", "womens", "boys", "girls", "guys", "ladies", "tees", "tanks", "sales"].includes(w) ? m : "")); }
 function scLook(dict, w) { return dict[w] ?? dict[scNorm(w)] ?? dict[w + "s"]; }
-// catalog.json product → the stylist's normalised product shape
+// catalogue item → the stylist's normalised product shape
 function normalizeProduct(p) {
   const tags = (p.tags || []).map((t) => scNorm(t));
   const title = scNorm(p.title), desc = scNorm(p.description), type = scNorm(p.productType);
@@ -608,29 +703,36 @@ function normalizeProduct(p) {
   if (["tops", "jeans", "bottoms", "accessories"].includes(category) && !/sequin|diamond/.test(title)) occasions.push("casual");
   if (category === "jeans") occasions.push("party");   // statement hand-painted denim is BYMARCCC's night-out signature
   const available = (p.variants || []).some((v) => v.available !== false);
-  const tryOn = p.tryOnAssets && Object.values(p.tryOnAssets)[0];
+  // style: derived from what the piece is, never invented per product
+  const style = new Set(tags.filter((t) => ["oversized", "printed", "logo", "denim", "holographic"].includes(t)));
+  if (/hoodie|t-shirt|tank|long-sleeve|sweatpants|cap/.test(subcategory || "") || category === "jeans" || fit === "oversized" || /zebra|cross|alien|logo|patch/.test(title)) style.add("streetwear");
+  if (/blazer|coat|pardesiu|elegant|lace|skirt/.test(title)) style.add("elegant");
+  if (/sequin|diamond|rocks|hand-painted|painted|embroider|patch|zebra|art|van gogh|delulu|muse|glitter|flame|butterfly|high heels/.test(`${title} ${desc}`)) style.add("statement");
+  if (!(p.designs || []).length && /^(black|white|grey|burgundy) (tee|hoodie|long sleeve)/.test(title)) style.add("minimal");
+  const tryOnDesigns = (p.tryOnResolved || []).filter((d) => d.ok);
   const images = p.images || [];
   return { id: p.id, title: p.title, handle: p.handle || p.id, url: p.url, description: p.description || "", gender: p.gender || [], category, subcategory, product_type: p.productType || null,
-    tags: p.tags || [], colors, sizes, fit, style: tags.filter((t) => ["oversized", "printed", "logo", "denim", "holographic"].includes(t)), occasions: [...new Set(occasions)],
+    tags: p.tags || [], colors, sizes, fit, style: [...style], occasions: [...new Set(occasions)], designs: p.designs || [],
     price: typeof p.price === "number" ? p.price : null, compare_at_price: p.compareAtPrice || null, currency: p.currency || "RON", available, inventory_status: available ? "in_stock" : "out_of_stock",
     featured_image: images[0] || null, images,
-    // AI try-on works from a garment photo: explicit try-on asset first, else the product photo for garments (not for accessories)
-    try_on_image: tryOn ? (/^https?:/.test(tryOn) ? tryOn : `${(env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "")}/${tryOn}`) : (["tops", "bottoms", "jeans", "outerwear"].includes(category) ? images[0] || null : null),
-    // optional exact artwork for the print (transparent PNG): catalog `printOverlayImage` (or the first of `printOverlays`)
-    print_overlay_image: (() => { const o = p.printOverlayImage || p.printOverlays && Object.values(p.printOverlays)[0]; return o ? (/^https?:/.test(o) ? o : `${(env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "")}/${o}`) : null; })(), _raw: p };
+    // Virtual Try-On: only products/designs whose garment (+ print) assets are configured in assets/catalog.js AND exist
+    try_on_image: tryOnDesigns.length ? tryOnDesigns[0].garmentViews[0] || tryOnDesigns[0].reference : null,
+    try_on_designs: tryOnDesigns.map((d) => d.design).filter(Boolean),
+    print_overlay_image: tryOnDesigns.length ? tryOnDesigns[0].print || null : null, _raw: p };
 }
 // free text + tool args → structured filters
 function parseStylistIntent(args = {}) {
-  const f = { gender: null, category: null, subcategory: null, colors: [], sizes: [], fit: null, occasion: null, collection: null, min_price: null, max_price: null, text: [] };
+  const f = { gender: null, category: null, subcategory: null, colors: [], sizes: [], fit: null, occasion: null, style: null, collection: null, min_price: null, max_price: null, text: [] };
   const take = (w) => {
     const g = scLook(SC_WORDS.gender, w); if (g) { f.gender = f.gender || g; return; }
     const k = scLook(SC_WORDS.kind, w); if (k) { if (!f.category || f.category === SC_CAT_BROADER[k[0]] || (k[0] === "jeans")) f.category = k[0]; if (k[1]) f.subcategory = k[1]; return; }
     const fi = scLook(SC_WORDS.fit, w); if (fi) { f.fit = fi; return; }
     const c = scLook(SC_WORDS.color, w); if (c) { if (!f.colors.includes(c)) f.colors.push(c); return; }
     const o = scLook(SC_WORDS.occasion, w); if (o) { f.occasion = f.occasion || o; return; }
+    const st = scLook(SC_WORDS.style, w); if (st) { f.style = f.style || st; return; }
     const col = scLook(SC_WORDS.collection, w); if (col) { f.collection = col; return; }
     if (/^(xxs|xs|s|m|l|xl|xxl|\d{2})$/i.test(w) && w.length <= 3) return;   // sizes are read from args.size only
-    if (!STOPWORDS.includes(w) && w.length > 2 && !["find", "show", "want", "need", "looking", "something", "some", "any", "all", "style", "outfit", "look", "wear", "what", "should", "with", "and", "or", "the", "for", "item", "items", "piece", "pieces", "product", "products", "bymarccc", "collection", "catalogue", "catalog"].includes(w)) f.text.push(w);
+    if (!STOPWORDS.includes(w) && w.length > 2 && !["give", "get", "got", "have", "like", "love", "please", "tonight", "today", "wearing", "suggest", "recommend", "vreau", "arata", "cauta", "ceva", "pentru", "find", "show", "want", "need", "looking", "something", "some", "any", "all", "style", "outfit", "look", "wear", "what", "should", "with", "and", "or", "the", "for", "item", "items", "piece", "pieces", "product", "products", "bymarccc", "collection", "catalogue", "catalog"].includes(w)) f.text.push(w);
   };
   for (const key of ["gender", "category", "collection", "subcategory", "fit", "color", "colour", "occasion", "style", "query"]) if (args[key]) scWords(Array.isArray(args[key]) ? args[key].join(" ") : args[key]).forEach(take);
   if (args.size) f.sizes = String(args.size).split(/[,\s/]+/).filter(Boolean);
@@ -647,8 +749,9 @@ function scMatch(p, f, skip) {
   if (f.colors.length && !skip.has("color") && !f.colors.some((c) => p.colors.includes(c))) return false;
   if (f.sizes.length && !skip.has("size") && !f.sizes.some((s) => p.sizes.map(String).map((x) => x.toLowerCase()).includes(s.toLowerCase()))) return false;
   if (f.occasion && !skip.has("occasion") && !p.occasions.includes(f.occasion)) return false;
+  if (f.style && !skip.has("style") && !p.style.includes(f.style)) return false;
   if (f.collection === "sale" && !skip.has("collection") && !(p.compare_at_price || p.tags.map(scNorm).some((t) => t === "sale" || t === "sales"))) return false;
-  if (f.text.length && !skip.has("keywords") && !f.category && !f.subcategory && !f.occasion && !f.collection) { const hay = scNorm(`${p.title} ${p.tags.join(" ")} ${p.description}`); if (!f.text.some((w) => hay.includes(w))) return false; }
+  if (f.text.length && !skip.has("keywords") && !f.category && !f.subcategory && !f.occasion && !f.style && !f.collection) { const hay = scNorm(`${p.title} ${p.tags.join(" ")} ${p.description}`); if (!f.text.some((w) => hay.includes(w))) return false; }
   if (f.max_price && !skip.has("price") && !(p.price != null && p.price <= f.max_price)) return false;
   if (f.min_price && !skip.has("price") && !(p.price != null && p.price >= f.min_price)) return false;
   return true;
@@ -658,6 +761,7 @@ function scScore(p, f) {
   const hay = scNorm(`${p.title} ${p.tags.join(" ")} ${p.description}`);
   for (const w of f.text) if (hay.includes(w)) s += scNorm(p.title).includes(w) ? 4 : 1;
   if (f.fit && p.fit === f.fit) s += 2; if (f.colors.some((c) => p.colors.includes(c))) s += 2;
+  if (f.style && p.style.includes(f.style)) s += 2; if (f.occasion && p.occasions.includes(f.occasion)) s += 1;
   return s;
 }
 // staged search → { products, applied_filters, relaxed_filters, stages }
@@ -665,9 +769,9 @@ function stylistSearch(items, args = {}) {
   const f = parseStylistIntent(args);
   const catalog = items.map(normalizeProduct);
   // relax order: least important first; gender is never relaxed when the customer gave it
-  const steps = [["keywords"], ["color"], ["size"], ["occasion"], ["fit"], ["subcategory"], ["category_narrow"], ["price"], ["collection"], ["category"]];
+  const steps = [["keywords"], ["color"], ["size"], ["style"], ["occasion"], ["fit"], ["subcategory"], ["category_narrow"], ["price"], ["collection"], ["category"]];
   const skip = new Set(), relaxed = [], stages = [];
-  const applicable = { keywords: f.text.length, color: f.colors.length, size: f.sizes.length, occasion: f.occasion, fit: f.fit, subcategory: f.subcategory, category_narrow: f.category && SC_CAT_BROADER[f.category], price: f.max_price || f.min_price, collection: f.collection, category: f.category };
+  const applicable = { keywords: f.text.length, color: f.colors.length, size: f.sizes.length, style: f.style, occasion: f.occasion, fit: f.fit, subcategory: f.subcategory, category_narrow: f.category && SC_CAT_BROADER[f.category], price: f.max_price || f.min_price, collection: f.collection, category: f.category };
   let res = catalog.filter((p) => scMatch(p, f, skip));
   stages.push({ stage: "strict", matches: res.length });
   for (const [k] of steps) {
@@ -677,6 +781,8 @@ function stylistSearch(items, args = {}) {
     res = catalog.filter((p) => scMatch(p, f, skip));
     stages.push({ stage: `without ${k}`, matches: res.length });
   }
+  // genuine zero: the only descriptive filter was free text that matches nothing — showing "everything for men" isn't a match
+  if (skip.has("keywords") && !f.category && !f.subcategory && !f.occasion && !f.style && !f.fit && !f.colors.length && !f.collection) { stages.push({ stage: "keywords were the only filter", matches: 0 }); res = []; }
   if (args.in_stock === true && res.some((p) => p.available)) res = res.filter((p) => p.available);
   res.sort((a, b) => scScore(b, f) - scScore(a, f));
   const { text, ...shown } = f;
@@ -686,28 +792,36 @@ function stylistSearch(items, args = {}) {
 // outfit: one real piece per slot, same gender, suited to the occasion when possible
 function stylistOutfit(items, args = {}) {
   const f = parseStylistIntent(args);
-  const catalog = items.map(normalizeProduct).filter((p) => p.available && (!f.gender || p.gender.includes(f.gender)));
-  const slots = [["top", (p) => p.category === "tops"], ["bottom", (p) => p.category === "jeans" || p.category === "bottoms"], ["outerwear", (p) => p.category === "outerwear"], ["accessory", (p) => p.category === "accessories"]];
+  const all = items.map(normalizeProduct);
+  const slotOf = (p) => p.category === "tops" ? "top" : p.category === "jeans" || p.category === "bottoms" ? "bottom" : p.category === "outerwear" ? "outerwear" : p.category === "accessories" ? "accessory" : null;
+  // "what goes with this?" — build around a real anchor piece
+  const anchor = args.with_product_id ? all.find((p) => p.id === String(args.with_product_id) || p.handle === String(args.with_product_id)) : null;
+  if (anchor && !f.gender && anchor.gender.length === 1) f.gender = anchor.gender[0];
+  if (anchor && !f.style && anchor.style.includes("elegant")) f.style = "elegant";
+  const catalog = all.filter((p) => p.available && (!f.gender || p.gender.includes(f.gender)));
+  const slots = ["top", "bottom", "outerwear", "accessory"];
   const exclude = new Set([].concat(args.exclude_ids || []).map(String));
   const look = [], missing = [];
-  for (const [slot, test] of slots) {
-    let pool = catalog.filter((p) => test(p) && !exclude.has(p.id));
+  for (const slot of slots) {
+    if (anchor && slotOf(anchor) === slot) { look.push({ slot, product: anchor, anchor: true }); continue; }
+    let pool = catalog.filter((p) => slotOf(p) === slot && !exclude.has(p.id) && (!anchor || p.id !== anchor.id));
     const byOcc = f.occasion ? pool.filter((p) => p.occasions.includes(f.occasion)) : pool;
-    const byColor = f.colors.length ? byOcc.filter((p) => f.colors.some((c) => p.colors.includes(c))) : byOcc;
-    pool = byColor.length ? byColor : byOcc.length ? byOcc : pool;
+    const bySty = f.style ? byOcc.filter((p) => p.style.includes(f.style)) : byOcc;
+    const byColor = f.colors.length ? bySty.filter((p) => f.colors.some((c) => p.colors.includes(c))) : bySty;
+    pool = byColor.length ? byColor : bySty.length ? bySty : byOcc.length ? byOcc : pool;
     if (!pool.length) { if (slot !== "outerwear") missing.push(slot); continue; }
     pool.sort((a, b) => scScore(b, f) - scScore(a, f));
     look.push({ slot, product: pool[Math.floor((Number(args.variation) || 0) % Math.min(pool.length, 3))] || pool[0] });
   }
-  return { look, missing, gender: f.gender, occasion: f.occasion, catalog_count: catalog.length };
+  return { look, missing, gender: f.gender, occasion: f.occasion, style: f.style, anchor: anchor ? anchor.id : null, catalog_count: catalog.length };
 }
 function stylistCard(p) {   // what the chat renders
   return { id: p.id, handle: p.handle, title: p.title, url: p.url, image: p.featured_image, price: p.price, compareAtPrice: p.compare_at_price, currency: p.currency, available: p.available, inStock: p.available,
-    availableSizes: p.sizes, gender: p.gender, type: p.category, tags: p.tags.slice(0, 8), tryOnImage: p.try_on_image || null, priceNote: p.price == null ? "not priced yet - tell the customer to ask on the site" : null };
+    availableSizes: p.sizes, gender: p.gender, type: p.category, tags: p.tags.slice(0, 8), tryOnImage: p.try_on_image || null, tryOnDesigns: p.try_on_designs || [], designs: p.designs || [], priceNote: p.price == null ? "not priced yet - tell the customer to ask on the site" : null };
 }
 function stylistModelView(p) {   // what the LLM sees — every field comes from the catalogue
   return { product_id: p.id, product_name: p.title, category: p.category, subcategory: p.subcategory, gender: p.gender.length > 1 ? "unisex" : p.gender[0] || null, fit: p.fit, colors: p.colors, occasions: p.occasions,
-    price: p.price, currency: p.currency, stock_status: p.inventory_status, sizes: p.sizes, product_url: p.url, try_on_available: !!p.try_on_image };
+    price: p.price, currency: p.currency, stock_status: p.inventory_status, sizes: p.sizes, product_url: p.url, style: p.style, designs: p.designs && p.designs.length ? p.designs : void 0, try_on_available: !!p.try_on_image, try_on_designs: p.try_on_designs && p.try_on_designs.length ? p.try_on_designs : void 0 };
 }
 function stylistLog(event, data) { if (env("ASSISTANT_DEBUG")) console.log(JSON.stringify({ at: "stylist", event, ...data })); }   // dev only, never sent to customers
 var CATALOG_SYNONYMS = { blugi: "jeans", blug: "jeans", jean: "jeans", rochie: "dress", tricou: "t-shirt", tricouri: "t-shirt", tshirt: "t-shirt", tee: "t-shirt", tees: "t-shirt", hanorac: "hoodie", hanorace: "hoodie", sapca: "cap", șapcă: "cap", geaca: "jacket", geacă: "jacket", jacheta: "jacket", jachetă: "jacket", pantaloni: "bottoms", geanta: "bag", geantă: "bag", top: "top", topuri: "top", bluza: "top", bluză: "top", barbati: "men", bărbați: "men", barbat: "men", mens: "men", man: "men", femei: "women", femeie: "women", womens: "women", woman: "women", reduceri: "sale", reducere: "sale", oferte: "sale" };
@@ -729,8 +843,8 @@ function specSummarize(p) {
 }
 __name(specSummarize, "specSummarize");
 var TOOL_DEFS = [
-  { type: "function", name: "search_products", description: "Search the real BYMARCCC catalogue — the ONLY source of truth for products, prices, stock, sizes and URLs. Understands natural language (e.g. 'women tops', 'men skinny jeans', 'party', colours, Romanian). If there is no exact match it relaxes optional filters (colour, fit, subcategory…) but never the gender, and says so in `note` and `relaxed_filters`.", parameters: { type: "object", properties: { query: { type: "string", description: "The customer's request in their own words (Romanian or English)." }, gender: { type: "string", description: "women, men or unisex — only when the customer said it." }, category: { type: "string", description: "tops, bottoms, jeans, outerwear, accessories (synonyms OK: tees, hoodies, skirts, bags…)" }, subcategory: { type: "string", description: "e.g. t-shirt, hoodie, tank, skirt, shorts, blazer, bag, cap" }, fit: { type: "string", description: "skinny, relaxed, straight, oversized, wide" }, color: { type: "string" }, size: { type: "string" }, occasion: { type: "string", description: "party, casual, smart" }, collection: { type: "string", description: "sale" }, min_price: { type: "number" }, max_price: { type: "number", description: "Only when the customer gave a budget." }, in_stock: { type: "boolean" }, limit: { type: "number" } } } },
-  { type: "function", name: "build_outfit", description: "Build a complete look from REAL catalogue pieces (top + bottom, plus outerwear and an accessory when they exist) for styling requests like 'style me for a party', 'build me an outfit', 'what should I wear'. Returns the pieces and which slots the catalogue can't fill.", parameters: { type: "object", properties: { gender: { type: "string", description: "women or men (ask with askGenderChoice first if unknown)" }, occasion: { type: "string" }, color: { type: "string" }, query: { type: "string" }, exclude_ids: { type: "array", items: { type: "string" }, description: "product ids already shown, for a different look" }, variation: { type: "number" } } } },
+  { type: "function", name: "search_products", description: "Search the real BYMARCCC catalogue — the ONLY source of truth for products, prices, stock, sizes and URLs. Understands natural language (e.g. 'women tops', 'men skinny jeans', 'party', colours, Romanian). If there is no exact match it relaxes optional filters (colour, fit, subcategory…) but never the gender, and says so in `note` and `relaxed_filters`.", parameters: { type: "object", properties: { query: { type: "string", description: "The customer's request in their own words (Romanian or English)." }, gender: { type: "string", description: "women, men or unisex — only when the customer said it." }, category: { type: "string", description: "tops, bottoms, jeans, outerwear, accessories (synonyms OK: tees, hoodies, skirts, bags…)" }, subcategory: { type: "string", description: "e.g. t-shirt, hoodie, tank, skirt, shorts, blazer, bag, cap" }, fit: { type: "string", description: "skinny, relaxed, straight, oversized, wide" }, color: { type: "string" }, size: { type: "string" }, occasion: { type: "string", description: "party, casual, smart" }, style: { type: "string", description: "streetwear, elegant, statement, minimal" }, collection: { type: "string", description: "sale" }, min_price: { type: "number" }, max_price: { type: "number", description: "Only when the customer gave a budget." }, in_stock: { type: "boolean" }, limit: { type: "number" } } } },
+  { type: "function", name: "build_outfit", description: "Build a complete look from REAL catalogue pieces (top + bottom, plus outerwear and an accessory when they exist) for styling requests like 'style me for a party', 'build me an outfit', 'what should I wear'. Returns the pieces and which slots the catalogue can't fill.", parameters: { type: "object", properties: { gender: { type: "string", description: "women or men (ask with askGenderChoice first if unknown)" }, occasion: { type: "string" }, style: { type: "string", description: "streetwear, elegant, statement, minimal" }, color: { type: "string" }, query: { type: "string" }, with_product_id: { type: "string", description: "Build the look AROUND this real product (e.g. 'what goes with this top?'). Use the product_id from a previous tool result." }, exclude_ids: { type: "array", items: { type: "string" }, description: "product ids already shown, for a different look" }, variation: { type: "number" } } } },
   { type: "function", name: "get_product", description: "Full details for exactly one BYMARCCC product by its product_id.", parameters: { type: "object", properties: { product_id: { type: "string" } }, required: ["product_id"] } },
   { type: "function", name: "generate_try_on", description: "Generate a virtual try-on preview of one BYMARCCC product on the customer's own uploaded photo. Ask the customer to choose a single product first if it isn't already clear. Always pass product_id and language explicitly; pass user_image_file_id only if this conversation already told you the customer's uploaded photo's reference id — never invent one. If the customer named a specific print/embroidery design of that product (from get_product's data) and it is available, pass its exact design slug (lowercase, hyphenated, e.g. 'boys-lie') as design — this lets the app use that design's own reference artwork instead of the product's default photo; never invent a slug that wasn't given to you by the product data.", parameters: { type: "object", properties: { product_id: { type: "string" }, design: { type: "string", description: "Optional design/print slug (lowercase, hyphenated) taken only from this product's own known designs — omit if the customer didn't name one or it isn't in the data." }, user_image_file_id: { type: "string", description: "The exact photo reference id this conversation already gave you (e.g. from a ‘Photo uploaded, reference id: ...’ line). Omit entirely if none was given — never invent a value." }, language: { type: "string", enum: ["ro", "en"] } }, required: ["product_id", "language"] } },
   { type: "function", name: "getProductImages", description: "Image URLs for a product.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
@@ -765,8 +879,8 @@ async function runTool(name, args = {}) {
     }
     case "build_outfit": {
       const o = stylistOutfit(items, args);
-      stylistLog("outfit", { query: args, gender: o.gender, occasion: o.occasion, catalog: o.catalog_count, pieces: o.look.map((x) => `${x.slot}:${x.product.id}`), missing: o.missing });
-      return { modelResult: { note: o.look.length ? (o.missing.length ? `PARTIAL_LOOK: the catalogue has no ${o.missing.join(" / ")} for this — say so, don't invent it.` : "FULL_LOOK") : "NO_PIECES", gender: o.gender || "any", occasion: o.occasion, look: o.look.map((x) => ({ slot: x.slot, ...stylistModelView(x.product) })), missing: o.missing },
+      stylistLog("outfit", { query: args, gender: o.gender, occasion: o.occasion, style: o.style, anchor: o.anchor, catalog: o.catalog_count, pieces: o.look.map((x) => `${x.slot}:${x.product.id}`), missing: o.missing });
+      return { modelResult: { note: o.look.length ? (o.missing.length ? `PARTIAL_LOOK: the catalogue has no ${o.missing.join(" / ")} for this — say so, don't invent it.` : "FULL_LOOK") : "NO_PIECES", gender: o.gender || "any", occasion: o.occasion, style: o.style || void 0, built_around: o.anchor || void 0, look: o.look.map((x) => ({ slot: x.slot, ...(x.anchor ? { anchor: true } : {}), ...stylistModelView(x.product) })), missing: o.missing },
         uiProducts: o.look.map((x) => stylistCard(x.product)) };
     }
     case "get_product": {
@@ -854,7 +968,7 @@ BROWSING: If the customer only names a collection or category ("Women", "men", "
 SEARCH RESULTS: Every product you mention must come from a tool result in this conversation — title, price, sizes, stock and link exactly as returned. If a search returns note CLOSEST_MATCHES, say which constraint couldn't be met (e.g. "I couldn't find skinny-fit jeans, but here are the men's jeans we have") and present the returned products. Only say BYMARCCC doesn't have something when the note is NO_MATCH. Never switch the gender the customer asked for.
 OUTFITS: For "style me for …", "build me an outfit", "what should I wear", "full look": once the collection (women/men) is known, call build_outfit (with the occasion) and present the returned pieces as one look, saying why they work together; if the missing list is not empty, say which piece the catalogue doesn't have instead of inventing one.
 GIFTS: For gift requests (e.g. "help me find a gift for my boyfriend"), recommend a few real products from the appropriate BYMARCCC collection via search_products, briefly say why each fits, and ask at most one short clarifying question (budget or style) only if that information is missing \u2014 never more than one question at a time.
-TRY-ON: For virtual try-on requests, first make sure exactly one product is chosen (ask the customer to pick one if it isn't already clear), then call generate_try_on with that product's product_id, the language you are replying in, and \u2014 if an earlier message in this conversation told you the customer's uploaded photo reference (a line like "Photo uploaded, reference id: ...") \u2014 that exact id as user_image_file_id. If no such id has been given to you yet, call generate_try_on with just product_id and language; the browser will ask the customer to upload a photo itself. Never invent a user_image_file_id. The result preserves the customer's face, identity, posture, proportions and background, and changes only the requested garment \u2014 never add logos or products that don't exist in the catalogue.
+TRY-ON: Only offer virtual try-on for products whose try_on_available is true (the product data says so); never promise it for others. When try_on_designs lists more than one design and the customer hasn\u2019t chosen, ask which one using those exact names, then pass it as design. For virtual try-on requests, first make sure exactly one product is chosen (ask the customer to pick one if it isn't already clear), then call generate_try_on with that product's product_id, the language you are replying in, and \u2014 if an earlier message in this conversation told you the customer's uploaded photo reference (a line like "Photo uploaded, reference id: ...") \u2014 that exact id as user_image_file_id. If no such id has been given to you yet, call generate_try_on with just product_id and language; the browser will ask the customer to upload a photo itself. Never invent a user_image_file_id. The result preserves the customer's face, identity, posture, proportions and background, and changes only the requested garment \u2014 never add logos or products that don't exist in the catalogue.
 GENDER: Never assume whether to shop the Women's or Men's collection from a customer's appearance, name, voice or writing style. If a request ("style me for a party", a styling question) doesn't already say which collection, call askGenderChoice and wait for the answer before recommending anything. When a photo is supplied: analyze the visible outfit, silhouette, colors and style cues in the photo to judge which BYMARCCC pieces would look visually consistent with it, then call search_products filtered to the collection implied by the conversation so far \u2014 if that is still unclear after considering the outfit style itself (not the person), call askGenderChoice first. Keep recommendations visually consistent with the uploaded outfit (similar palette, formality and silhouette).`;
 var VOICE_LANGUAGE_RULES = `
 VOICE LANGUAGE: The customer speaks only English or Romanian \u2014 never any other language. Decide, per utterance, whether the customer is speaking English or Romanian and reply in that same language; never reply in Spanish, French, Italian, German, Portuguese or any other language, and never treat Romanian speech as if it were Spanish or another Romance language. Utterances can naturally mix English and Romanian in one sentence (e.g. "Arat\u0103-mi ni\u0219te black jeans", "Vreau un oversized T-shirt negru", "Show me blugii de la men") \u2014 this is normal bilingual speech, not a third language: understand the intent, keep product names, fashion terms, brand names and English words exactly as said rather than force-translating them, and reply in whichever of English/Romanian is the dominant language of that utterance. Keep your reply language consistent with what the customer just said \u2014 do not switch languages between turns on your own. If the customer is clearly speaking a third language, say the following in English: "${LANGUAGE_REFUSAL}"`;
@@ -971,35 +1085,52 @@ var TRYON_MIN_SIDE = 256;
 // Nothing here is persisted: the customer photo lives only in PHOTO_STORE (in-memory, single use,
 // 5 min TTL) or in the request body, and the generated image is returned to the browser and never stored.
 var tryErr = /* @__PURE__ */ __name((status, code, message) => json(status, { error: code, code, message }), "tryErr");
-function tryOnRegion(n) {
-  if (n.category === "bottoms" || n.category === "jeans") return "the lower-body garment (trousers / jeans / shorts / skirt)";
-  if (n.category === "outerwear") return "the outer layer (jacket / blazer / coat), worn over the customer's existing top";
+function tryOnRegion(category) {
+  if (category === "bottoms" || category === "jeans") return "the lower-body garment (trousers / jeans / shorts / skirt)";
+  if (category === "outerwear") return "the outer layer (jacket / blazer / coat), worn over the customer's existing top";
   return "the upper-body garment (top / t-shirt / shirt / hoodie / sweatshirt)";
 }
 __name(tryOnRegion, "tryOnRegion");
-var PROMPT = /* @__PURE__ */ __name((n, o) => {
-  const meta = [`Title: ${n.title}`, `Type: ${[n.category, n.subcategory, n.product_type].filter(Boolean).join(" / ")}`, n.colors.length ? `Colour: ${n.colors.join(", ")}` : "", n.fit ? `Fit: ${n.fit}` : "", o.design ? `Print/design: ${o.design}` : "", n.description ? `Description: ${n.description.replace(/\s+/g, " ").slice(0, 350)}` : ""].filter(Boolean).join("\n");
-  const ref = o.cutout ? "a cut-out of the garment on a transparent background" : "a product photo of the garment";
-  const print = o.hasOverlay
-    ? "IMAGE 3 is the exact print/graphic artwork used on this garment and is the authoritative reference for it."
-    : "Any print, graphic, embroidery, lettering or logo visible on the garment in IMAGE 2 is authoritative.";
-  return `You are editing a real photograph, not generating a new image from scratch.
+var TRYON_IDENTITY = "IMAGE 1 is the customer's own photo: it is the base image and the only source of identity. Keep exactly: identity, face and facial features (eyes, nose, mouth), skin tone, hairstyle and hair colour, body shape and proportions, pose, arms, hands, visible tattoos, jewellery and accessories, camera angle, framing, lighting and background (change the background only where the new garment physically covers or reveals it). Do not beautify, slim, reshape or retouch the person, and do not regenerate anything that doesn't have to change.";
+var TRYON_PHYSICS = "Do NOT paste the reference flat over the photo. Re-render the garment as actually worn by this customer: conforming in 3D to their shoulders, chest/bust, waist and torso rotation, with gravity, realistic drape, folds, stretch and compression, correct perspective, and the photo's own lighting direction, shadows and highlights. Handle occlusion: anything in front of the garment in the photo (hair, arms, hands, bag straps) stays in front of it. Nothing may look like it floats above the photograph.";
+function tryOnMeta(n, g, design) {
+  return [`Title: ${n.title}`, `Garment: ${g && g.label || [n.category, n.subcategory].filter(Boolean).join(" / ")}${g && g.type ? ` (${g.type})` : ""}`, n.colors.length ? `Colour: ${n.colors.join(", ")}` : "", n.fit ? `Fit: ${n.fit}` : "", design ? `Design: ${design}` : "", n.description ? `Description: ${n.description.replace(/\s+/g, " ").slice(0, 300)}` : ""].filter(Boolean).join("\n");
+}
+__name(tryOnMeta, "tryOnMeta");
+// STAGE 1 (print products): customer + REAL BLANK garment -> customer wearing it, with a chroma-key panel where the
+// print goes. The exact print PNG is NEVER shown to the image model; the browser warps the original artwork onto that
+// panel (stages 2-4), so logos, typography and spelling stay pixel-exact.
+var PROMPT_GARMENT_STAGE = /* @__PURE__ */ __name((n, g, o) => `You are editing a real photograph, not generating a new image from scratch.
 
-IMAGE 1 is the customer's own photo: it is the base image and the only source of identity. Keep exactly: identity, face and facial features, skin tone, hair, body shape and proportions, pose, hands, camera angle, framing, lighting and background (change the background only where the new garment physically covers or reveals it). Do not beautify, slim, reshape or retouch the person.
+${TRYON_IDENTITY}
 
-Replace ONLY ${tryOnRegion(n)} with the BYMARCCC product below. Keep every other clothing item, accessory and detail unchanged.
+IMAGE 2${o.views > 1 ? ` to IMAGE ${o.views + 1} show` : " shows"} the REAL physical BYMARCCC garment (${g.label || n.title}), blank, without its print${o.views > 1 ? ", from different angles" : ""}. Dress the customer in exactly this garment, replacing ONLY ${tryOnRegion(g.category || n.category)}. Keep every other clothing item and accessory unchanged.
+
+GARMENT FIDELITY: the result must clearly be this exact garment. Match its garment type, length (keep a cropped garment cropped, at the same crop height relative to the body), neckline, sleeve shape and length, silhouette, proportions and fit, fabric and material appearance, seams, edges, hems and every construction detail, and its exact colour${g.colour ? ` (${g.colour})` : ""}. Do not turn it into a different garment (e.g. a regular-length T-shirt, tank top, hoodie, or another neckline or sleeve).
 
 PRODUCT
-${meta}
+${tryOnMeta(n, g, o.design)}
 
-IMAGE 2 is ${ref}. It is the authoritative source for garment type, silhouette, cut, proportions and length, colour, material and fabric appearance, collar/neckline, sleeves, seams, pockets, trims, hardware and every visible construction detail. Reproduce it faithfully; do not simplify, restyle, recolour or add details. If a person appears in IMAGE 2, ignore that person completely and never copy their face, body or skin.
+PRINT PLACEHOLDER: the real garment carries a printed graphic that is added in a later step. Exactly where that graphic sits — ${g.printPlacement}, about ${Math.round(g.printWidth * 100)}% of the width of the garment's front, with a width:height ratio of ${o.aspect} — print a flat, solid, pure chroma-key ${o.keyName} (${o.keyHex}) rectangle instead. Treat it exactly like screen-printed ink on the fabric: it bends with the fabric's folds, curvature, stretch and perspective, takes the same lighting and shading as the fabric around it, and is hidden behind anything in front of the garment (hair, arms, hands). Keep it one uniform, fully saturated ${o.keyName} with crisp edges: no text, pattern, logo, gradient, glow, outline or border, and no ${o.keyName} anywhere else in the image. Apart from this rectangle the garment is blank.
 
-PRINT FIDELITY: ${print} Reproduce the same artwork, typography and spelling, logo geometry, placement on the garment, relative scale and colours. Do not redesign, reinterpret, re-letter or replace it with similar-looking artwork, and do not add text or graphics that are not in the reference.
+${TRYON_PHYSICS}
 
-Do NOT paste the reference flat over the photo. Re-render the garment as actually worn by this customer: conforming in 3D to their body, pose and posture, with realistic drape, folds, stretch and tension, correct perspective, natural occlusion (arms, hands or hair in front where appropriate) and the photo's own lighting and shadows. The print follows the same folds, curvature and perspective as the fabric while staying recognisably the same supplied artwork.
+Output one photorealistic image: the same person in the same photo, now wearing this garment.`, "PROMPT_GARMENT_STAGE");
+// Legacy single-image reference (garment photo WITH its print baked in) — one generative pass.
+var PROMPT_REFERENCE = /* @__PURE__ */ __name((n, o) => `You are editing a real photograph, not generating a new image from scratch.
 
-Output one photorealistic image: the same person in the same photo, now wearing this garment. It is a visualisation, not a sizing guarantee.`;
-}, "PROMPT");
+${TRYON_IDENTITY}
+
+Replace ONLY ${tryOnRegion(n.category)} with the BYMARCCC product below. Keep every other clothing item and accessory unchanged.
+
+PRODUCT
+${tryOnMeta(n, null, o.design)}
+
+IMAGE 2 shows the garment. It is the authoritative source for garment type, silhouette, cut, length, colour, material, neckline, sleeves, seams, trims and construction, and for its printed/embroidered graphic: reproduce the same artwork, typography, spelling, logo geometry, placement, relative scale and colours; never redesign, re-letter or replace it. If a person appears in IMAGE 2, ignore that person completely.
+
+${TRYON_PHYSICS} The graphic follows the same folds, curvature and perspective as the fabric.
+
+Output one photorealistic image: the same person in the same photo, now wearing this garment.`, "PROMPT_REFERENCE");
 // Sniff the real format + pixel size from the bytes (never trust the data-URL mime).
 function readImageInfo(b) {
   const u16 = (i) => b[i] << 8 | b[i + 1];
@@ -1088,14 +1219,46 @@ async function fetchTryOnAsset(url) {
   return new File([bytes], `ref.${info.type.split("/")[1]}`, { type: info.type });
 }
 __name(fetchTryOnAsset, "fetchTryOnAsset");
+// Image model: env OPENAI_IMAGE_MODEL, else the newest GPT Image model the account accepts, falling back to gpt-image-1.
+function tryOnModels() {
+  const m = env("OPENAI_IMAGE_MODEL", "");
+  return [...new Set([m, "gpt-image-1.5", "gpt-image-1"].filter(Boolean))];
+}
+__name(tryOnModels, "tryOnModels");
+async function tryOnEdit(buildForm, deadline) {
+  let lastErr = null;
+  for (const model of tryOnModels()) {
+    for (const fidelity of [true, false]) {
+      const left = deadline - Date.now();
+      if (left < 15e3) { const e = new Error("timeout"); e.name = "AbortError"; throw lastErr && lastErr.name === "AbortError" ? lastErr : e; }
+      try {
+        const out = await openai("images/edits", null, { form: buildForm(model, fidelity), timeoutMs: left });
+        return { out, model, fidelity };
+      } catch (e) {
+        lastErr = e;
+        const m = String(e && e.message || "");
+        if (e && e.status === 400 && fidelity && /input_fidelity/i.test(m)) continue;          // model without input_fidelity: retry without it
+        if (e && (e.status === 404 || e.status === 400 || e.status === 403) && (e.param === "model" || /model/i.test(m)) && !/moderation|safety|input_fidelity/i.test(m)) break;   // model not available on this account: next model
+        throw e;
+      }
+    }
+  }
+  throw lastErr || new Error("no image model available");
+}
+__name(tryOnEdit, "tryOnEdit");
+function tryOnSize(info) {
+  const r = info && info.w && info.h ? info.h / info.w : 1.5;
+  return r > 1.2 ? "1024x1536" : r < 0.83 ? "1536x1024" : "1024x1024";
+}
+__name(tryOnSize, "tryOnSize");
 async function assistantTryon(request) {
-  const g = guard(request);
-  if (g) return g;
+  const g0 = guard(request);
+  if (g0) return g0;
   if (!rateLimit(request, Number(env("ASSISTANT_TRYON_RATE_LIMIT_PER_MIN", "6")))) return tryErr(429, "RATE_LIMITED", "Too many try-on requests. Please wait a moment.");
   const b = await readJson(request);
   if (!b) return tryErr(400, "BAD_REQUEST", "Bad JSON");
   if (b.consent !== true) return tryErr(400, "CONSENT_REQUIRED", "Consent is required to process the photo.");
-  // Try-On transforms ONE selected product (catalogue search/recommendation lives elsewhere).
+  // Try-On transforms ONE selected product/design (catalogue search/recommendation lives elsewhere).
   const raw = typeof b.productId === "string" && b.productId.trim() ? b.productId.trim() : Array.isArray(b.productIds) ? b.productIds.find((x) => typeof x === "string" && x.trim()) : null;
   if (!raw) return tryErr(400, "PRODUCT_REQUIRED", "Select a product to try on.");
   let photoDataUrl = null;
@@ -1111,61 +1274,90 @@ async function assistantTryon(request) {
   if (ph.code) return tryErr(ph.status, ph.code, ph.message);
   const sep = String(raw).indexOf("::");
   const pid = sep === -1 ? String(raw) : String(raw).slice(0, sep);
-  const design = sep === -1 ? null : String(raw).slice(sep + 2).toLowerCase() || null;
+  const wanted = sep === -1 ? null : slugify(String(raw).slice(sep + 2)) || null;
   const items = await loadCatalog();
-  const p = items.find((it) => it.id === pid || it.handle === pid);
+  let p = items.find((it) => it.id === pid || it.handle === pid);
+  // TEMPORARY dev-only pipeline check with clearly-marked placeholder assets (tests/fixtures/try-on). Never listed in
+  // the catalogue or shown to customers; removed again after the end-to-end verification.
+  if (!p && pid === "__tryon_test__") {
+    const base = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "");
+    p = { id: pid, handle: pid, title: "TEST PLACEHOLDER crop top", productType: "top", gender: ["women"], tags: ["tops"], url: base + "/", price: null, currency: "RON", description: "Development placeholder, not a product.", images: [], variants: [], designs: [],
+      tryOnResolved: [{ design: "Test print", slug: "test-print", garment: { id: "test", type: "womens_crop_top", label: "women's black cropped T-shirt (short sleeves, round neck, cropped just above the navel)", category: "tops", colour: "black", fabric: "#141414", printPlacement: "centred on the chest, a little below the neckline", printWidth: 0.55 }, garmentViews: [base + "/tests/fixtures/try-on/garment.png"], print: base + "/tests/fixtures/try-on/print.png", reference: null, mode: "print", ok: true }] };
+  }
   if (!p) return tryErr(404, "PRODUCT_NOT_FOUND", "That product couldn’t be found.");
   const n = normalizeProduct(p);
-  const designAsset = design && p.tryOnAssets && p.tryOnAssets[design];
-  const garmentUrl = designAsset || n.try_on_image;
-  if (!garmentUrl) return tryErr(422, "NO_TRY_ON_IMAGE", "Virtual try-on isn’t available for this product yet.");
-  const overlayUrl = design && p.printOverlays && p.printOverlays[design] || n.print_overlay_image;
-  const garment = await fetchTryOnAsset(garmentUrl);
-  if (!garment) return tryErr(502, "GARMENT_ASSET_UNAVAILABLE", "The product image for try-on couldn’t be loaded. Please try again.");
-  const overlay = overlayUrl ? await fetchTryOnAsset(overlayUrl) : null;
+  const all = p.tryOnResolved || [];
+  const entry = wanted ? all.find((d) => d.slug === wanted) : all.find((d) => d.ok) || all[0];
+  const diag = { product: p.id, design: entry && entry.design || null, mode: entry && entry.mode || null, garment: !!(entry && (entry.garmentViews.length || entry.reference)), print: !!(entry && entry.print) };
+  if (!entry) { stylistLog("tryon", { ...diag, stage: "config", fail: "NO_TRY_ON_CONFIG" }); return tryErr(422, "NO_TRY_ON_IMAGE", wanted ? "Virtual try-on isn’t available for this design yet." : "Virtual try-on isn’t available for this product yet."); }
+  if (!entry.ok) {
+    const code = entry.mode === "print" && entry.garmentViews.length && !entry.print || entry.missing && entry.print && entry.missing.includes(entry.print) ? "PRINT_MISSING" : "GARMENT_MISSING";
+    stylistLog("tryon", { ...diag, stage: "config", fail: code, missing: entry.missing });
+    return tryErr(422, code, code === "PRINT_MISSING" ? "The print for this design isn’t available for try-on yet." : "The garment reference for this product isn’t available for try-on yet.");
+  }
+  const t0 = Date.now();
+  const refs = [];
+  for (const u of entry.mode === "print" ? entry.garmentViews.slice(0, 4) : [entry.reference]) {
+    const blob = await fetchTryOnAsset(u);
+    if (blob) refs.push(blob); else if (!refs.length) { stylistLog("tryon", { ...diag, stage: "assets", fail: "GARMENT_ASSET_UNAVAILABLE" }); return tryErr(502, "GARMENT_ASSET_UNAVAILABLE", "The product image for try-on couldn’t be loaded. Please try again."); }
+  }
+  let printInfo = null;
+  if (entry.mode === "print") {
+    const pb = await fetchTryOnAsset(entry.print);
+    if (!pb) { stylistLog("tryon", { ...diag, stage: "assets", fail: "PRINT_MISSING" }); return tryErr(502, "PRINT_MISSING", "The print for this design couldn’t be loaded. Please try again."); }
+    const info = readImageInfo(new Uint8Array(await pb.arrayBuffer()));
+    if (!info || !info.w || !info.h) return tryErr(502, "PRINT_MISSING", "The print file for this design is not a readable PNG.");
+    printInfo = { w: info.w, h: info.h };
+  }
   const ip = (request.headers.get("cf-connecting-ip") || "").split(".").slice(0, 2).join(".") + ".x.x";
-  logEvent("assistant-tryon", { ip, product: n.id, design, cutout: !!(designAsset || n._raw.tryOnAssets), overlay: !!overlay });
+  logEvent("assistant-tryon", { ip, product: p.id, design: entry.design, mode: entry.mode });
   try {
     const mod = await openai("moderations", { model: "omni-moderation-latest", input: [{ type: "image_url", image_url: { url: photoDataUrl } }] }, { timeoutMs: 15e3 });
-    if (mod.results?.[0]?.flagged) return tryErr(422, "PHOTO_REJECTED", "This photo can’t be used for a try-on preview. Please use a different photo.");
+    if (mod.results?.[0]?.flagged) { stylistLog("tryon", { ...diag, stage: "moderation", fail: "PHOTO_REJECTED" }); return tryErr(422, "PHOTO_REJECTED", "This photo can’t be used for a try-on preview. Please use a different photo."); }
   } catch {
     // moderation outage: fail open — the image model applies its own safety system below
   }
-  const prompt = PROMPT(n, { design, cutout: !!(designAsset || n._raw.tryOnAssets), hasOverlay: !!overlay });
-  const build = (fidelity) => {
+  const g = entry.garment || {};
+  const keyGreen = !/green|verde/i.test(`${g.colour || ""} ${n.colors.join(" ")}`);
+  const key = keyGreen ? { name: "green", hex: "#00FF00" } : { name: "magenta", hex: "#FF00FF" };
+  const aspect = printInfo ? `${printInfo.w}:${printInfo.h}` : null;
+  const prompt = entry.mode === "print"
+    ? PROMPT_GARMENT_STAGE(n, g, { design: entry.design, views: refs.length, aspect, keyName: key.name, keyHex: key.hex })
+    : PROMPT_REFERENCE(n, { design: entry.design });
+  const size = tryOnSize(ph.info);
+  const buildForm = (model, fidelity) => {
     const form = new FormData();
-    form.append("model", env("OPENAI_IMAGE_MODEL", "gpt-image-1"));
+    form.append("model", model);
     form.append("prompt", prompt);
-    form.append("size", "1024x1536");
-    form.append("quality", env("OPENAI_IMAGE_QUALITY", "medium"));
-    if (fidelity) form.append("input_fidelity", "high");
-    form.append("image[]", ph.blob, ph.info.type === "image/png" ? "customer.png" : ph.info.type === "image/webp" ? "customer.webp" : "customer.jpg");
-    form.append("image[]", garment, `garment.${garment.type.split("/")[1]}`);
-    if (overlay) form.append("image[]", overlay, `print.${overlay.type.split("/")[1]}`);
+    form.append("size", size);
+    form.append("quality", env("OPENAI_IMAGE_QUALITY", "high"));   // quality over speed
+    if (fidelity) form.append("input_fidelity", "high");          // keeps the customer's face/body/background
+    form.append("image[]", ph.blob, `customer.${ph.info.type.split("/")[1]}`);
+    refs.forEach((r, i) => form.append("image[]", r, `garment-${i + 1}.${r.type.split("/")[1]}`));
     return form;
   };
-  const t0 = Date.now();
-  let out;
+  let res;
   try {
-    try {
-      out = await openai("images/edits", null, { form: build(true), timeoutMs: 13e4 });
-    } catch (e) {
-      // models without input_fidelity support: retry once without it
-      if (e.status === 400 && /input_fidelity/i.test(e.message || "")) out = await openai("images/edits", null, { form: build(false), timeoutMs: 13e4 - (Date.now() - t0) });
-      else throw e;
-    }
+    res = await tryOnEdit(buildForm, t0 + 17e4);
   } catch (e) {
     const m = String(e && e.message || "");
-    logEvent("assistant-tryon-failed", { product: n.id, status: e && e.status, code: e && e.code, ms: Date.now() - t0, msg: m.slice(0, 160) });
-    if (e && e.name === "AbortError") return tryErr(504, "TIMEOUT", "The preview took too long. Please try again.");
-    if (e && (e.code === "moderation_blocked" || /safety|moderation|content policy/i.test(m))) return tryErr(422, "SAFETY_REJECTED", "The image service declined this photo. Please try a different photo.");
-    if (e && (e.status === 429 || e.status >= 500)) return tryErr(503, "GENERATION_BUSY", "The image service is busy right now. Please try again in a moment.");
-    return tryErr(502, "GENERATION_FAILED", "Could not generate the preview right now. Please try again.");
+    const code = e && e.name === "AbortError" ? "TIMEOUT" : e && (e.code === "moderation_blocked" || /safety|moderation|content policy/i.test(m)) ? "SAFETY_REJECTED" : e && (e.status === 429 || e.status >= 500) ? "GENERATION_BUSY" : "GENERATION_FAILED";
+    stylistLog("tryon", { ...diag, stage: "generate", fail: code, status: e && e.status, ms: Date.now() - t0, msg: m.slice(0, 160) });
+    logEvent("assistant-tryon-failed", { product: p.id, code, status: e && e.status, ms: Date.now() - t0 });
+    if (code === "TIMEOUT") return tryErr(504, code, "The preview took too long. Please try again.");
+    if (code === "SAFETY_REJECTED") return tryErr(422, code, "The image service declined this photo. Please try a different photo.");
+    if (code === "GENERATION_BUSY") return tryErr(503, code, "The image service is busy right now. Please try again in a moment.");
+    return tryErr(502, code, "Could not generate the preview right now. Please try again.");
   }
-  const b64 = out && out.data && out.data[0] && out.data[0].b64_json;
-  if (!b64) return tryErr(502, "GENERATION_FAILED", "Could not generate the preview right now. Please try again.");
-  const card = { id: n.id, title: n.title, url: n.url, price: n.price, currency: n.currency, image: n.featured_image, category: n.category, variants: p.variants.filter((v) => v.available !== false).map((v) => ({ id: v.id, title: v.title })) };
-  return json(200, { image: `data:image/png;base64,${b64}`, product: card, products: [card] });
+  const b64 = res.out && res.out.data && res.out.data[0] && res.out.data[0].b64_json;
+  if (!b64 || b64.length < 1e3) { stylistLog("tryon", { ...diag, stage: "generate", fail: "MALFORMED_RESPONSE", model: res.model }); return tryErr(502, "GENERATION_FAILED", "Could not generate the preview right now. Please try again."); }
+  stylistLog("tryon", { ...diag, stage: entry.mode === "print" ? "garment-generated" : "done", model: res.model, input_fidelity: res.fidelity, size, ms: Date.now() - t0 });
+  const card = { id: n.id, title: n.title, url: n.url, price: n.price, currency: n.currency, image: n.featured_image, category: n.category, design: entry.design || null, variants: p.variants.filter((v) => v.available !== false).map((v) => ({ id: v.id, title: v.title })) };
+  const base = { image: `data:image/png;base64,${b64}`, product: card, products: [card], pipeline: { model: res.model, ms: Date.now() - t0 } };
+  if (entry.mode !== "print") return json(200, { ...base, stage: "final" });
+  // stages 2-4 run in the browser on this image: find the key panel, warp the ORIGINAL print onto it, shade + occlude
+  const origin = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "");
+  return json(200, { ...base, stage: "garment", key: key.hex, print: { src: entry.print.startsWith(origin) ? entry.print.slice(origin.length) : entry.print, width: printInfo.w, height: printInfo.h }, fabric: g.fabric || null });
 }
 __name(assistantTryon, "assistantTryon");
 
@@ -1418,7 +1610,7 @@ function orderEmails(o, pay, totals, images = [], base = "https://bymarccc.com")
 }
 __name(orderEmails, "orderEmails");
 // Customer confirmation e-mail — table layout + inline styles (Gmail, Apple Mail, Outlook). Product photos come from
-// catalog.json on the server (never from the browser).
+// the catalogue on the server (never from the browser).
 function orderCustomerHtml(o, t, payLabel, totals, addr, images, base) {
   const F = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif", BLUE = "#1268F3", INK = "#111111", SUB = "#6b6b68", LINE = "#ecebe6";
   const img = (u) => typeof u === "string" && /^https:\/\/[^\s"'<>]+$/i.test(u) ? u : "";
@@ -1583,7 +1775,7 @@ async function forwardToGoatify(o, { pay, totals, sourceUrl, placedAt, notes } =
   return { forwarded: false, reason: 'unavailable' };
 }
 
-// Server-side check of the bag lines against catalog.json (the browser sends its own prices). Prices are not changed;
+// Server-side check of the bag lines against the catalogue (assets/catalog.js) (the browser sends its own prices). Prices are not changed;
 // a line that is not in the catalogue or has another price is flagged in the GOATIFY order note, so it is seen before
 // the parcel leaves / cash is collected. Adds the catalogue id (sku) and main photo to each line.
 async function goatifyItemCheck(rawItems) {
@@ -1599,7 +1791,7 @@ async function goatifyItemCheck(rawItems) {
     if (!ok) warn.push(name + (p ? ` (catalogue ${p.price} RON, bag ${price} RON)` : " (not in catalogue)"));
     extras.push({ ...(p ? { sku: String(p.id).slice(0, 64) } : {}), ...(p && p.images && p.images[0] ? { image: p.images[0] } : {}) });
   }
-  return { extras, notes: warn.length ? "⚠ Price not verified against catalog.json: " + warn.join("; ") : "" };
+  return { extras, notes: warn.length ? "⚠ Price not verified against the catalogue: " + warn.join("; ") : "" };
 }
 __name(goatifyItemCheck, "goatifyItemCheck");
 
@@ -1633,9 +1825,9 @@ async function verifyAddTo(a) {
   return sig === await addToSig(id) ? { id, t: Math.floor(placed / 1e3) } : null;
 }
 __name(verifyAddTo, "verifyAddTo");
-// Up to 3 suggestions from catalog.json, based on what was bought: a women's top → the Delulu blazer first; then
+// Up to 3 suggestions from the catalogue, based on what was bought: a women's top → the Delulu blazer first; then
 // accessories (caps, bags) for the same gender; then another jeans/top. Never something already in the order.
-// Photos for catalogue items that have none in catalog.json yet (the product page has them in its own gallery).
+// Photos for catalogue items that have no gallery yet (the product page has them in its own gallery).
 var REC_IMAGES = { "w-hg-delulu-blazer": "assets/img/gallery/delulu-blazer-1-73460abe.webp" };
 async function orderRecommendations(rawItems, parentOrderId, max = 3, parentT = Math.floor(Date.now() / 1e3)) {
   const base = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN || "https://bymarccc.com").replace(/\/$/, "");

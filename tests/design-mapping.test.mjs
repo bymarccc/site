@@ -22,7 +22,7 @@ function extractScript(marker) {
   const closeIdx = html.indexOf('</script>', idx);
   return html.slice(openEnd, closeIdx);
 }
-const catalogCode = extractScript('const CATALOG');
+const catalogCode = fs.readFileSync(`${SITE}/assets/catalog.js`, 'utf8');   // the single product source
 const sandboxWin = {};
 vm.runInContext(catalogCode, vm.createContext({ window: sandboxWin }));
 const CATALOG = sandboxWin.BYMARCCC_CATALOG.CATALOG;

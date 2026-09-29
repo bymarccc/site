@@ -1,7 +1,7 @@
 // Audit harness: exercises the REAL _worker.js code paths locally (no deploy, no network to
 // OpenAI) by importing its default export and driving it with real Request objects and a
 // mocked `env` (fake OPENAI_API_KEY just to pass the presence check in guard(); ASSETS.fetch
-// reads catalog.json straight off disk). Any code path that needs a genuine OpenAI response
+// serves the repo's static files — incl. assets/catalog.js, the single product source — straight off disk). Any code path that needs a genuine OpenAI response
 // (chat replies, image generation) is out of scope here and reported as such.
 // Run from anywhere: node tests/audit_harness.mjs
 import fs from 'node:fs';
@@ -11,7 +11,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const SITE = path.dirname(path.dirname(fileURLToPath(import.meta.url))); // tests/.. = site root
 const worker = (await import(pathToFileURL(path.join(SITE, '_worker.js')).href)).default;
 
-const catalogJson = fs.readFileSync(path.join(SITE, 'catalog.json'));
 
 function makeEnv(overrides = {}) {
   return {
@@ -19,9 +18,8 @@ function makeEnv(overrides = {}) {
     ASSETS: {
       fetch: async (req) => {
         const url = new URL(typeof req === 'string' ? req : req.url);
-        if (url.pathname.endsWith('/catalog.json')) {
-          return new Response(catalogJson, { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
+        const f = path.join(SITE, decodeURIComponent(url.pathname));
+        if (f.startsWith(SITE) && fs.existsSync(f) && fs.statSync(f).isFile()) return new Response(fs.readFileSync(f), { status: 200 });
         return new Response('not found', { status: 404 });
       },
     },
@@ -86,8 +84,10 @@ async function call(path_, body, { origin = 'https://bymarccc.com', env = makeEn
 
 // ---- 4. assistant-upload-photo (no OpenAI call at all) ----
 const TINY_JPEG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=';
+// a 300x300 JPEG header (the try-on endpoints read format + size from the real bytes; min side 256px)
+const OK_JPEG = 'data:image/jpeg;base64,' + Buffer.from([255,216,255,224,0,16,74,70,73,70,0,1,1,0,0,1,0,1,0,0,255,192,0,17,8,1,44,1,44,3,1,34,0,2,17,1,3,17,1,255,217]).toString('base64');
 {
-  const r = await call('assistant-upload-photo', { photo: TINY_JPEG });
+  const r = await call('assistant-upload-photo', { photo: OK_JPEG });
   ok('Valid photo upload: 200 with a user_image_file_id', r.status === 200 && typeof r.json?.user_image_file_id === 'string' && r.json.user_image_file_id.length > 10, JSON.stringify(r));
 }
 {
@@ -114,7 +114,7 @@ const nextIp = () => ({ headers: { 'cf-connecting-ip': `10.0.0.${++ipN}` } });
 }
 {
   const r = await call('assistant-tryon', { consent: true, productIds: ['skinny'] }, nextIp());
-  ok('Try-on with neither photo nor userImageFileId: 400 "Photo required."', r.status === 400 && /photo required/i.test(r.json?.error || ''), JSON.stringify(r));
+  ok('Try-on with neither photo nor userImageFileId: 400 PHOTO_REQUIRED', r.status === 400 && r.json?.code === 'PHOTO_REQUIRED', JSON.stringify(r));
 }
 {
   const r = await call('assistant-tryon', { consent: true, userImageFileId: 'not-a-real-id-00000000', productIds: ['skinny'] }, nextIp());
@@ -124,15 +124,15 @@ const nextIp = () => ({ headers: { 'cf-connecting-ip': `10.0.0.${++ipN}` } });
   // Full round-trip: upload -> get a real id -> use it -> product lookup succeeds (fails later
   // only because there's no real OpenAI key to call the moderation/image-edit endpoints).
   const ip = nextIp();
-  const up = await call('assistant-upload-photo', { photo: TINY_JPEG }, ip);
+  const up = await call('assistant-upload-photo', { photo: OK_JPEG }, ip);
   const id = up.json?.user_image_file_id;
-  const r = await call('assistant-tryon', { consent: true, userImageFileId: id, productIds: ['skinny'] }, ip);
+  const r = await call('assistant-tryon', { consent: true, userImageFileId: id, productIds: ['w-red-baby-top::boys-lie'] }, ip);   // a product with a real try-on asset
   ok('Try-on with a real userImageFileId: passes validation (reaches the OpenAI call, which then fails offline as expected)', r.status === 502 || r.status === 200, JSON.stringify(r));
-  const reuse = await call('assistant-tryon', { consent: true, userImageFileId: id, productIds: ['skinny'] }, ip);
+  const reuse = await call('assistant-tryon', { consent: true, userImageFileId: id, productIds: ['w-red-baby-top::boys-lie'] }, ip);
   ok('Reusing the same userImageFileId a second time: 410 (single-use, deleted after first use)', reuse.status === 410, JSON.stringify(reuse));
 }
 {
-  const r = await call('assistant-tryon', { consent: true, photo: TINY_JPEG, productIds: ['this-product-does-not-exist'] }, nextIp());
+  const r = await call('assistant-tryon', { consent: true, photo: OK_JPEG, productIds: ['this-product-does-not-exist'] }, nextIp());
   ok('Try-on with a nonexistent product id: 404', r.status === 404, JSON.stringify(r));
 }
 {
@@ -143,18 +143,18 @@ const nextIp = () => ({ headers: { 'cf-connecting-ip': `10.0.0.${++ipN}` } });
   ok('7th try-on request from the same IP within a minute is throttled (429)', last.status === 429, JSON.stringify(last));
 }
 
-// ---- 6. catalog.json sanity: the 8 manually-added sale items resolve through the same
-//         loadCatalog() path get_product/search_products actually use ----
+// ---- 6. catalogue sanity: the sale items resolve through the same loadCatalog() path
+//         get_product/search_products actually use (source: assets/catalog.js) ----
 {
-  const items = JSON.parse(catalogJson.toString()).items;
   const wanted = ['sale-pink-striped-jeans', 'sale-art-dept-jeans', 'sale-camo-cross-jeans', 'sale-cross-sweatpants', 'sale-glitter-flame-jeans', 'sale-beige-elegant-pants', 'sale-printed-jeans', 'sale-star-jeans'];
   for (const id of wanted) {
-    const it = items.find((i) => i.id === id);
-    ok(`catalog.json has ${id}`, !!it);
+    const r = await call('assistant-tool', { name: 'get_product', args: { product_id: id } }, nextIp());
+    const it = r.json && r.json.products && r.json.products[0];
+    ok(`catalogue has ${id}`, !!it, JSON.stringify(r.json || {}).slice(0, 200));
     if (it) {
-      ok(`${id}: url points at index.html#shop (matches the sale-rail pattern, no dedicated product page)`, it.url === 'index.html#shop', it.url);
-      ok(`${id}: has exactly one image path`, Array.isArray(it.images) && it.images.length === 1, JSON.stringify(it.images));
-      ok(`${id}: price 200 / compareAtPrice 500 RON`, it.price === 200 && it.compareAtPrice === 500 && it.currency === 'RON');
+      ok(`${id}: url points at its product page`, /bymarccc-product\.html\?p=/.test(it.url), it.url);
+      ok(`${id}: has an image`, !!it.image, JSON.stringify(it.image));
+      ok(`${id}: sale price 200 / was 500 RON`, it.price === 200 && it.compareAtPrice === 500 && it.currency === 'RON', JSON.stringify(it));
     }
   }
 }
