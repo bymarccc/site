@@ -1125,6 +1125,32 @@ async function resendSend(msg) {
   return r.json().catch(() => ({}));
 }
 __name(resendSend, "resendSend");
+// POST /api/goatify-mail — GOATIFY (goatify.goatagency.us) sends its customer e-mails (shipped, order updates, order link)
+// through this site's Resend account. Signed like site orders: HMAC-SHA256(GOATIFY_SITE_SECRET, `${ts}.${rawBody}`),
+// ±5 min; each signature is accepted once. Body: { to, subject, text, html? }.
+var relaySeen = /* @__PURE__ */ new Map();
+async function goatifyMail(request) {
+  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
+  const secret = env("GOATIFY_SITE_SECRET");
+  if (!secret || !env("RESEND_API_KEY") || !env("ORDER_EMAIL_FROM")) return json(503, { error: "NOT_CONFIGURED" });
+  const raw = await request.text();
+  if (raw.length > 300000) return json(413, { error: "Too large" });
+  const ts = request.headers.get("x-goatify-timestamp") || "", sig = String(request.headers.get("x-goatify-signature") || "").toLowerCase();
+  if (!/^\d{9,12}$/.test(ts) || Math.abs(Date.now() / 1e3 - Number(ts)) > 300) return json(401, { error: "STALE" });
+  const want = await gHmacHex(secret, `${ts}.${raw}`);
+  let diff = want.length ^ sig.length; for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ (sig.charCodeAt(i) || 0);
+  if (diff) return json(401, { error: "BAD_SIGNATURE" });
+  const now = Date.now(); for (const [k, t] of relaySeen) if (now - t > 6e5) relaySeen.delete(k);
+  if (relaySeen.has(sig)) return json(200, { ok: true, duplicate: true });
+  relaySeen.set(sig, now);
+  let b; try { b = JSON.parse(raw); } catch { return json(400, { error: "Invalid JSON" }); }
+  const to = String(b.to || "").trim();
+  if (!/^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/.test(to) || to.length > 200) return json(400, { error: "Bad recipient" });
+  const subject = String(b.subject || "").replace(/[\r\n]+/g, " ").slice(0, 200);
+  const r = await resendSend({ from: env("ORDER_EMAIL_FROM"), to: [to], subject, text: String(b.text || "").slice(0, 100000), ...(b.html ? { html: String(b.html).slice(0, 250000) } : {}) });
+  return json(200, { ok: true, id: r && r.id || null });
+}
+__name(goatifyMail, "goatifyMail");
 function cleanOrder(b) {
   const str = (v, n) => String(v ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
   const c = b.customer || {};
@@ -1415,6 +1441,7 @@ var ROUTES = {
   "checkout-session": checkoutSession,
   "geocode": geocodeAddress,
   "order-submit": orderSubmit,
+  "goatify-mail": goatifyMail,
   "cron-charge-installments": cronChargeInstallments
 };
 async function onRequest(context) {
