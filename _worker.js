@@ -1256,7 +1256,7 @@ __name(orderSubmit, "orderSubmit");
 
 // lib/goatify.js — forwards each accepted order to GOATIFY (orders, fulfilment, invoicing). Generated from
 // goatify-backend/integrations/bymarccc/cloudflare/goatify-forward.js (tested there: test/bymarccc-cloudflare.test.js).
-// Sends NOTHING unless GOATIFY_FORWARDING=on. Env (Cloudflare Pages → Settings → Variables and Secrets):
+// Sends NOTHING unless GOATIFY_SITE_SECRET is set (GOATIFY_FORWARDING=off turns it off). Env (Cloudflare Pages → Settings → Variables and Secrets):
 //   GOATIFY_API_URL (e.g. https://goatify.goatagency.us/api/v1) · GOATIFY_SITE_KEY=bymarccc · GOATIFY_SITE_SECRET (secret) · GOATIFY_FORWARDING
 // Signed server-side (HMAC-SHA256) — the secret never reaches the browser. Never blocks or fails the customer's order.
 const G_COUNTRIES = { romania: 'RO', 'românia': 'RO', moldova: 'MD', 'republica moldova': 'MD', 'united kingdom': 'GB', uk: 'GB', 'great britain': 'GB', england: 'GB',
@@ -1299,8 +1299,11 @@ async function gHmacHex(secret, data) {
  * @returns {Promise<{forwarded:true, duplicate:boolean, number:number} | {forwarded:false, reason:string, status?:number, error?:string}>}  never throws
  */
 async function forwardToGoatify(o, { pay, totals, sourceUrl, placedAt, notes } = {}, env, { fetchImpl = fetch } = {}) {
-  if (String(env('GOATIFY_FORWARDING') || '').toLowerCase() !== 'on') return { forwarded: false, reason: 'off' };
-  const api = String(env('GOATIFY_API_URL') || '').replace(/\/+$/, ''), siteKey = env('GOATIFY_SITE_KEY') || 'bymarccc', secret = env('GOATIFY_SITE_SECRET');
+  // Only GOATIFY_SITE_SECRET is required: forwarding is on as soon as the secret exists (GOATIFY_FORWARDING=off disables it),
+  // and the API defaults to the live GOATIFY (Cloudflare) at goatify.goatagency.us.
+  const secret = env('GOATIFY_SITE_SECRET'), fwd = String(env('GOATIFY_FORWARDING') || (secret ? 'on' : '')).toLowerCase();
+  if (fwd !== 'on') return { forwarded: false, reason: 'off' };
+  const api = String(env('GOATIFY_API_URL') || 'https://goatify.goatagency.us/api/v1').replace(/\/+$/, ''), siteKey = env('GOATIFY_SITE_KEY') || 'bymarccc';
   if (!/^https?:\/\//.test(api) || !secret) return { forwarded: false, reason: 'not_configured' };
   let raw;
   try { raw = JSON.stringify(toGoatifyOrder(o, { pay, totals, siteKey, sourceUrl, notes, ...(placedAt ? { placedAt } : {}) })); } catch (e) { return { forwarded: false, reason: 'invalid', error: e.code || e.message }; }
