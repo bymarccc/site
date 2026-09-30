@@ -2439,9 +2439,10 @@
       pl.innerHTML = '<svg class="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
       b.append(img, meta, du, pl);
       b.addEventListener('click', () => {
-        if (tab === 'video') { if (t.video && window.BYMARCCC_VP) { window.BYMARCCC_VP.play(t); markCurrent(); } return; }   // MUSIC VIDEO → floating mini player; the playlist stays open behind it
+        if (tab === 'video') { if (t.video && window.BYMARCCC_VP) { audio.pause(); window.BYMARCCC_VP.play(t); markCurrent(); } return; }   // MUSIC VIDEO → floating mini player; the playlist stays open behind it
         // MUSIC → this row is the player: first tap plays, next taps pause / resume
         if (t.src && typeof miniItem !== 'undefined' && miniItem && miniItem.id === t.id) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
+        window.BYMARCCC_VP?.pause();   // a music track replaces a playing music video
         t.src ? miniPlayList(shown.items, i) : playFrom(shown.items, i);
       });
       li.appendChild(b); frag.appendChild(li);
@@ -2467,19 +2468,7 @@
     tab = b.dataset.tab;
     tabs.forEach(t => t.setAttribute('aria-selected', String(t === b)));
     applyFilter(query?.value || '');
-    // the selection follows the mode: the same song, its other file — nothing starts on its own
-    const vpOpen = window.BYMARCCC_VP && window.BYMARCCC_VP.isOpen();
-    const audioSel = (typeof miniItem !== 'undefined' && miniItem && miniItem.id) ? playlist.find(t => t.id === miniItem.id) : null;
-    if (tab === 'video') {                                    // MUSIC → MUSIC VIDEO: same song, its video, paused until tapped
-      audio.pause();
-      const sel = audioSel || (vpOpen ? window.BYMARCCC_VP.current() : null);
-      if (sel && sel.video && window.BYMARCCC_VP) window.BYMARCCC_VP.select(sel);
-    } else {                                                  // MUSIC VIDEO → MUSIC: same song, its audio, paused until tapped
-      window.BYMARCCC_VP?.pause();
-      const sel = (vpOpen && window.BYMARCCC_VP.current()) || audioSel;
-      if (sel && sel.src && (!audioSel || audioSel.id !== sel.id)) miniSelect(playlist, playlist.indexOf(sel));
-      miniUI();
-    }
+    // switching tabs only switches the list — whatever is playing keeps playing until a row is tapped
     markCurrent();
   }));
 
