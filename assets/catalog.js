@@ -36,7 +36,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
   "collections": [{"key":"denim","label":"DENIM"},{"key":"tops","label":"TOPS"},{"key":"jackets","label":"JACKETS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "womenCollections": [{"key":"tops","label":"TOPS"},{"key":"bottoms","label":"BOTTOMS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "customizeCollections": [{"key":"bags","label":"BAGS"}],
-  "womenFeatured": {"tops":["w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-leggings"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
+  "womenFeatured": {"tops":["w-burgundy-long-sleeve","w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-leggings"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
   "tryOnGarments": {"black-baby-top":{"type":"womens_baby_top","label":"women's black baby top: short, fitted, short-sleeve black cotton top with a fine rib, round neck; the hem sits slightly above the belly button","category":"tops","colour":"black","views":{"front":"assets/try-on/black-baby-top/garment.png"},"fitReference":"assets/try-on/black-baby-top/fit-reference.jpg","print":{"placement":"centred on the chest, a little below the neckline","width":0.3}}},
   "products": {
     "skinny": {
@@ -612,7 +612,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
     },
     "w-burgundy-baby-top": {
       "designs": ["Muse","PARIS","Happy Hoes","Boys Lie","Delulu","Logo","Hot Girls","Yacht","Art"],
-      "designImages": {"muse":1,"paris":2,"happy-hoes":3,"boys-lie":4,"delulu":5,"logo":0,"hot-girls":7,"yacht":8},
+      "designImages": {"art":0,"muse":1,"paris":2,"happy-hoes":3,"boys-lie":4,"delulu":5,"logo":6,"hot-girls":7,"yacht":8},
       "gender": "women",
       "model": {"height":177,"weight":53,"size":"S-M","modelMedia":[0],"text":"Model is 177 cm and 53 kg and wears size S-M"},
       "id": "shopify:burgundy-baby-top",
@@ -621,12 +621,12 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "currency": "RON",
       "cut": "Womenswear",
       "collections": ["tops"],
-      "details": ["Several embroidery/printed designs available (Muse, NOT FROM PARIS, Happy Hoes, Boys Lie, Delulu, Logo, Hot Girls, Yacht)","All clothing is custom made.","100% Organic Cotton"],
+      "details": ["Several embroidery/printed designs available (Muse, NOT FROM PARIS, Happy Hoes, Boys Lie, Delulu, Logo, Hot Girls, Yacht, Art)","All clothing is custom made.","100% Organic Cotton"],
       "description": "Burgundy Baby Top from the bymarccc womenswear collection, available in several embroidery/printed designs.",
       "unavailable": [],
       "colours": [{"id":"burgundy","name":"Burgundy","hex":"#5c1a2b"}],
       "chart": ["S-M","L-XL"],
-      "gallery": [{"src":"assets/img/gallery/w-burgundy-baby-top-11-ad1e0418.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-3-3373f7bf.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-4-c647dfb4.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-5-f7477dc5.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-6-5aa55cf2.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-7-bafd65be.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-8-f60598ac.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-9-9e1f00eb.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-10-0101d2ab.webp","w":900,"h":1353}]
+      "gallery": [{"src":"assets/img/gallery/w-burgundy-baby-top-11-ad1e0418.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-3-3373f7bf.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-4-c647dfb4.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-5-f7477dc5.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-6-5aa55cf2.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-7-bafd65be.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-12-67ba2632.webp","w":1212,"h":1816},{"src":"assets/img/gallery/w-burgundy-baby-top-9-9e1f00eb.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-burgundy-baby-top-10-0101d2ab.webp","w":900,"h":1353}]
     },
     "w-no-bra-tank-top": {
       "gender": "women",
@@ -1170,6 +1170,24 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"burgundy","name":"Burgundy","hex":"#6B1A1E"}],
       "gallery": [{"src":"assets/img/gallery/w-burgundy-shoulder-bag-1-9390fc60.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-shoulder-bag-2-c4ae301d.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-shoulder-bag-3-da487a8b.webp","w":1024,"h":1534}]
+    },
+    "w-burgundy-long-sleeve": {
+      "designs": ["Muse","PARIS","Happy Hoes","Boys Lie","Delulu","Logo","Hot Girls","Yacht","Art"],
+      "designImages": {"logo":0,"art":1,"muse":2,"paris":3,"happy-hoes":4,"boys-lie":5,"delulu":6,"hot-girls":7,"yacht":8},
+      "gender": "women",
+      "model": {"height":177,"weight":53,"size":"S-M","modelMedia":[0],"text":"Model is 177 cm and 53 kg and wears size S-M"},
+      "id": "bymarccc:burgundy-long-sleeve",
+      "title": "LONG SLEEVE TOP",
+      "price": 250,
+      "currency": "RON",
+      "cut": "Womenswear",
+      "collections": ["tops"],
+      "details": ["Cropped, fitted long-sleeve top with a round neck","Several embroidery/printed designs available (Logo, Art, Muse, NOT FROM PARIS, Happy Hoes, Boys Lie, Delulu, Hot Girls, Yacht)","Burgundy","All clothing is custom made.","100% Organic Cotton"],
+      "description": "A cropped burgundy long-sleeve top from the bymarccc womenswear collection, available in several embroidery/printed designs.",
+      "unavailable": [],
+      "colours": [{"id":"burgundy","name":"Burgundy","hex":"#5c1a2b"}],
+      "chart": ["S-M","L-XL"],
+      "gallery": [{"src":"assets/img/gallery/w-burgundy-long-sleeve-1-73fa3368.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-2-b75078dd.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-3-9e8b4420.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-4-58a2265f.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-5-2b50207a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-6-f867ab2b.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-7-18196745.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-8-2490f07c.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-9-f00e4fda.webp","w":1024,"h":1534}]
     },
     "w-purple-sweatpants": {
       "gender": "women",

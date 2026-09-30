@@ -1113,7 +1113,7 @@
   @media (min-width: 900px) { .shop__tabs { justify-content: center; gap: 44px; overflow: visible; } }
   @media (max-width: 640px) { .shop__tab { font-size: 12px; letter-spacing: .12em; } .shop__tabs { gap: 16px; justify-content: center; flex-wrap: wrap; row-gap: 8px; } }   /* 30% larger than the previous compact size, centered on the row */
   .shop__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(22px, 3vw, 34px) clamp(10px, 2vw, 20px); padding: 0 clamp(16px, 4vw, 48px); max-width: 1320px; margin: 0 auto; }
-  @media (min-width: 900px) { .shop__grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (min-width: 900px) { .shop__grid { grid-template-columns: repeat(5, 1fr); } }
   .shop__card { display: block; color: inherit; text-decoration: none; }
   .shop__img { position: relative; display: block; aspect-ratio: 1212 / 1816; background: #f2f2f0; overflow: hidden; touch-action: pan-y pinch-zoom; }
   .shop__soldout { position: absolute; z-index: 2; top: 10px; left: 10px; background: #111; color: #fff; font-size: 10px; font-weight: 600; letter-spacing: .1em; padding: 5px 9px; border-radius: 3px; }
@@ -1224,7 +1224,7 @@
   /* sale rail: the same card size/ratio as the shop grid, but on ONE row that slides */
   .salerail .sales__track { gap: 10px; padding: 2px clamp(16px, 4vw, 48px) 6px; scroll-padding: 0 clamp(16px, 4vw, 48px); }
   .salerail .sales__card { width: calc((100vw - 2 * clamp(16px, 4vw, 48px) - 10px) / 2); scroll-snap-align: start; }
-  @media (min-width: 900px) { .salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - 3 * 20px) / 4); } }
+  @media (min-width: 900px) { .salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - 4 * 20px) / 5); } }
   /* mobile: the wrap padding + track padding were stacking (~32px per side) — cut both way down so the sale cards run almost edge to edge */
   @media (max-width: 899px) {
     .salerail .sales__wrap { padding: 0 6px; }
@@ -1234,7 +1234,7 @@
   .salerail .sales__card { background: none; border: 0; border-radius: 0; padding: 0; box-shadow: none; }
   /* sliding rails (men SALES, SKINNY / RELAXED JEANS): cards exactly the size of the regular shop cards (e.g. Zebra Patch Jeans) — they were a bit bigger */
   .shop .salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - clamp(10px, 2vw, 20px)) / 2); }
-  @media (min-width: 900px) { .shop .salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - 3 * clamp(10px, 2vw, 20px)) / 4); } }
+  @media (min-width: 900px) { .shop .salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - 4 * clamp(10px, 2vw, 20px)) / 5); } }
   /* women: shorter photos (3:4 instead of 2:3) — the tall 2:3 frames looked too big/long there */
   #shopWomen .shop__img { aspect-ratio: 1212 / 1816; }
   #shopWomen .shop__img img { object-position: 50% 50%; }
@@ -1246,7 +1246,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=3d93311c65"></script>
+<script src="/assets/catalog.js?v=45d1026744"></script>
 <script>
 (() => {
   'use strict';
@@ -1489,7 +1489,7 @@
   function mount(section, collections, gender) {
     const tabs = section.querySelector('.shop__tabs'), grid = section.querySelector('.shop__grid');
     let active = collections[0].key;
-    const LIMIT = 6;
+    const LIMIT = matchMedia('(min-width: 900px)').matches ? 10 : 6;   // desktop: 2 rows of 5, then LOAD MORE
     const tabBtns = [];
     const render = (all = false) => {
       grid.innerHTML = '';
