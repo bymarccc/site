@@ -54,7 +54,7 @@
   aspect-ratio: 2 / 3;                             /* mobile: image edge-to-edge from the very top, height from the photo */
   height: auto;
   overflow: hidden;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;               /* two fingers = the browser's own page zoom */
   user-select: none; -webkit-user-select: none;
 }
 .pdp-gallery__track { display: flex; height: 100%; will-change: transform; transition: transform .5s var(--ease); }
@@ -1053,13 +1053,13 @@ body.is-custom-bag-page #gallery { display: none; }
     if (e.target.closest('button, input, label, form')) return;
     gallery.setPointerCapture?.(e.pointerId);
     zoomPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (zoomPointers.size === 2) {
-      drag = null;   // a second finger landed: this is a pinch, not a swipe
-      const pts = [...zoomPointers.values()];
-      pinch = { d0: Math.max(1, dist(pts[0], pts[1])), scale0: zoomScale };
+    if (zoomPointers.size >= 2) {
+      /* a second finger landed: hand the gesture to the browser's normal page zoom (no in-frame zoom) */
+      drag = null; layout(0, false);
+      zoomPointers.forEach((_, id) => { try { gallery.releasePointerCapture?.(id); } catch {} });
     } else if (zoomPointers.size === 1) {
-      if (zoomScale > 1.02) { panDrag = { id: e.pointerId, x0: e.clientX - panX, y0: e.clientY - panY }; }
-      else if (GALLERY.length >= 2) { drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, axis: null, x: e.clientX, t: performance.now() }; }
+      const pageZoomed = window.visualViewport && visualViewport.scale > 1.01;   // zoomed in: one finger pans the page
+      if (!pageZoomed && GALLERY.length >= 2) { drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, axis: null, x: e.clientX, t: performance.now() }; }
     }
   });
   gallery.addEventListener('pointermove', e => {
