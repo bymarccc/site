@@ -1110,6 +1110,22 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "chart": ["S","M","L"],
       "gallery": [{"src":"assets/img/gallery/w-logo-vest-1-d3c17366.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-2-e60bd130.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-3-266e7c1d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-4-b73c32e1.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-5-1b6cdb4d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-6-44e96152.webp","w":1025,"h":1535}]
     },
+    "w-logo-leggings": {
+      "gender": "women",
+      "model": {"height":176,"weight":54,"size":"M","modelMedia":[0],"text":"Model is 176 cm and 54 kg and wears size M"},
+      "id": "bymarccc:logo-leggings",
+      "title": "LOGO LEGGINGS",
+      "price": 250,
+      "currency": "RON",
+      "cut": "High-waist leggings",
+      "collections": ["bottoms"],
+      "details": ["High-waist leggings in soft, highly stretchy fabric","Contrast white piping along the waistband and down both legs","White alien logo on the back waistband","Black","80% polyester, 20% elastane","Machine wash max 30°C · Do not bleach · Iron at low temperature · Do not dry clean · Do not tumble dry","All clothing is custom made."],
+      "description": "High-waist black stretch leggings with contrast white piping on the waistband and legs, and a white alien logo on the back waistband.",
+      "unavailable": [],
+      "colours": [{"id":"black","name":"Black","hex":"#111111"}],
+      "chart": ["S","M","L"],
+      "gallery": [{"src":"assets/img/gallery/w-logo-leggings-1-5b4f227d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-leggings-2-00c24431.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-leggings-3-9ee2929e.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-leggings-4-43eb0c11.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-leggings-5-ba9f1254.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-leggings-6-65722cb7.webp","w":1025,"h":1535}]
+    },
     "w-purple-sweatpants": {
       "gender": "women",
       "id": "bymarccc:purple-sweatpants",
