@@ -4268,6 +4268,17 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     if (mini && mini.parentElement !== document.body) {
       document.body.appendChild(mini);
     }
+    // Never cache a page with an overlay open (cart / quick add / size guide / wishlist / complete-the-look):
+    // coming back to that product used to show only the empty cart drawer instead of the product page.
+    let hadOverlay = false;
+    ['cart', 'qa', 'sizeModal', 'wl', 'ctlDrawer', 'backdrop'].forEach(oid => {
+      const el = document.getElementById(oid);
+      if (el && !el.hidden) { el.hidden = true; el.classList.remove('is-in'); hadOverlay = true; }
+    });
+    if (hadOverlay) {
+      document.getElementById('bar')?.classList.remove('is-hidden');
+      const b = document.body.style; if (b.position === 'fixed') { b.position = ''; b.top = ''; b.left = ''; b.right = ''; b.width = ''; }
+    }
     const nodes = captureContent(document);
     nodes.forEach(n => n.remove());
     // document.body's own class (e.g. "pdp") gates almost every page-specific CSS
