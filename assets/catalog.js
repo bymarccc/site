@@ -1126,6 +1126,21 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "chart": ["S","M","L"],
       "gallery": [{"src":"assets/img/gallery/w-logo-leggings-1-5b4f227d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-leggings-2-00c24431.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-leggings-3-9ee2929e.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-leggings-4-43eb0c11.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-leggings-5-ba9f1254.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-leggings-6-65722cb7.webp","w":1025,"h":1535}]
     },
+    "w-logo-bag": {
+      "gender": "women",
+      "id": "bymarccc:logo-bag",
+      "title": "LOGO BAG",
+      "price": 300,
+      "currency": "RON",
+      "cut": "Accessory",
+      "collections": ["accessories"],
+      "hideModelText": true,
+      "details": ["Rounded shoulder bag with a curved top handle","Hand-woven look in soft faux leather","Silver alien logo on the front","Burgundy","Outer: 100% polyurethane · Lining: 100% polyester","Clean with a damp cloth only — do not wash, iron, dry clean or tumble dry","Each piece is custom created."],
+      "description": "A rounded burgundy shoulder bag in woven faux leather, with a curved top handle and a silver alien logo on the front.",
+      "unavailable": [],
+      "colours": [{"id":"burgundy","name":"Burgundy","hex":"#6B1A1E"}],
+      "gallery": [{"src":"assets/img/gallery/w-logo-bag-1-558e3a61.webp","w":1024,"h":1536},{"src":"assets/img/gallery/w-logo-bag-2-4a6483d6.webp","w":1024,"h":1536},{"src":"assets/img/gallery/w-logo-bag-3-3cde1686.webp","w":1025,"h":1535}]
+    },
     "w-purple-sweatpants": {
       "gender": "women",
       "id": "bymarccc:purple-sweatpants",
