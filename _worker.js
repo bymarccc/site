@@ -1344,7 +1344,7 @@ async function assistantTryon(request) {
     form.append("model", model);
     form.append("prompt", prompt);
     form.append("size", size);
-    form.append("quality", env("OPENAI_IMAGE_QUALITY", "high"));   // quality over speed
+    form.append("quality", b.testQuality === "medium" || b.testQuality === "low" ? b.testQuality : env("OPENAI_IMAGE_QUALITY", "high"));   // testQuality: internal validation runs only (cheaper); customers never send it   // quality over speed
     if (fidelity) form.append("input_fidelity", "high");          // keeps the customer's face/body/background
     form.append("image[]", ph.blob, `customer.${ph.info.type.split("/")[1]}`);
     refs.forEach((r, i) => form.append("image[]", r, `garment-${i + 1}.${r.type.split("/")[1]}`));
@@ -1355,11 +1355,12 @@ async function assistantTryon(request) {
     res = await tryOnEdit(buildForm, t0 + 17e4);
   } catch (e) {
     const m = String(e && e.message || "");
-    const code = e && e.name === "AbortError" ? "TIMEOUT" : e && (e.code === "moderation_blocked" || /safety|moderation|content policy/i.test(m)) ? "SAFETY_REJECTED" : e && (e.status === 429 || e.status >= 500) ? "GENERATION_BUSY" : "GENERATION_FAILED";
+    const code = e && e.name === "AbortError" ? "TIMEOUT" : e && (e.code === "moderation_blocked" || /safety|moderation|content policy/i.test(m)) ? "SAFETY_REJECTED" : e && (e.code === "insufficient_quota" || e.code === "billing_hard_limit_reached" || /quota|billing/i.test(m)) ? "TRYON_UNAVAILABLE" : e && (e.status === 429 || e.status >= 500) ? "GENERATION_BUSY" : "GENERATION_FAILED";
     stylistLog("tryon", { ...diag, stage: "generate", fail: code, status: e && e.status, ms: Date.now() - t0, msg: m.slice(0, 160) });
     logEvent("assistant-tryon-failed", { product: p.id, code, status: e && e.status, ms: Date.now() - t0 });
     if (code === "TIMEOUT") return tryErr(504, code, "The preview took too long. Please try again.");
     if (code === "SAFETY_REJECTED") return tryErr(422, code, "The image service declined this photo. Please try a different photo.");
+    if (code === "TRYON_UNAVAILABLE") return tryErr(503, code, "Try-on is temporarily unavailable.");
     if (code === "GENERATION_BUSY") return tryErr(503, code, "The image service is busy right now. Please try again in a moment.");
     return tryErr(502, code, "Could not generate the preview right now. Please try again.");
   }
