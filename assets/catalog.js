@@ -1302,6 +1302,13 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "gallery": [{"src":"assets/img/gallery/van-gogh-jacket-1-33014866.webp","w":1212,"h":1816}]
     },
     "bandana-jeans": {
+      "needsBody": true,
+      "noSize": true,
+      "shippingNote": "Made-to-measure length adjustments are final sale.",
+      "unavailable": [],
+      "chart": "jeans-skinny",
+      "details": ["100% cotton denim, 14 oz", "Hand-applied bandana-print patches", "Skinny fit", "Raw hem", "All clothing is custom made."],
+      "description": "Hand-finished skinny jeans with bandana-print patches, made to fit you. Tell us your height and weight and we adjust the length before shipping.",
       "gender": "men",
       "id": "bymarccc:bandana-jeans",
       "title": "Bandana Jeans",
@@ -1313,6 +1320,13 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "gallery": [{"src":"assets/img/gallery/bandana-jeans-1-23009a35.webp","w":1024,"h":1536}]
     },
     "palm-jeans": {
+      "needsBody": true,
+      "noSize": true,
+      "shippingNote": "Made-to-measure length adjustments are final sale.",
+      "unavailable": [],
+      "chart": "jeans-skinny",
+      "details": ["100% cotton denim, 14 oz", "Light-wash denim with ripped knees", "Hand-painted pink-to-blue sunset hem with palm-tree print", "Skinny fit", "All clothing is custom made."],
+      "description": "Light-wash ripped skinny jeans with a hand-painted sunset and palm-tree print on the lower legs, made to fit you. Tell us your height and weight and we adjust the length before shipping.",
       "gender": "men",
       "id": "bymarccc:palm-jeans",
       "title": "Palm Jeans",
@@ -1324,6 +1338,13 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "gallery": [{"src":"assets/img/gallery/palm-jeans-1-aa238f6a.webp","w":1024,"h":1536}]
     },
     "distressed-jeans": {
+      "needsBody": true,
+      "noSize": true,
+      "shippingNote": "Made-to-measure length adjustments are final sale.",
+      "unavailable": [],
+      "chart": "jeans-skinny",
+      "details": ["100% cotton denim, 14 oz", "Light-wash denim", "Heavy hand-distressed rips down both legs", "Skinny fit", "All clothing is custom made."],
+      "description": "Light-wash skinny jeans with heavy hand-distressed rips, made to fit you. Tell us your height and weight and we adjust the length before shipping.",
       "gender": "men",
       "id": "bymarccc:distressed-jeans",
       "title": "Distressed Jeans",
@@ -1335,6 +1356,13 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "gallery": [{"src":"assets/img/gallery/distressed-jeans-1-f00f11e9.webp","w":1024,"h":1536}]
     },
     "art-jeans": {
+      "needsBody": true,
+      "noSize": true,
+      "shippingNote": "Made-to-measure length adjustments are final sale.",
+      "unavailable": [],
+      "chart": "jeans-relaxed",
+      "details": ["100% cotton denim, 14 oz", "Washed black denim", "Hand-splattered pink and turquoise paint", "ART DEPT patch and printed tag on the front", "Relaxed straight fit", "All clothing is custom made."],
+      "description": "Washed black relaxed jeans with hand-splattered pink and turquoise paint and an ART DEPT patch, made to fit you. Tell us your height and weight and we adjust the length before shipping.",
       "gender": "men",
       "id": "bymarccc:art-jeans",
       "title": "Art Jeans",

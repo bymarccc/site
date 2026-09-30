@@ -1246,7 +1246,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=c01bc37705"></script>
+<script src="/assets/catalog.js?v=f871bbb598"></script>
 <script>
 (() => {
   'use strict';
@@ -1353,15 +1353,17 @@
   }
 
   /* Sale rail card: shop-grid size, one photo with a thin ADD TO BAG on it, name on two lines, old price / sale price on two lines. */
-  function saleRailCard(key, p) {
+  function saleRailCard(key, p, link) {
     const img = (p.gallery || [])[0] || {};
     const size = (p.chart && p.chart.sizes || []).map(x => x.size)[0] || '';
     const onSale = typeof p.salePrice === 'number', chargePrice = onSale ? p.salePrice : p.price;
     const words = p.title.split(' '); const name = words.length > 1 ? `${words.slice(0, -1).join(' ')}<br>${words[words.length - 1]}` : p.title;
-    const card = document.createElement('article'); card.className = 'sales__card salegrid__card';
+    const card = document.createElement(link ? 'a' : 'article'); card.className = 'sales__card salegrid__card';
+    if (link) card.href = 'bymarccc-product.html?p=' + key;   // MEN → DENIM rails: the card opens the product page (no quick add)
     card.innerHTML = `<span class="shop__img"><img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on"><button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
       <span class="salerail__meta"><span class="salerail__name">${name}</span>${typeof p.price === 'number' ? `<span class="salerail__price">${onSale ? `<s>${fmt(p.price, p.currency)}</s><b>${fmt(p.salePrice, p.currency)}</b>` : `<span class="salerail__price--plain">${fmt(p.price, p.currency)}</span>`}</span>` : ''}</span>`;
     const add = card.querySelector('.salegrid__add');
+    if (link) { add.remove(); return card; }
     add.addEventListener('click', async () => {
       const store = window.BYMARCCC && window.BYMARCCC.bag; if (!store) return;
       await store.add({ id: `${p.id}:default:${size}`, name: p.title, variant: size ? 'Size ' + size : '', image: img.src, price: chargePrice, currency: p.currency, quantity: 1 });
@@ -1399,7 +1401,7 @@
     const nextBtn = document.createElement('button'); nextBtn.type = 'button'; nextBtn.className = 'sales__nav sales__nav--next'; nextBtn.setAttribute('aria-label', 'Next');
     nextBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
     const track = document.createElement('div'); track.className = 'sales__track';
-    items.forEach(([key, p]) => track.appendChild(opts.rail ? saleRailCard(key, p) : opts.compact ? saleBarCard(key, p) : salesCard(key, p)));
+    items.forEach(([key, p]) => track.appendChild(opts.rail ? saleRailCard(key, p, opts.link) : opts.compact ? saleBarCard(key, p) : salesCard(key, p)));
     wrap.append(prevBtn, track, nextBtn);
     const progress = document.createElement('div'); progress.className = 'sales__progress';
     progress.setAttribute('role', 'scrollbar'); progress.setAttribute('aria-controls', ''); progress.setAttribute('aria-orientation', 'horizontal'); progress.tabIndex = 0;
@@ -1521,7 +1523,7 @@
           const section = document.createElement('div'); section.className = 'sales__section'; grid.appendChild(section);
           // Mounted only once revealed — mounting a slider into a hidden/zero-width container
           // would miscompute its drag track and progress bar.
-          mountSalesSlider(section, group, { compact: true, rail: true });
+          mountSalesSlider(section, group, { compact: true, rail: true, link: true });
         };
         if (restPlain.length || skinnyGroup.length || relaxedGroup.length) {
           const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__loadmore'; b.textContent = 'LOAD MORE';
