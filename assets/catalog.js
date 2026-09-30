@@ -1108,7 +1108,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"burgundy","name":"Burgundy","hex":"#6B1A1E"}],
       "chart": ["S","M","L"],
-      "gallery": [{"src":"assets/img/gallery/w-logo-vest-1-d3c17366.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-2-e60bd130.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-3-266e7c1d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-4-b73c32e1.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-5-1b6cdb4d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-6-44e96152.webp","w":1025,"h":1535}]
+      "gallery": [{"src":"assets/img/gallery/w-logo-vest-1-8757627c.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-2-a545ffc7.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-3-266e7c1d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-4-9e935202.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-5-1b6cdb4d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-6-44e96152.webp","w":1025,"h":1535}]
     },
     "w-logo-leggings": {
       "gender": "women",
