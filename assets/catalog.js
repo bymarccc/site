@@ -36,7 +36,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
   "collections": [{"key":"denim","label":"DENIM"},{"key":"tops","label":"TOPS"},{"key":"jackets","label":"JACKETS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "womenCollections": [{"key":"tops","label":"TOPS"},{"key":"bottoms","label":"BOTTOMS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "customizeCollections": [{"key":"bags","label":"BAGS"}],
-  "womenFeatured": {"tops":["w-burgundy-long-sleeve","w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-leggings"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
+  "womenFeatured": {"tops":["w-burgundy-long-sleeve","w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-flare-leggings","w-logo-leggings"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
   "tryOnGarments": {"black-baby-top":{"type":"womens_baby_top","label":"women's black baby top: short, fitted, short-sleeve black cotton top with a fine rib, round neck; the hem sits slightly above the belly button","category":"tops","colour":"black","views":{"front":"assets/try-on/black-baby-top/garment.png"},"fitReference":"assets/try-on/black-baby-top/fit-reference.jpg","print":{"placement":"centred on the chest, a little below the neckline","width":0.3}}},
   "products": {
     "skinny": {
@@ -1188,6 +1188,22 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "colours": [{"id":"burgundy","name":"Burgundy","hex":"#5c1a2b"}],
       "chart": ["S-M","L-XL"],
       "gallery": [{"src":"assets/img/gallery/w-burgundy-long-sleeve-1-73fa3368.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-2-b75078dd.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-3-9e8b4420.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-4-58a2265f.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-5-2b50207a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-6-f867ab2b.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-7-18196745.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-8-2490f07c.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-long-sleeve-9-f00e4fda.webp","w":1024,"h":1534}]
+    },
+    "w-logo-flare-leggings": {
+      "gender": "women",
+      "id": "bymarccc:logo-flare-leggings",
+      "title": "LOGO FLARE LEGGINGS",
+      "price": 250,
+      "currency": "RON",
+      "cut": "Flared leggings",
+      "collections": ["bottoms"],
+      "hideModelText": true,
+      "details": ["Fitted flared leggings in soft stretch jersey","Front pintuck seams down each leg","Elastic waistband","White alien logo on the front hip","Black","All clothing is custom made."],
+      "description": "Black stretch flared leggings with front pintuck seams and a white alien logo on the hip.",
+      "unavailable": [],
+      "colours": [{"id":"black","name":"Black","hex":"#111111"}],
+      "chart": ["S","M","L"],
+      "gallery": [{"src":"assets/img/gallery/w-logo-flare-leggings-1-707c8a6e.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-2-7f0f75cf.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-3-0ff5febb.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-4-877ec7bd.webp","w":1025,"h":1535}]
     },
     "w-purple-sweatpants": {
       "gender": "women",
