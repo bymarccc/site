@@ -1237,9 +1237,9 @@ function tryOnModels() {
   return [...new Set([m, "gpt-image-1.5", "gpt-image-1"].filter(Boolean))];
 }
 __name(tryOnModels, "tryOnModels");
-async function tryOnEdit(buildForm, deadline) {
+async function tryOnEdit(buildForm, deadline, models) {
   let lastErr = null;
-  for (const model of tryOnModels()) {
+  for (const model of models || tryOnModels()) {
     for (const fidelity of [true, false]) {
       const left = deadline - Date.now();
       if (left < 15e3) { const e = new Error("timeout"); e.name = "AbortError"; throw lastErr && lastErr.name === "AbortError" ? lastErr : e; }
@@ -1352,7 +1352,7 @@ async function assistantTryon(request) {
   };
   let res;
   try {
-    res = await tryOnEdit(buildForm, t0 + 17e4);
+    res = await tryOnEdit(buildForm, t0 + 17e4, b.testModel === "gpt-image-1-mini" ? ["gpt-image-1-mini"] : null);   // testModel: internal validation runs only (cheaper)
   } catch (e) {
     const m = String(e && e.message || "");
     const code = e && e.name === "AbortError" ? "TIMEOUT" : e && (e.code === "moderation_blocked" || /safety|moderation|content policy/i.test(m)) ? "SAFETY_REJECTED" : e && (e.code === "insufficient_quota" || e.code === "billing_hard_limit_reached" || /quota|billing/i.test(m)) ? "TRYON_UNAVAILABLE" : e && (e.status === 429 || e.status >= 500) ? "GENERATION_BUSY" : "GENERATION_FAILED";
