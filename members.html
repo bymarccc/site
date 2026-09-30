@@ -680,15 +680,16 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const snd = new Audio(); snd.preload = 'auto'; snd.setAttribute('playsinline', ''); snd.setAttribute('webkit-playsinline', '');
   let sndOn = false, sndBroken = false, bgPlay = false, userMuted = false, lastSndSaveT = 0;
   const sndUrl = v => { const u = (v && (v.raw || v.src)) || ''; const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/[^?#]+)\.(?:mp4|mov|webm)(?:[?#].*)?$/i.exec(u); return m ? m[1] + m[2] + '.m4a' : ''; };
-  const applySound = () => { if (sndOn) { video.muted = true; snd.muted = userMuted; } else { video.muted = userMuted; } };
+  const applySound = () => { if (sndOn && !pipOwn) { video.muted = true; snd.muted = userMuted; } else { video.muted = userMuted; } };
   const sndSync = () => { if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.3) { try { snd.currentTime = video.currentTime || 0; } catch {} } };
   /* while the twin plays, the SOUND is the clock: a lagging picture is moved to the song (throttled), the song is never
      re-seeked to the picture — re-seeking it made the music stop/start every half second after coming back to the site */
   let picSeek = false, lastPicSync = 0;
   const picSync = force => { const now = Date.now(); if (!force && now - lastPicSync < 2000) return; if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.5) { lastPicSync = now; picSeek = true; try { video.currentTime = snd.currentTime || 0; } catch { picSeek = false; } } };
   function sndLoad(v) { sndOn = false; sndBroken = false; snd.pause(); const u = sndUrl(v); if (u) snd.src = u; else { snd.removeAttribute('src'); sndBroken = true; } applySound(); }
+  let pipOwn = false;   // true while the video plays its own sound in the Picture-in-Picture window
   function sndPlay() {
-    if (sndBroken || !snd.getAttribute('src') || bgPlay) return;
+    if (sndBroken || !snd.getAttribute('src') || bgPlay || pipOwn) return;
     if (!snd.paused) { if (sndOn) picSync(); else sndSync(); return; }
     try { snd.currentTime = video.currentTime || 0; } catch {}
     const p = snd.play(); if (p) p.catch(() => {});
@@ -871,11 +872,20 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       e.stopPropagation();
       try {
         if (inPiP()) { if (document.pictureInPictureElement && document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {}); else video.webkitSetPresentationMode?.('inline'); return; }
+        // the PiP window carries its own sound: hand the song from the audio twin back to the video itself
+        // (iPhone won't keep a muted video floating over other apps)
+        const at = sndOn && !snd.paused ? snd.currentTime : null;
+        pipOwn = true; sndOn = false; snd.pause(); video.muted = userMuted;
+        if (at !== null) { try { video.currentTime = at; } catch {} }
         if (video.paused) video.play().catch(() => {});
-        if (typeof video.webkitSetPresentationMode === 'function') video.webkitSetPresentationMode('picture-in-picture');
-        else video.requestPictureInPicture().catch(() => {});
-      } catch {}
+        if (typeof video.webkitSetPresentationMode === 'function' && (!video.webkitSupportsPresentationMode || video.webkitSupportsPresentationMode('picture-in-picture'))) video.webkitSetPresentationMode('picture-in-picture');
+        else if (video.requestPictureInPicture) video.requestPictureInPicture().catch(() => { pipOwn = false; applySound(); sndPlay(); });
+      } catch { pipOwn = false; applySound(); }
     });
+    // back from PiP: the audio twin takes the song over again, from where the video is
+    const pipLeft = () => { if (!pipOwn || inPiP()) return; pipOwn = false; applySound(); if (!video.paused) sndPlay(); };
+    video.addEventListener('webkitpresentationmodechanged', () => setTimeout(pipLeft, 50));
+    video.addEventListener('leavepictureinpicture', () => setTimeout(pipLeft, 50));
   }
   tab.addEventListener('click', () => { if (!docked) open(); });   // docked: handled by the drag/tap logic above
 
