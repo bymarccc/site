@@ -36,7 +36,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
   "collections": [{"key":"denim","label":"DENIM"},{"key":"tops","label":"TOPS"},{"key":"jackets","label":"JACKETS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "womenCollections": [{"key":"tops","label":"TOPS"},{"key":"bottoms","label":"BOTTOMS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "customizeCollections": [{"key":"bags","label":"BAGS"}],
-  "womenFeatured": {"tops":["w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"]},
+  "womenFeatured": {"tops":["w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"]},
   "tryOnGarments": {"black-baby-top":{"type":"womens_baby_top","label":"women's black baby top: short, fitted, short-sleeve black cotton top with a fine rib, round neck; the hem sits slightly above the belly button","category":"tops","colour":"black","views":{"front":"assets/try-on/black-baby-top/garment.png"},"fitReference":"assets/try-on/black-baby-top/fit-reference.jpg","print":{"placement":"centred on the chest, a little below the neckline","width":0.3}}},
   "products": {
     "skinny": {
@@ -1093,6 +1093,21 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
       "chart": ["S","M","L"],
       "gallery": [{"src":"assets/img/gallery/w-delulu-pardesiu-1-f45b8022.webp","w":1212,"h":1816}]
+    },
+    "w-logo-vest": {
+      "gender": "women",
+      "id": "bymarccc:logo-vest",
+      "title": "LOGO VEST",
+      "price": 300,
+      "currency": "RON",
+      "cut": "Fitted vest",
+      "collections": ["tops"],
+      "details": ["Fitted sleeveless vest in glossy crinkle-textured faux leather","High stand collar and full-length two-way metal zip","Contoured seams with a flared peplum hem","Silver alien logo on the chest","Burgundy","Outer: 100% recycled polyester (RCS certified) · Coating/lining: 100% polyurethane","Hand wash max 30°C · Do not bleach · Iron max 110°C · Do not dry clean · Do not tumble dry","All clothing is custom made."],
+      "description": "A fitted burgundy faux-leather vest with a high stand collar, a two-way zip, contoured seams and a silver alien logo on the chest.",
+      "unavailable": [],
+      "colours": [{"id":"burgundy","name":"Burgundy","hex":"#6B1A1E"}],
+      "chart": ["S","M","L"],
+      "gallery": [{"src":"assets/img/gallery/w-logo-vest-1-d3c17366.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-2-e60bd130.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-3-266e7c1d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-4-b73c32e1.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-5-1b6cdb4d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-6-44e96152.webp","w":1025,"h":1535}]
     },
     "w-purple-sweatpants": {
       "gender": "women",
