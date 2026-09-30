@@ -1344,7 +1344,20 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const now = Date.now(); if (now - lastSndSaveT > 3000) { lastSndSaveT = now; saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: snd.currentTime || 0, paused: false }); }
   });
   video.addEventListener('play', () => { setPlayIcon(true); setPP(true); vp.classList.remove('is-ended'); showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: false }); });
-  video.addEventListener('pause', () => { if (bgPlay || document.hidden) return; snd.pause(); });
+  /* Every pause the site itself asks for goes through video.pause() and is marked as intended. A pause nobody asked
+     for (iPhone Safari stopping the picture as you leave the site) must NOT stop the song: the twin keeps playing. */
+  let vIntent = false;
+  { const nativePause = video.pause.bind(video); video.pause = () => { vIntent = true; nativePause(); }; }
+  const inPiP = () => document.pictureInPictureElement === video || video.webkitPresentationMode === 'picture-in-picture';
+  const goBg = () => { if (bgPlay || sndBroken || snd.paused) return false; bgPlay = true; sndOn = true; snd.muted = userMuted; return true; };
+  video.addEventListener('pause', () => {
+    const intended = vIntent; vIntent = false;
+    if (bgPlay) return;
+    if (intended) { if (!document.hidden) snd.pause(); return; }
+    if (document.hidden) { goBg(); return; }
+    // system pause while still visible: wait a moment — if the site is being left, the song carries on
+    setTimeout(() => { if (bgPlay || !video.paused) return; if (document.hidden) goBg(); else snd.pause(); }, 400);
+  });
   video.addEventListener('pause', () => { if (bgPlay) return; setPlayIcon(false); setPP(false); if (!video.ended) showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: true }); });
   // end of the song: black card with Replay / Next — nothing auto-plays
   video.addEventListener('ended', () => { hideCtrls(); vp.classList.add('is-ended'); if (docked) undock(); clearNow(); });
@@ -1624,7 +1637,9 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const cur = list[idx] && (window.BYMARCCC_PLAYLIST || []).find(t => t.video === list[idx].src);
     if (document.hidden) {
       // the twin is already playing the song → just let the picture stop; the song carries on
-      if (!video.paused && !video.ended && sndOn && !snd.paused) { bgPlay = true; video.pause(); return; }
+      if (!video.paused && !video.ended && inPiP()) return;   // Picture-in-Picture: picture and song both keep going
+      if (!video.paused && !video.ended && goBg()) { video.pause(); return; }   // the twin is playing the song → only the picture stops
+      if (bgPlay) return;   // Safari already stopped the picture and the song carried on
       if (!video.paused && !video.ended && cur && cur.src && window.BYMARCCC?.audioTrack) { const at = video.currentTime; video.pause(); if (window.BYMARCCC.audioTrack.play(cur, at)) handedOff = cur; }
     } else if (bgPlay) {
       // back on the site: the picture jumps to where the song is now
