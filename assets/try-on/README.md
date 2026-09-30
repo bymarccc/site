@@ -1,24 +1,17 @@
 # BYMARCCC Virtual Try-On assets
 
-One folder per PHYSICAL garment, one transparent PNG per print:
+One folder per PHYSICAL garment:
 
-    assets/try-on/black-crop-top/
-        garment.png          ← the REAL blank garment (no print), clean, high resolution, transparent background
-        front.png / back.png / side.png / three-quarter.png   ← optional extra views (improve quality, not required)
-        prints/
-            print-01.png     ← ORIGINAL artwork, transparent background, high resolution
-            print-02.png ...
+    assets/try-on/black-baby-top/
+        garment.png, garment-2.png   blank garment reference photos (transparent background)
+        fit-reference.jpg            the same garment worn by a model, artwork removed (fit + hem height only)
+        prints/print-0N-*.png        ORIGINAL printed artworks (transparent PNG)
+        embroidery/embroidery-0N-*.png  ORIGINAL embroideries (transparent PNG)
 
-1. The garment is described once in `assets/catalog.js` → `"tryOnGarments"` (already there for `black-crop-top`).
-   Extra views go in its `"views"`: `{"front": ".../garment.png", "side": ".../side.png"}`.
-2. Each sellable product points to the garment + its exact print, in `assets/catalog.js` → `"products"`:
+The garment is described once in `assets/catalog.js` → `"tryOnGarments"`; each product lists its designs in
+`"tryOn"` with the PNG, the artwork box inside the PNG, and its real size/position on the body (see the comment at the
+top of `assets/catalog.js`). Adding a design = add the PNG + one entry there.
 
-       "tryOn": { "garment": "black-crop-top", "print": "assets/try-on/black-crop-top/prints/print-03.png" }
-
-   or, for one product sold in several designs (names = the product's `"designs"`):
-
-       "tryOn": { "garment": "black-crop-top", "designs": { "Logo": "assets/try-on/black-crop-top/prints/print-01.png" } }
-
-The TRY ON button appears automatically once the files exist on the site. The print is never redrawn by AI:
-OpenAI dresses the customer in the blank garment and marks where the print goes; the site then warps the
-original PNG onto that area (folds, lighting, arms/hair in front), so text and logos stay exact.
+The artwork is never redrawn by AI: OpenAI dresses the customer in the blank garment and marks where the design goes;
+the site measures the garment in that photo, places the ORIGINAL PNG at the design's real scale, and bends/shades it
+with the fabric (arms/hair stay in front).

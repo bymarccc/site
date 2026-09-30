@@ -14,17 +14,18 @@
      shippingNote: extra sentence after the default Delivery & Returns text; cardGallery: optional homepage-tile images (else gallery).
 
    VIRTUAL TRY-ON (optional per product):
-     1. Describe each PHYSICAL garment once in "tryOnGarments":
-          "black-crop-top": {
-            "type": "womens_crop_top", "label": "women's black cropped top", "category": "tops",
-            "views": { "front": "assets/try-on/black-crop-top/garment.png" },   // later: "back", "side", "three-quarter"
-            "print": { "placement": "centred on the chest", "width": 0.55 }      // print width as a fraction of the garment's front width
-          }
-     2. On each sellable product point to it + its exact print PNG (transparent background):
-          "tryOn": { "garment": "black-crop-top", "print": "assets/try-on/black-crop-top/prints/print-03.png" }
-        or, for a product sold in several designs (names = the product's "designs"):
-          "tryOn": { "garment": "black-crop-top", "designs": { "Logo": "assets/try-on/black-crop-top/prints/print-01.png", ... } }
-     The TRY ON button appears only for products/designs whose garment + print are configured.
+     1. Describe each PHYSICAL garment once in "tryOnGarments" (e.g. "black-baby-top"): blank garment photo(s) in
+        "views" (front + optional extra views), an optional "fitReference" (the garment worn by a model, without print).
+     2. On the product, point to the garment and give every design its exact transparent PNG:
+          "tryOn": { "garment": "black-baby-top", "designs": {
+             "Muse": { "print": "assets/try-on/black-baby-top/embroidery/embroidery-01-muse.png",
+                       "box": [x0, y0, x1, y1],   // where the artwork sits inside its PNG (transparent margins excluded)
+                       "width": 0.143,            // artwork width as a fraction of the torso width (below the sleeves)
+                       "top": 0.181,              // artwork top edge: fraction of the way from neckline to hem
+                       "x": 0,                    // horizontal offset from the chest centre (fraction of torso width)
+                       "technique": "embroidery" } } }   // or "print"
+        Each design keeps its OWN real size/position (measured on the product's model photos) — never normalised.
+     The TRY ON button appears only for designs whose garment + PNG files exist on the site.
    ===================================================================== */
 window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
   "shipping": "Romania: 3–5 working days.\nEU & UK: DHL Express — 5–7 working days.\nUSA: UPS Express — 7–9 working days.\n\nReturns accepted within 14 days of delivery, unworn and with tags.",
@@ -36,7 +37,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
   "womenCollections": [{"key":"tops","label":"TOPS"},{"key":"bottoms","label":"BOTTOMS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "customizeCollections": [{"key":"bags","label":"BAGS"}],
   "womenFeatured": {"tops":["w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"]},
-  "tryOnGarments": {"black-crop-top": {"type": "womens_crop_top", "label": "women's black cropped top", "category": "tops", "colour": "black", "views": {"front": "assets/try-on/black-crop-top/garment.png"}, "print": {"placement": "centred on the chest, a little below the neckline", "width": 0.55}}},
+  "tryOnGarments": {"black-baby-top":{"type":"womens_baby_top","label":"women's black baby top: short, fitted, short-sleeve black cotton top with a fine rib, round neck; the hem sits slightly above the belly button","category":"tops","colour":"black","views":{"front":"assets/try-on/black-baby-top/garment.png","front-2":"assets/try-on/black-baby-top/garment-2.png"},"fitReference":"assets/try-on/black-baby-top/fit-reference.jpg","print":{"placement":"centred on the chest, a little below the neckline","width":0.3}}},
   "products": {
     "skinny": {
       "needsBody": true,
@@ -691,6 +692,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "collections": ["tops"],
       "designs": ["Muse","PARIS","Happy Hoes","Boys Lie","Delulu","Logo","Hot Girls","Yacht","Art"],
       "designImages": {"paris":0,"happy-hoes":1,"muse":2,"hot-girls":3,"delulu":4,"boys-lie":5,"art":6,"logo":7,"yacht":8},
+      "tryOn": {"garment":"black-baby-top","designs":{"PARIS":{"print":"assets/try-on/black-baby-top/prints/print-01-paris.png","box":[575,196,1266,589],"width":0.173,"top":0.181,"x":0,"technique":"print"},"Happy Hoes":{"print":"assets/try-on/black-baby-top/prints/print-02-happy-hoes.png","box":[80,479,3419,1228],"width":0.789,"top":0.174,"x":0.004,"technique":"print"},"Boys Lie":{"print":"assets/try-on/black-baby-top/prints/print-03-boys-lie.png","box":[547,250,1388,646],"width":0.399,"top":0.178,"x":0.009,"technique":"print"},"Logo":{"print":"assets/try-on/black-baby-top/prints/print-04-logo.png","box":[69,85,1034,1196],"width":0.106,"top":0.131,"x":0.027,"technique":"print"},"Yacht":{"print":"assets/try-on/black-baby-top/prints/print-05-yacht.png","box":[58,284,2113,451],"width":0.569,"top":0.186,"x":0.016,"technique":"print"},"Art":{"print":"assets/try-on/black-baby-top/prints/print-06-art.png","box":[97,86,1744,693],"width":0.616,"top":0.212,"x":-0.011,"technique":"print"},"Muse":{"print":"assets/try-on/black-baby-top/embroidery/embroidery-01-muse.png","box":[594,258,1226,423],"width":0.143,"top":0.181,"x":0,"technique":"embroidery"},"Delulu":{"print":"assets/try-on/black-baby-top/embroidery/embroidery-02-delulu.png","box":[458,227,1377,419],"width":0.286,"top":0.162,"x":-0.021,"technique":"embroidery"},"Hot Girls":{"print":"assets/try-on/black-baby-top/embroidery/embroidery-03-hot-girls.png","box":[51,72,1798,725],"width":0.339,"top":0.153,"x":-0.012,"technique":"embroidery"}}},
       "details": ["Several embroidery/printed designs available (Muse, NOT FROM PARIS, Happy Hoes, Boys Lie, Delulu, Logo, Hot Girls, Yacht, Art)","All clothing is custom made.","100% Organic Cotton"],
       "description": "Black Baby Top from the bymarccc womenswear collection, available in several embroidery/printed designs.",
       "unavailable": [],

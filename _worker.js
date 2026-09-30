@@ -497,10 +497,17 @@ function resolveTryOn(p, garments, abs) {
   if (t && t.garment) {
     const g = typeof t.garment === "string" ? garments[t.garment] : t.garment;
     const gid = typeof t.garment === "string" ? t.garment : "inline";
-    const views = g && g.views ? ["front", "three-quarter", "side", "back"].map((v) => g.views[v]).filter(Boolean).map(abs) : [];
-    const garment = g ? { id: gid, type: g.type || null, label: g.label || null, category: g.category || null, colour: g.colour || null, fabric: g.fabric || null, printPlacement: g.print && g.print.placement || "centred on the chest, a little below the neckline", printWidth: Number(g.print && g.print.width) || 0.5 } : null;
+    const order = ["front", "three-quarter", "side", "back"];
+    const views = g && g.views ? [...order.filter((v) => g.views[v]), ...Object.keys(g.views).filter((v) => !order.includes(v))].map((v) => abs(g.views[v])) : [];
+    const garment = g ? { id: gid, type: g.type || null, label: g.label || null, category: g.category || null, colour: g.colour || null, fabric: g.fabric || null, fitReference: g.fitReference ? abs(g.fitReference) : null, printPlacement: g.print && g.print.placement || "centred on the chest, a little below the neckline", printWidth: Number(g.print && g.print.width) || 0.5 } : null;
     const designs = t.designs && typeof t.designs === "object" ? Object.entries(t.designs) : [[null, t.print]];
-    for (const [design, print] of designs) out.push({ design, slug: design ? slugify(design) : null, garment, garmentViews: views, print: print ? abs(print) : null, reference: null, mode: "print", ok: !!(garment && views.length && print) });
+    for (const [design, val] of designs) {
+      // a design is either just its PNG path, or { print, box: [x0,y0,x1,y1] artwork extent in the PNG, width: fraction of the
+      // torso width, top: fraction neckline→hem, x: horizontal offset (fraction of torso width), technique: print|embroidery }
+      const d = val && typeof val === "object" ? val : { print: val };
+      const placement = Number(d.width) > 0 ? { width: Number(d.width), top: Number(d.top) || 0, x: Number(d.x) || 0 } : null;
+      out.push({ design, slug: design ? slugify(design) : null, garment, garmentViews: views, print: d.print ? abs(d.print) : null, box: Array.isArray(d.box) && d.box.length === 4 ? d.box.map(Number) : null, placement, technique: d.technique === "embroidery" ? "embroidery" : "print", reference: null, mode: "print", ok: !!(garment && views.length && d.print) });
+    }
   } else if (p.tryOnAssets && typeof p.tryOnAssets === "object") {
     for (const [slug, img] of Object.entries(p.tryOnAssets)) {
       const design = (p.designs || []).find((d) => slugify(d) === slug) || slug;
@@ -569,7 +576,7 @@ async function loadCatalog() {
   const D = await loadCatalogData();
   const items = D ? siteCatalogToItems(D, base) : [];
   // a TRY ON button must never appear for a garment/print file that isn't actually deployed
-  const urls = [...new Set(items.flatMap((p) => p.tryOnResolved.filter((d) => d.ok).flatMap((d) => [...d.garmentViews, d.print, d.reference].filter(Boolean))))];
+  const urls = [...new Set(items.flatMap((p) => p.tryOnResolved.filter((d) => d.ok).flatMap((d) => [...d.garmentViews, d.print, d.reference, d.garment && d.garment.fitReference].filter(Boolean))))];
   const exists = new Map(await Promise.all(urls.map(async (u) => {
     try { const r = ENV.ASSETS && typeof ENV.ASSETS.fetch === "function" && u.startsWith(base) ? await ENV.ASSETS.fetch(new Request(u, { method: "HEAD" })) : await fetch(u, { method: "HEAD" }); return [u, r.ok]; } catch { return [u, false]; }
   })));
@@ -577,6 +584,7 @@ async function loadCatalog() {
     if (!d.ok) { stylistLog("tryon-config-incomplete", { product: p.id, design: d.design, garment: !!d.garment, garmentViews: d.garmentViews.length, print: !!d.print }); continue; }
     const missing = [d.garmentViews[0], d.print, d.reference].filter((u) => u && !exists.get(u));
     d.garmentViews = d.garmentViews.filter((u, i) => i === 0 || exists.get(u));   // optional extra views (side/back…) are simply skipped when absent
+    if (d.garment && d.garment.fitReference && !exists.get(d.garment.fitReference)) d.garment = { ...d.garment, fitReference: null };
     if (missing.length) { d.ok = false; d.missing = missing; stylistLog("tryon-asset-missing", { product: p.id, design: d.design, missing }); }
   }
   if (items.length) cache = { t: Date.now(), items };
@@ -1104,14 +1112,16 @@ var PROMPT_GARMENT_STAGE = /* @__PURE__ */ __name((n, g, o) => `You are editing 
 
 ${TRYON_IDENTITY}
 
-IMAGE 2${o.views > 1 ? ` to IMAGE ${o.views + 1} show` : " shows"} the REAL physical BYMARCCC garment (${g.label || n.title}), blank, without its print${o.views > 1 ? ", from different angles" : ""}. Dress the customer in exactly this garment, replacing ONLY ${tryOnRegion(g.category || n.category)}. Keep every other clothing item and accessory unchanged.
+IMAGE 2${o.views > 1 ? ` to IMAGE ${o.views + 1} show` : " shows"} the REAL physical BYMARCCC garment (${g.label || n.title}), blank, without its ${o.technique}${o.views > 1 ? " (several reference photos of the same garment)" : ""}. Dress the customer in exactly this garment, replacing ONLY ${tryOnRegion(g.category || n.category)}. Keep every other clothing item and accessory unchanged.${o.fitIndex ? `
 
-GARMENT FIDELITY: the result must clearly be this exact garment. Match its garment type, length (keep a cropped garment cropped, at the same crop height relative to the body), neckline, sleeve shape and length, silhouette, proportions and fit, fabric and material appearance, seams, edges, hems and every construction detail, and its exact colour${g.colour ? ` (${g.colour})` : ""}. Do not turn it into a different garment (e.g. a regular-length T-shirt, tank top, hoodie, or another neckline or sleeve).
+IMAGE ${o.fitIndex} shows this same garment worn by a model. Use it ONLY to match how the garment fits and where its hem sits on the body (length, snugness, sleeve length, neckline height). Never copy that model's face, hair, body, skin, pose, background or anything else from IMAGE ${o.fitIndex}.` : ""}
+
+GARMENT FIDELITY: the result must clearly be this exact garment. Match its garment type, its exact length on the body, neckline, sleeve shape and length, silhouette, proportions and fit, fabric and material appearance (including any rib texture), seams, edges, hems and every construction detail, and its exact colour${g.colour ? ` (${g.colour})` : ""}. Do not turn it into a different garment (e.g. a regular-length or oversized T-shirt, a differently cropped top, a tank top, a hoodie, or another neckline or sleeve).
 
 PRODUCT
 ${tryOnMeta(n, g, o.design)}
 
-PRINT PLACEHOLDER: the real garment carries a printed graphic that is added in a later step. Exactly where that graphic sits — ${g.printPlacement}, about ${Math.round(g.printWidth * 100)}% of the width of the garment's front, with a width:height ratio of ${o.aspect} — print a matte, mid-tone chroma-key ${o.keyName} (${o.keyHex}) rectangle instead. Treat it exactly like screen-printed ink on the fabric: it bends with the fabric's folds, curvature, stretch and perspective, and is hidden behind anything in front of the garment (hair, arms, hands). The fabric's wrinkles, folds, shadows and highlights must stay clearly visible across the rectangle as darker and lighter shades of that same ${o.keyName}, exactly as they would on printed ink. Use no other colour in it: no text, pattern, logo, glow, outline or border, crisp edges, and no ${o.keyName} anywhere else in the image. Apart from this rectangle the garment is blank.
+${o.technique.toUpperCase()} PLACEHOLDER: the real garment carries ${o.technique === "embroidery" ? "an embroidered design" : "a printed graphic"} that is added in a later step. Exactly where it sits — ${o.placementText}, with a width:height ratio of ${o.aspect} — print a matte, mid-tone chroma-key ${o.keyName} (${o.keyHex}) rectangle instead. Size and position matter: make the rectangle exactly that size relative to the torso, even when it is very small. Treat it exactly like ink on the fabric: it bends with the fabric's folds, curvature, stretch and perspective, and is hidden behind anything in front of the garment (hair, arms, hands). The fabric's wrinkles, folds, shadows and highlights must stay clearly visible across the rectangle as darker and lighter shades of that same ${o.keyName}. Use no other colour in it: no text, pattern, logo, glow, outline or border, crisp edges, and no ${o.keyName} anywhere else in the image. Apart from this rectangle the garment is blank.
 
 ${TRYON_PHYSICS}
 
@@ -1290,10 +1300,13 @@ async function assistantTryon(request) {
   }
   const t0 = Date.now();
   const refs = [];
-  for (const u of entry.mode === "print" ? entry.garmentViews.slice(0, 4) : [entry.reference]) {
+  for (const u of entry.mode === "print" ? entry.garmentViews.slice(0, 3) : [entry.reference]) {
     const blob = await fetchTryOnAsset(u);
     if (blob) refs.push(blob); else if (!refs.length) { stylistLog("tryon", { ...diag, stage: "assets", fail: "GARMENT_ASSET_UNAVAILABLE" }); return tryErr(502, "GARMENT_ASSET_UNAVAILABLE", "The product image for try-on couldn’t be loaded. Please try again."); }
   }
+  const garmentRefCount = refs.length;
+  const fitRef = entry.mode === "print" && entry.garment && entry.garment.fitReference ? await fetchTryOnAsset(entry.garment.fitReference) : null;
+  if (fitRef) refs.push(fitRef);
   let printInfo = null;
   if (entry.mode === "print") {
     const pb = await fetchTryOnAsset(entry.print);
@@ -1313,9 +1326,15 @@ async function assistantTryon(request) {
   const g = entry.garment || {};
   const keyGreen = !/green|verde/i.test(`${g.colour || ""} ${n.colors.join(" ")}`);
   const key = keyGreen ? { name: "green", hex: "#00B140" } : { name: "magenta", hex: "#C000C0" };   // mid-tone keys so folds/shadows AND highlights stay visible on the panel
-  const aspect = printInfo ? `${printInfo.w}:${printInfo.h}` : null;
+  const box = entry.box && entry.box[2] > entry.box[0] && entry.box[3] > entry.box[1] ? entry.box : printInfo ? [0, 0, printInfo.w, printInfo.h] : null;
+  const aspect = box ? `${Math.round(box[2] - box[0])}:${Math.round(box[3] - box[1])}` : null;
+  const pl = entry.placement;
+  const pct = (v) => `${Math.round(v * 100)}%`;
+  const placementText = pl
+    ? `${Math.abs(pl.x) < 0.03 ? "horizontally centred on the chest" : `${pct(Math.abs(pl.x))} of the torso width ${pl.x > 0 ? "right" : "left"} of the chest centre (as seen in the photo)`}, its width about ${pct(pl.width)} of the torso width measured below the sleeves, its top edge ${pct(pl.top)} of the way down from the neckline to the hem`
+    : `${g.printPlacement}, about ${pct(g.printWidth)} of the width of the garment's front`;
   const prompt = entry.mode === "print"
-    ? PROMPT_GARMENT_STAGE(n, g, { design: entry.design, views: refs.length, aspect, keyName: key.name, keyHex: key.hex })
+    ? PROMPT_GARMENT_STAGE(n, g, { design: entry.design, views: garmentRefCount, fitIndex: fitRef ? garmentRefCount + 2 : 0, aspect, placementText, technique: entry.technique || "print", keyName: key.name, keyHex: key.hex })
     : PROMPT_REFERENCE(n, { design: entry.design });
   const size = tryOnSize(ph.info);
   const buildForm = (model, fidelity) => {
@@ -1350,7 +1369,7 @@ async function assistantTryon(request) {
   if (entry.mode !== "print") return json(200, { ...base, stage: "final" });
   // stages 2-4 run in the browser on this image: find the key panel, warp the ORIGINAL print onto it, shade + occlude
   const origin = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN).replace(/\/$/, "");
-  return json(200, { ...base, stage: "garment", key: key.hex, print: { src: entry.print.startsWith(origin) ? entry.print.slice(origin.length) : entry.print, width: printInfo.w, height: printInfo.h }, fabric: g.fabric || null });
+  return json(200, { ...base, stage: "garment", key: key.hex, placement: pl || null, technique: entry.technique || "print", print: { box, src: entry.print.startsWith(origin) ? entry.print.slice(origin.length) : entry.print, width: printInfo.w, height: printInfo.h }, fabric: g.fabric || null });
 }
 __name(assistantTryon, "assistantTryon");
 
