@@ -576,7 +576,7 @@ body.is-custom-bag-page #gallery { display: none; }
     align-items: start;
     padding: calc(var(--header-h) + 28px) 40px 56px;
   }
-  body:not(.is-custom-bag-page) .pdp-left { display: block; grid-column: 1; grid-row: 1; align-self: end; justify-self: end; width: min(100%, 340px); margin-right: 48px; }
+  body:not(.is-custom-bag-page) .pdp-left { display: block; grid-column: 1; grid-row: 1; align-self: end; justify-self: end; width: min(calc(100% - 48px), 340px); margin-right: 48px; }
   body:not(.is-custom-bag-page) .pdp-left .pdp-acc { margin: 0; }
   body:not(.is-custom-bag-page) .pdp-thumbs { display: flex; grid-column: 2; grid-row: 1; flex-direction: column; gap: 8px; margin-right: 10px; max-height: var(--gh); overflow-y: auto; scrollbar-width: none; position: sticky; top: calc(var(--header-h) + 28px); }
   body:not(.is-custom-bag-page) .pdp-thumbs::-webkit-scrollbar { display: none; }
@@ -589,6 +589,13 @@ body.is-custom-bag-page #gallery { display: none; }
   body:not(.is-custom-bag-page) .pdp-hanger { bottom: 60px; left: 12px; }
   body:not(.is-custom-bag-page) .pdp-wish { bottom: 60px; right: 12px; }
   body:not(.is-custom-bag-page) .pdp-info { grid-column: 4; grid-row: 1; align-self: center; width: min(100%, 400px); padding: 0 0 0 48px; }
+  body:not(.is-custom-bag-page) .pdp-info .pdp-summary__row { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 26px; }
+  body:not(.is-custom-bag-page) .pdp-info .pdp-info__title { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+  body:not(.is-custom-bag-page) .pdp-info .pdp-info__price { margin: 0; font-size: 16px; font-weight: 600; }
+  body:not(.is-custom-bag-page) #barPrice { display: none !important; }
+  body:not(.is-custom-bag-page) .pdp-left .pdp-acc__guide { display: block; margin: 0 0 8px; font-size: 15px; }
+  body:not(.is-custom-bag-page) .pdp-left .pdp-acc__guide[hidden] { display: none; }
+  body:not(.is-custom-bag-page) .pdp-left .pdp-acc__btn { justify-content: space-between; padding: 16px 0; font-size: 15px; }
 }
 
 </style>
