@@ -1209,7 +1209,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "gender": "women",
       "model": {"size":"M"},
       "id": "bymarccc:white-logo-windbreaker",
-      "title": "WHITE LOGO WINDBREAKER",
+      "title": "LOGO WINDBREAKER",
       "price": 350,
       "currency": "RON",
       "cut": "Cropped track jacket",
@@ -1225,7 +1225,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "gender": "women",
       "model": {"size":"M"},
       "id": "bymarccc:black-logo-windbreaker",
-      "title": "BLACK LOGO WINDBREAKER",
+      "title": "LOGO WINDBREAKER",
       "price": 350,
       "currency": "RON",
       "cut": "Cropped windbreaker",
@@ -1235,7 +1235,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
       "chart": ["S","M","L"],
-      "gallery": [{"src":"assets/img/gallery/w-black-logo-windbreaker-1-c22ce8f6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-2-1452badc.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-3-9f6ba83f.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-4-5f4062a3.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-5-a0ce36a0.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-6-7e3f22e4.webp","w":1024,"h":1534}]
+      "gallery": [{"src":"assets/img/gallery/w-black-logo-windbreaker-3-9f6ba83f.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-1-c22ce8f6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-2-1452badc.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-4-5f4062a3.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-5-a0ce36a0.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-6-7e3f22e4.webp","w":1024,"h":1534}]
     },
     "w-purple-sweatpants": {
       "gender": "women",
