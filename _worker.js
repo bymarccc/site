@@ -508,6 +508,8 @@ function resolveTryOn(p, garments, abs) {
       const placement = Number(d.width) > 0 ? { width: Number(d.width), top: Number(d.top) || 0, x: Number(d.x) || 0 } : null;
       out.push({ design, slug: design ? slugify(design) : null, garment, garmentViews: views, print: d.print ? abs(d.print) : null, box: Array.isArray(d.box) && d.box.length === 4 ? d.box.map(Number) : null, placement, technique: d.technique === "embroidery" ? "embroidery" : "print", reference: null, mode: "print", ok: !!(garment && views.length && d.print) });
     }
+    const dOrder = (p.designs || []).map(slugify);   // same order as the product page's design buttons
+    out.sort((a, b) => (dOrder.indexOf(a.slug) + 1 || 999) - (dOrder.indexOf(b.slug) + 1 || 999));
   } else if (p.tryOnAssets && typeof p.tryOnAssets === "object") {
     for (const [slug, img] of Object.entries(p.tryOnAssets)) {
       const design = (p.designs || []).find((d) => slugify(d) === slug) || slug;
