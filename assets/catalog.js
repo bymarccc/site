@@ -1207,7 +1207,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
     },
     "w-white-logo-windbreaker": {
       "gender": "women",
-      "model": {"size":"M"},
+      "model": {"height":176,"weight":53,"size":"M","modelMedia":[0],"text":"Model is 176 cm and 53 kg and wears size M"},
       "id": "bymarccc:white-logo-windbreaker",
       "title": "LOGO WINDBREAKER",
       "price": 350,
@@ -1223,7 +1223,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
     },
     "w-black-logo-windbreaker": {
       "gender": "women",
-      "model": {"size":"M"},
+      "model": {"height":176,"weight":53,"size":"M","modelMedia":[0],"text":"Model is 176 cm and 53 kg and wears size M"},
       "id": "bymarccc:black-logo-windbreaker",
       "title": "LOGO WINDBREAKER",
       "price": 350,

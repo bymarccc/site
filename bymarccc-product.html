@@ -150,6 +150,8 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-members__soon { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
 .pdp-members__note { margin: 0; font-size: 13px; color: #6f6f6f; line-height: 1.5; }
 .pdp-service__terms { margin: 8px 0 0; }
+.pdp-split-go { width: 100%; margin: 14px 0 0; }
+.pdp-split-msg:empty { display: none; }
 .pdp-service__terms a { color: #111; text-decoration: underline; text-underline-offset: 2px; }
 .pdp-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .pdp-swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; padding: 2px; background: transparent; }
@@ -821,7 +823,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=2c8ab6900d"></script>
+<script src="/assets/catalog.js?v=b01f63bf66"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1724,7 +1726,7 @@ body.is-custom-bag-page #gallery { display: none; }
      is bymarccc's own (2 payments, card-only), never PayPal's. */
   function splitPayBodyInner() {
     const [a, b] = splitTwo(priceMinor());
-    return `<p>Split this order into 2 card payments: <strong>${fmtMinor(a)}</strong> today and <strong>${fmtMinor(b)}</strong> in 30 days, charged automatically to the same card. No PayPal account needed, no interest, no fees.</p><p class="pdp-service__terms"><a href="pay-in-2-terms.html" target="_blank" rel="noopener noreferrer">Terms and conditions apply.</a></p>`;
+    return `<p>Split this order into 2 card payments: <strong>${fmtMinor(a)}</strong> today and <strong>${fmtMinor(b)}</strong> in 30 days, charged automatically to the same card. No PayPal account needed, no interest, no fees.</p><button type="button" class="pdp-btn pdp-split-go" data-split-go>CHECKOUT · PAY IN 2</button><p class="pdp-bar__msg pdp-split-msg" role="status" aria-live="polite"></p><p class="pdp-service__terms"><a href="pay-in-2-terms.html" target="_blank" rel="noopener noreferrer">Terms and conditions apply.</a></p>`;
   }
   const splitRow = SERVICE.splitPay.enabled && hasPrice ? svcRow(ICON.pay, '', splitPayBodyInner(), 'svc-split') : null;
   function renderSplit() {
@@ -1735,6 +1737,16 @@ body.is-custom-bag-page #gallery { display: none; }
     if (bodyEl) bodyEl.innerHTML = splitPayBodyInner();
   }
   renderSplit();
+  /* "Checkout · Pay in 2": adds the selected piece to the bag (same checks as ADD TO BAG) and opens
+     checkout with the 2-installment card option preselected. */
+  if (splitRow) splitRow.addEventListener('click', async e => {
+    const go = e.target.closest('[data-split-go]'); if (!go) return;
+    const msg = splitRow.querySelector('.pdp-split-msg');
+    const ok = await addMain(go, msg);
+    if (!ok) return;
+    try { sessionStorage.setItem('bym.wantSplit', '1'); } catch {}
+    if (window.BYM_NAV) BYM_NAV.navigate('checkout.html'); else location.href = 'checkout.html';
+  });
   renderPrice();
   state.listeners.add(renderPrice);
   state.listeners.add(renderSplit);

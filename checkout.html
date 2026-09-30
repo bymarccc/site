@@ -200,7 +200,7 @@
   @media (max-width:899px){ #coThankYou{ padding-bottom:96px; } }
   .co-ty__continue{ display:inline-flex; align-items:center; justify-content:center; height:48px; padding:0 28px; margin-top:28px; border-radius:999px; background:var(--ink); color:#fff; text-decoration:none; font:600 11px/1 inherit; letter-spacing:.2em; text-transform:uppercase; }
 </style>
-<script src="/assets/catalog.js?v=2c8ab6900d" defer></script>
+<script src="/assets/catalog.js?v=b01f63bf66" defer></script>
 </head>
 <body>
 
@@ -539,6 +539,12 @@
     submitBtn.textContent = isCard ? t('btnContinuePayment') : t('btnCompleteOrder');
   }
   payCard.addEventListener('change', updatePaymentView); payCod.addEventListener('change', updatePaymentView);
+  /* arrived from a product page's "Checkout · Pay in 2" button: card + 2 installments preselected */
+  try { if (sessionStorage.getItem('bym.wantSplit') === '1') {
+    sessionStorage.removeItem('bym.wantSplit');
+    payCard.checked = true; payCard.dispatchEvent(new Event('change'));
+    splitTwoRadio.checked = true; splitTwoRadio.dispatchEvent(new Event('change'));
+  } } catch(e){}
 
   var discount = $('coDiscount'), discountBtn = $('coDiscountBtn');
   discount.addEventListener('input', function(){ discountBtn.classList.toggle('is-active', discount.value.trim().length > 0); });
