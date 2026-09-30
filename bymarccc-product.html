@@ -566,6 +566,31 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-header .pdp-header__btn[aria-label="Search"],
 .pdp-header .pdp-header__btn[aria-label="Menu"] { display: none !important; }
 
+/* ---------- Desktop product page (Pull&Bear-style): details column on the left, thumbnail strip +
+   photo in the middle, buy box on the right. Mobile layout is untouched. ---------- */
+.pdp-thumbs, .pdp-left { display: none; }
+@media (min-width: 900px) {
+  body:not(.is-custom-bag-page) .pdp-layout {
+    --gh: calc(100vh - var(--header-h) - 56px);
+    grid-template-columns: minmax(0, 1fr) 68px auto minmax(0, 1fr);
+    align-items: start;
+    padding: calc(var(--header-h) + 28px) 40px 56px;
+  }
+  body:not(.is-custom-bag-page) .pdp-left { display: block; grid-column: 1; grid-row: 1; align-self: end; justify-self: end; width: min(100%, 340px); margin-right: 48px; }
+  body:not(.is-custom-bag-page) .pdp-left .pdp-acc { margin: 0; }
+  body:not(.is-custom-bag-page) .pdp-thumbs { display: flex; grid-column: 2; grid-row: 1; flex-direction: column; gap: 8px; margin-right: 10px; max-height: var(--gh); overflow-y: auto; scrollbar-width: none; position: sticky; top: calc(var(--header-h) + 28px); }
+  body:not(.is-custom-bag-page) .pdp-thumbs::-webkit-scrollbar { display: none; }
+  body:not(.is-custom-bag-page) .pdp-thumbs button { flex: 0 0 auto; width: 58px; aspect-ratio: 2 / 3; padding: 0; border: 1px solid transparent; background: #f2f2f2; cursor: pointer; }
+  body:not(.is-custom-bag-page) .pdp-thumbs button.is-on { border-color: #111; }
+  body:not(.is-custom-bag-page) .pdp-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  body:not(.is-custom-bag-page) .pdp-gallery { grid-column: 3; grid-row: 1; width: min(calc(var(--gh) * 2 / 3), 44vw); height: auto; aspect-ratio: 2 / 3; position: sticky; top: calc(var(--header-h) + 28px); }
+  body:not(.is-custom-bag-page) .pdp-gallery__slide img { height: 100%; }
+  body:not(.is-custom-bag-page) .pdp-modelbar { left: 12px; right: 12px; bottom: 12px; max-width: none; }
+  body:not(.is-custom-bag-page) .pdp-hanger { bottom: 60px; left: 12px; }
+  body:not(.is-custom-bag-page) .pdp-wish { bottom: 60px; right: 12px; }
+  body:not(.is-custom-bag-page) .pdp-info { grid-column: 4; grid-row: 1; align-self: center; width: min(100%, 400px); padding: 0 0 0 48px; }
+}
+
 </style>
 <style>html,body{margin:0;padding:0;background:#fff}</style>
 </head>
@@ -974,6 +999,7 @@ body.is-custom-bag-page #gallery { display: none; }
     track.style.transform = `translate3d(calc(${-gi * 100}% + ${dx}px), 0, 0)`;
     count.textContent = `${gi + 1} / ${GALLERY.length}`;
     [...bars.children].forEach((b, i) => b.classList.toggle('is-on', i === gi));
+    document.querySelectorAll('.pdp-thumbs > button').forEach((b, i) => b.classList.toggle('is-on', i === gi));
     slides.forEach((s, i) => s.setAttribute('aria-hidden', String(i !== gi)));
     const nxt = slides[(gi + 1) % slides.length]?.querySelector('img'); if (nxt) nxt.loading = 'eager';
   }
@@ -988,6 +1014,28 @@ body.is-custom-bag-page #gallery { display: none; }
     } else if (PRODUCT.imageDesigns && DESIGNS[gi] && state.design !== DESIGNS[gi]) { state.design = DESIGNS[gi]; emit(); }
   }
   if (GALLERY.length < 2) { gallery.classList.add('is-single'); $('galPrev').hidden = true; $('galNext').hidden = true; }
+  layout(0, false);
+  /* Desktop (Pull&Bear-style): thumbnail strip beside the photo, and the size guide / details /
+     description / delivery accordions in their own column on the left. Mobile keeps its layout. */
+  const thumbs = document.createElement('div'); thumbs.className = 'pdp-thumbs';
+  if (GALLERY.length > 1) GALLERY.forEach((g, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', `Show image ${i + 1}`);
+    const im = document.createElement('img'); im.src = g.src; im.alt = ''; im.loading = 'lazy'; im.decoding = 'async';
+    b.appendChild(im); b.addEventListener('click', () => goTo(i)); thumbs.appendChild(b);
+  });
+  gallery.parentNode.insertBefore(thumbs, gallery);
+  const leftCol = document.createElement('aside'); leftCol.className = 'pdp-left';
+  gallery.parentNode.insertBefore(leftCol, thumbs);
+  const accEl = document.querySelector('.pdp-info > .pdp-acc'), accHome = accEl && accEl.nextElementSibling;
+  const deskMQ = matchMedia('(min-width: 900px)');
+  const placeAcc = () => {
+    if (!accEl || !accHome) return;
+    const desk = deskMQ.matches && !document.body.classList.contains('is-custom-bag-page');
+    if (desk && accEl.parentNode !== leftCol) leftCol.appendChild(accEl);
+    else if (!desk && accEl.parentNode === leftCol) accHome.parentNode.insertBefore(accEl, accHome);
+  };
+  deskMQ.addEventListener ? deskMQ.addEventListener('change', placeAcc) : deskMQ.addListener(placeAcc);
+  placeAcc(); setTimeout(placeAcc, 0);
   layout(0, false);
   $('galPrev').addEventListener('click', () => goTo(gi - 1));
   $('galNext').addEventListener('click', () => goTo(gi + 1));
