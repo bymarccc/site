@@ -36,7 +36,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
   "collections": [{"key":"denim","label":"DENIM"},{"key":"tops","label":"TOPS"},{"key":"jackets","label":"JACKETS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "womenCollections": [{"key":"tops","label":"TOPS"},{"key":"bottoms","label":"BOTTOMS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "customizeCollections": [{"key":"bags","label":"BAGS"}],
-  "womenFeatured": {"tops":["w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"]},
+  "womenFeatured": {"tops":["w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-leggings"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
   "tryOnGarments": {"black-baby-top":{"type":"womens_baby_top","label":"women's black baby top: short, fitted, short-sleeve black cotton top with a fine rib, round neck; the hem sits slightly above the belly button","category":"tops","colour":"black","views":{"front":"assets/try-on/black-baby-top/garment.png"},"fitReference":"assets/try-on/black-baby-top/fit-reference.jpg","print":{"placement":"centred on the chest, a little below the neckline","width":0.3}}},
   "products": {
     "skinny": {
@@ -1108,7 +1108,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"burgundy","name":"Burgundy","hex":"#6B1A1E"}],
       "chart": ["S","M","L"],
-      "gallery": [{"src":"assets/img/gallery/w-logo-vest-1-8757627c.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-2-a545ffc7.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-3-266e7c1d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-4-9e935202.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-5-1b6cdb4d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-6-44e96152.webp","w":1025,"h":1535}]
+      "gallery": [{"src":"assets/img/gallery/w-logo-vest-1-c2984dac.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-2-a545ffc7.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-3-266e7c1d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-4-9e935202.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-5-1b6cdb4d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-6-44e96152.webp","w":1025,"h":1535}]
     },
     "w-logo-leggings": {
       "gender": "women",
@@ -1140,6 +1140,36 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"burgundy","name":"Burgundy","hex":"#6B1A1E"}],
       "gallery": [{"src":"assets/img/gallery/w-logo-bag-1-558e3a61.webp","w":1024,"h":1536},{"src":"assets/img/gallery/w-logo-bag-2-4a6483d6.webp","w":1024,"h":1536},{"src":"assets/img/gallery/w-logo-bag-3-3cde1686.webp","w":1025,"h":1535}]
+    },
+    "w-white-shoulder-bag": {
+      "gender": "women",
+      "id": "bymarccc:white-shoulder-bag",
+      "title": "WHITE SHOULDER BAG",
+      "price": 350,
+      "currency": "RON",
+      "cut": "Accessory",
+      "collections": ["accessories"],
+      "hideModelText": true,
+      "details": ["Structured shoulder bag in glossy crocodile-effect faux leather","Two long rounded shoulder straps","Top zip fastening","Black alien logo on the front","White","Approx. 16 × 31.4 × 10.5 cm (H × W × D)","Outer: 100% polyurethane · Lining: 100% polyester","Clean with a damp cloth only","Each piece is custom created."],
+      "description": "A structured white shoulder bag in crocodile-effect faux leather with long rounded straps, a top zip and a black alien logo on the front.",
+      "unavailable": [],
+      "colours": [{"id":"white","name":"White","hex":"#f2f0ea"}],
+      "gallery": [{"src":"assets/img/gallery/w-white-shoulder-bag-1-63d73c5c.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-shoulder-bag-2-590ced37.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-shoulder-bag-3-027ebbaa.webp","w":1024,"h":1534}]
+    },
+    "w-burgundy-shoulder-bag": {
+      "gender": "women",
+      "id": "bymarccc:burgundy-shoulder-bag",
+      "title": "BURGUNDY SHOULDER BAG",
+      "price": 350,
+      "currency": "RON",
+      "cut": "Accessory",
+      "collections": ["accessories"],
+      "hideModelText": true,
+      "details": ["Structured shoulder bag in glossy crocodile-effect faux leather","Two long rounded shoulder straps","Top zip fastening","Silver alien logo on the front","Burgundy","Approx. 16 × 31.4 × 10.5 cm (H × W × D)","Outer: 100% polyurethane · Lining: 100% polyester","Clean with a damp cloth only","Each piece is custom created."],
+      "description": "A structured burgundy shoulder bag in glossy crocodile-effect faux leather with long rounded straps, a top zip and a silver alien logo on the front.",
+      "unavailable": [],
+      "colours": [{"id":"burgundy","name":"Burgundy","hex":"#6B1A1E"}],
+      "gallery": [{"src":"assets/img/gallery/w-burgundy-shoulder-bag-1-9390fc60.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-shoulder-bag-2-c4ae301d.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-burgundy-shoulder-bag-3-da487a8b.webp","w":1024,"h":1534}]
     },
     "w-purple-sweatpants": {
       "gender": "women",
