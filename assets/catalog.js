@@ -36,7 +36,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
   "collections": [{"key":"denim","label":"DENIM"},{"key":"tops","label":"TOPS"},{"key":"jackets","label":"JACKETS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "womenCollections": [{"key":"tops","label":"TOPS"},{"key":"bottoms","label":"BOTTOMS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"}],
   "customizeCollections": [{"key":"bags","label":"BAGS"}],
-  "womenFeatured": {"tops":["w-burgundy-long-sleeve","w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-flare-leggings","w-logo-leggings"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
+  "womenFeatured": {"tops":["w-white-logo-windbreaker","w-black-logo-windbreaker","w-burgundy-long-sleeve","w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-flare-leggings","w-logo-leggings"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
   "tryOnGarments": {"black-baby-top":{"type":"womens_baby_top","label":"women's black baby top: short, fitted, short-sleeve black cotton top with a fine rib, round neck; the hem sits slightly above the belly button","category":"tops","colour":"black","views":{"front":"assets/try-on/black-baby-top/garment.png"},"fitReference":"assets/try-on/black-baby-top/fit-reference.jpg","print":{"placement":"centred on the chest, a little below the neckline","width":0.3}}},
   "products": {
     "skinny": {
@@ -1203,7 +1203,39 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
       "chart": ["S","M","L"],
-      "gallery": [{"src":"assets/img/gallery/w-logo-flare-leggings-1-707c8a6e.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-2-7f0f75cf.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-3-0ff5febb.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-4-877ec7bd.webp","w":1025,"h":1535}]
+      "gallery": [{"src":"assets/img/gallery/w-logo-flare-leggings-1-707c8a6e.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-2-7f0f75cf.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-5-27957478.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-3-0ff5febb.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-4-877ec7bd.webp","w":1025,"h":1535}]
+    },
+    "w-white-logo-windbreaker": {
+      "gender": "women",
+      "model": {"size":"M"},
+      "id": "bymarccc:white-logo-windbreaker",
+      "title": "WHITE LOGO WINDBREAKER",
+      "price": 350,
+      "currency": "RON",
+      "cut": "Cropped track jacket",
+      "collections": ["tops"],
+      "details": ["Cropped zip-up track jacket with a high stand collar","Contrast black piping across the shoulders, body and sleeves","Relaxed dropped shoulders, elasticated hem and cuffs","Black alien logo on the shoulder","Off-white","92% polyester, 8% elastane","Machine wash max 30°C (delicate) · Do not bleach · Iron max 110°C · Do not dry clean · Do not tumble dry","All clothing is custom made."],
+      "description": "A cropped off-white track jacket with a high collar, contrast black piping, elasticated hem and cuffs, and a black alien logo on the shoulder.",
+      "unavailable": [],
+      "colours": [{"id":"white","name":"Off-white","hex":"#f2efe6"}],
+      "chart": ["S","M","L"],
+      "gallery": [{"src":"assets/img/gallery/w-white-logo-windbreaker-1-8353abb1.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-logo-windbreaker-2-877ec7bd.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-white-logo-windbreaker-3-6b0a0b99.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-white-logo-windbreaker-4-896276b9.webp","w":1024,"h":1534}]
+    },
+    "w-black-logo-windbreaker": {
+      "gender": "women",
+      "model": {"size":"M"},
+      "id": "bymarccc:black-logo-windbreaker",
+      "title": "BLACK LOGO WINDBREAKER",
+      "price": 350,
+      "currency": "RON",
+      "cut": "Cropped windbreaker",
+      "collections": ["tops"],
+      "details": ["Cropped windbreaker in lightweight technical fabric","High neck with adjustable drawcords","Front zip hidden under a placket, two side pockets","Balloon sleeves with elasticated cuffs, drawcord hem","Contrast white piping and a white alien logo on the chest","Black","100% polyamide","Machine wash max 30°C · Do not bleach · Iron at low temperature · Do not dry clean · Do not tumble dry","All clothing is custom made."],
+      "description": "A cropped black windbreaker in technical fabric with a drawcord high neck, hidden zip, side pockets, white piping and a white alien logo on the chest.",
+      "unavailable": [],
+      "colours": [{"id":"black","name":"Black","hex":"#111111"}],
+      "chart": ["S","M","L"],
+      "gallery": [{"src":"assets/img/gallery/w-black-logo-windbreaker-1-c22ce8f6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-2-1452badc.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-3-9f6ba83f.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-4-5f4062a3.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-5-a0ce36a0.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-black-logo-windbreaker-6-7e3f22e4.webp","w":1024,"h":1534}]
     },
     "w-purple-sweatpants": {
       "gender": "women",

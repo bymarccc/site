@@ -821,7 +821,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=cfd29f72df"></script>
+<script src="/assets/catalog.js?v=797b28f24a"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -997,6 +997,7 @@ body.is-custom-bag-page #gallery { display: none; }
     const own = (CATALOG[KEY] || {}).model;   // product-specific model measurements win over the gender default
     mt.textContent = own && own.height && own.weight && own.size
       ? `Model is ${own.height} cm and ${own.weight} kg, wearing size ${own.size}`
+      : own && own.size && !own.height ? `Model is wearing size ${own.size}`
       : PRODUCT.gender === 'women'
         ? 'Model is 177 cm and 53 kg, wearing size S-M'
         : 'Model is 184 cm and 74 kg, wearing size M';
