@@ -1096,6 +1096,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
     },
     "w-logo-vest": {
       "gender": "women",
+      "model": {"height":176,"weight":54,"size":"M","modelMedia":[0],"text":"Model is 176 cm and 54 kg and wears size M"},
       "id": "bymarccc:logo-vest",
       "title": "LOGO VEST",
       "price": 300,
