@@ -3386,6 +3386,8 @@ body.pdp .ai-launch{--ai-offset:92px}
 .vp__ov--close { top: 6px; left: 6px; }
 .vp__ov--mute { bottom: 6px; right: 6px; }
 .vp__ov--full { top: 6px; right: 6px; }
+.vp__ov--pip { top: 6px; right: 40px; }
+.vp__ov[hidden] { display: none; }
 
 .vp__video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; transform: scale(var(--vz, 1)); transform-origin: 50% 50%; background: rgba(24,24,26,.94); pointer-events: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 /* YouTube-style mini-player controls: shown while paused or for a moment after a tap */
@@ -3407,7 +3409,7 @@ body.pdp .ai-launch{--ai-offset:92px}
 /* end of song: black card with replay / next */
 .vp__end { position: absolute; inset: 0; background: #000; display: none; align-items: center; justify-content: center; gap: 22px; }
 .vp.is-ended .vp__end { display: flex; }
-.vp.is-ended .vp__ctr, .vp.is-ended .vp__shade, .vp.is-ended .vp__prog, .vp.is-ended .vp__ov--full { display: none; }
+.vp.is-ended .vp__ctr, .vp.is-ended .vp__shade, .vp.is-ended .vp__prog, .vp.is-ended .vp__ov--full, .vp.is-ended .vp__ov--pip { display: none; }
 .vp.is-ended .vp__ov--close { opacity: .95; pointer-events: auto; }
 .vp__endbtn { border: 0; padding: 0; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.12); color: #fff; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
 .vp__endbtn svg { width: 22px; height: 22px; }
@@ -3525,6 +3527,9 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     </div>
     <button class="vp__ov vp__ov--close" id="vpCloseOv" type="button" aria-label="Close video">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <button class="vp__ov vp__ov--pip" id="vpPipOv" type="button" aria-label="Picture in picture — keeps playing over other apps">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="11" width="7" height="6" rx="1" fill="currentColor"/></svg>
     </button>
     <button class="vp__ov vp__ov--full" id="vpFullOv" type="button" aria-label="Fullscreen">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
@@ -3786,6 +3791,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   video.addEventListener('pause', () => {
     const intended = vIntent; vIntent = false;
     if (bgPlay) return;
+    if (!intended && inPiP()) { snd.pause(); return; }   // paused from the PiP window → the song pauses too
     if (intended) { if (!document.hidden) snd.pause(); return; }
     if (document.hidden) { goBg(); return; }
     // system pause while still visible: wait a moment — if the site is being left, the song carries on
@@ -3850,6 +3856,22 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   btnClose.addEventListener('click', close);
   $('vpCloseOv').addEventListener('click', close);
   $('vpFullOv').addEventListener('click', () => btnFull.click());
+
+  /* Picture-in-Picture: a tap puts the video in the floating system window, which follows you to other apps and the
+     home screen (iPhone Safari only allows this from a tap, never automatically). While it is in PiP, leaving the site
+     keeps picture + song going; pausing from the PiP window pauses the song too. */
+  { const pipBtn = $('vpPipOv'), canPip = document.pictureInPictureEnabled || typeof video.webkitSetPresentationMode === 'function';
+    if (!canPip) pipBtn.hidden = true;
+    pipBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      try {
+        if (inPiP()) { if (document.pictureInPictureElement && document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {}); else video.webkitSetPresentationMode?.('inline'); return; }
+        if (video.paused) video.play().catch(() => {});
+        if (typeof video.webkitSetPresentationMode === 'function') video.webkitSetPresentationMode('picture-in-picture');
+        else video.requestPictureInPicture().catch(() => {});
+      } catch {}
+    });
+  }
   tab.addEventListener('click', () => { if (!docked) open(); });   // docked: handled by the drag/tap logic above
 
   /* ---------- position: default, clamp, persist, drag ---------- */
