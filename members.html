@@ -247,6 +247,8 @@
      ===================================================================== -->
 <style>
 .play__reset { display: none !important; }
+/* retired homepage mini bar: never visible on any page (after in-site navigation it sits under <body> without the homepage's CSS) */
+#mini, #mini.is-open, #mini:not([hidden]) { display: none !important; }
 .vp-layer { position: fixed; inset: 0; z-index: 1200; overflow: hidden; pointer-events: none; }   /* clips the player: dragging it past an edge can never widen or scroll the page */
 .vp {
   position: absolute; left: 0; top: 0; z-index: 2; pointer-events: auto;
@@ -675,14 +677,18 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const sndUrl = v => { const u = (v && (v.raw || v.src)) || ''; const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/[^?#]+)\.(?:mp4|mov|webm)(?:[?#].*)?$/i.exec(u); return m ? m[1] + m[2] + '.m4a' : ''; };
   const applySound = () => { if (sndOn) { video.muted = true; snd.muted = userMuted; } else { video.muted = userMuted; } };
   const sndSync = () => { if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.3) { try { snd.currentTime = video.currentTime || 0; } catch {} } };
+  /* while the twin plays, the SOUND is the clock: a lagging picture is moved to the song (throttled), the song is never
+     re-seeked to the picture — re-seeking it made the music stop/start every half second after coming back to the site */
+  let picSeek = false, lastPicSync = 0;
+  const picSync = force => { const now = Date.now(); if (!force && now - lastPicSync < 2000) return; if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.5) { lastPicSync = now; picSeek = true; try { video.currentTime = snd.currentTime || 0; } catch { picSeek = false; } } };
   function sndLoad(v) { sndOn = false; sndBroken = false; snd.pause(); const u = sndUrl(v); if (u) snd.src = u; else { snd.removeAttribute('src'); sndBroken = true; } applySound(); }
   function sndPlay() {
     if (sndBroken || !snd.getAttribute('src') || bgPlay) return;
-    if (!snd.paused) { sndSync(); return; }
+    if (!snd.paused) { if (sndOn) picSync(); else sndSync(); return; }
     try { snd.currentTime = video.currentTime || 0; } catch {}
     const p = snd.play(); if (p) p.catch(() => {});
   }
-  snd.addEventListener('playing', () => { if (bgPlay) return; if (video.paused) { snd.pause(); return; } sndSync(); sndOn = true; applySound(); });
+  snd.addEventListener('playing', () => { if (bgPlay) return; if (video.paused) { snd.pause(); return; } picSync(true); sndOn = true; applySound(); });
   snd.addEventListener('waiting', () => { if (bgPlay || !sndOn) return; sndOn = false; applySound(); });   // twin buffering → video's own sound meanwhile
   snd.addEventListener('error', () => { if (!snd.getAttribute('src')) return; sndBroken = true; sndOn = false; applySound(); });
 
@@ -763,13 +769,13 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   let lastVSaveT = 0;
   video.addEventListener('timeupdate', () => {
     if (video.duration && !vSeeking) prog.style.width = (video.currentTime / video.duration * 100) + '%';
-    if (!bgPlay && sndOn && !video.paused) sndSync();
+    if (!bgPlay && sndOn && !vSeeking && !video.paused && !snd.paused) picSync();
     if (!video.paused) { const now = Date.now(); if (now - lastVSaveT > 3000) { lastVSaveT = now; saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: false }); } }
   });
   video.addEventListener('play', () => { if (!bgPlay) sndPlay(); });
   video.addEventListener('playing', () => { if (!bgPlay) sndPlay(); });
-  video.addEventListener('waiting', () => { if (!bgPlay && sndOn) snd.pause(); });
-  video.addEventListener('seeked', () => { if (!bgPlay && snd.getAttribute('src')) { try { snd.currentTime = video.currentTime || 0; } catch {} } });
+  video.addEventListener('waiting', () => {});   // picture buffering: the song keeps playing, the picture catches up via picSync
+  video.addEventListener('seeked', () => { if (picSeek) { picSeek = false; return; } if (!bgPlay && snd.getAttribute('src')) { try { snd.currentTime = video.currentTime || 0; } catch {} } });
   video.addEventListener('ended', () => { if (!bgPlay) snd.pause(); });
   snd.addEventListener('timeupdate', () => {
     if (!bgPlay || snd.paused) return;
@@ -1063,7 +1069,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       bgPlay = false;
       const at = snd.currentTime || 0;
       if (snd.ended) { snd.pause(); try { video.currentTime = video.duration || at; } catch {} setPlayIcon(false); setPP(false); hideCtrls(); vp.classList.add('is-ended'); clearNow(); return; }
-      try { video.currentTime = at; } catch {}
+      picSeek = !snd.paused; try { video.currentTime = at; } catch { picSeek = false; }   // picture jumps to the song; the song itself is not re-seeked
       sndOn = !snd.paused; applySound();
       if (!snd.paused) video.play().catch(() => {});
       else { setPlayIcon(false); setPP(false); showCtrls(); saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: at, paused: true }); }
