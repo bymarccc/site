@@ -282,13 +282,35 @@ async function assignOrderNumber(clientRef, kind) {
   return "bymarccc-" + n;
 }
 __name(assignOrderNumber, "assignOrderNumber");
+// "Pay in 2" records live in KV (binding MEMBERS) when it is bound, otherwise in the ORDERS_DB D1 database
+// (table kv_store) — same get/put/list shape, so the cron job works with either.
+var instTableReady = null;
+function instStore() {
+  const k = kv();
+  if (k) return k;
+  const db = ordersDb();
+  if (!db) return null;
+  const init = () => instTableReady || (instTableReady = db.prepare("CREATE TABLE IF NOT EXISTS kv_store (k TEXT PRIMARY KEY, v TEXT NOT NULL)").run().catch((e) => { instTableReady = null; throw e; }));
+  return {
+    async get(key) { await init(); const r = await db.prepare("SELECT v FROM kv_store WHERE k = ?1").bind(key).first(); return r ? r.v : null; },
+    async put(key, value) { await init(); await db.prepare("INSERT INTO kv_store (k, v) VALUES (?1, ?2) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(key, String(value)).run(); },
+    async list({ prefix = "", cursor, limit = 200 } = {}) {
+      await init();
+      const off = Number(cursor || 0) || 0;
+      const rs = await db.prepare("SELECT k FROM kv_store WHERE k >= ?1 AND k < ?2 ORDER BY k LIMIT ?3 OFFSET ?4").bind(prefix, prefix + "\uffff", limit, off).all();
+      const keys = (rs.results || []).map((r) => ({ name: r.k }));
+      return { keys, list_complete: keys.length < limit, cursor: String(off + keys.length) };
+    }
+  };
+}
+__name(instStore, "instStore");
 async function recordPendingInstallment(session) {
   // Called once, right after the FIRST (deposit) payment is confirmed paid. Saves what the
   // scheduled cron-charge-installments job needs to charge the remaining 50% automatically in
   // 30 days: the Stripe customer + payment method the first charge attached the card to, the
   // amount still owed, and the due date. Stored in the same KV namespace the members system
   // already uses (binding MEMBERS), under an "inst:" prefix so the two never collide.
-  const store = kv();
+  const store = instStore();
   if (!store) return;
   const md = session.metadata || {};
   const order_id = md.order_id || session.id;
@@ -408,7 +430,7 @@ async function cronChargeInstallments(request) {
   if (!secret) return json(503, { error: "CRON_NOT_CONFIGURED" });
   if (request.headers.get("x-cron-secret") !== secret) return json(403, { error: "Forbidden" });
   if (!env("STRIPE_SECRET_KEY")) return json(503, { error: "STRIPE_NOT_CONFIGURED" });
-  const store = kv();
+  const store = instStore();
   if (!store) return json(503, { error: "KV_NOT_CONFIGURED" });
   const now = Date.now();
   const MAX_ATTEMPTS = 5;
