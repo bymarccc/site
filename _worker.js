@@ -2169,7 +2169,7 @@ __name(seoHeadFor, "seoHeadFor");
 // visitors who picked a language (cookie bym_lang) or browse from Hungary / Italy / Bulgaria.
 // Prefixed pages price in that country's currency, so Google and Merchant Center see one price.
 // ---------------------------------------------------------------------------------------------
-var I18N_VERSION = "4";
+var I18N_VERSION = "5";
 var I18N_LANGS = ["fr", "de", "it", "es", "nl", "pt", "pl", "ro", "hu", "cs", "bg", "el", "sv"];
 var I18N_AUTO = ["fr", "de", "it", "es", "nl", "pt", "pl", "hu", "cs", "bg", "el", "sv"];   // picked automatically from the browser language (Romanian visitors keep English unless they choose RO)
 var I18N_RE = new RegExp("^/(" + I18N_LANGS.join("|") + ")(/.*)?$");
@@ -2423,7 +2423,7 @@ __name(contentSitemapEntries, "contentSitemapEntries");
 
 // ---------------------------------------------------------------------------------------------
 // Customer accounts — bymarccc CIRCLE (D1 binding ORDERS_DB). Sign in with an e-mailed 6-digit code (no passwords).
-// Tiers on spend in the last 12 months (RON, before shipping, after discounts; cancelled/returned orders excluded):
+// Tiers on LIFETIME spend (RON, before shipping, after discounts; cancelled/returned orders excluded):
 //   Bronze 0 · Silver 1 500 (−10 %, free shipping) · Gold 4 000 (−20 %, free shipping, early access to drops)
 //   Platinum 10 000 (−30 %, free shipping, early access). Everyone gets their own playlist.
 // Also: orders & returns, credits, address book, wishlist, communication preferences, refer a friend
@@ -2477,7 +2477,7 @@ async function acctSessionEmail(request) {
 }
 __name(acctSessionEmail, "acctSessionEmail");
 async function acctSpend(db, email) {
-  const since = new Date(Date.now() - 365 * 864e5).toISOString();
+  const since = "1970-01-01T00:00:00.000Z";   // lifetime spend — tiers never expire
   const r = await db.prepare("SELECT COALESCE(SUM(total_ron),0) AS s, COUNT(*) AS n FROM acct_orders WHERE email = ?1 AND created_at >= ?2 AND status NOT IN ('cancelled','returned','refunded')").bind(email, since).first();
   const c = await db.prepare("SELECT spend_import, tier_override FROM acct_customers WHERE email = ?1").bind(email).first();
   return { spend: Math.round(((r && r.s) || 0) + ((c && c.spend_import) || 0)), orders: (r && r.n) || 0, override: c && c.tier_override };

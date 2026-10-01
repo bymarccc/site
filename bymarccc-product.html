@@ -297,12 +297,12 @@ body.is-custom-bag-page #gallery { display: none; }
 .rail { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -20px; padding: 0 20px 6px; }
 .rail::-webkit-scrollbar { display: none; }
 .rail:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
-.pc { flex: 0 0 62%; scroll-snap-align: start; background: var(--soft); border-radius: 8px; position: relative; overflow: hidden; }
+.pc { flex: 0 0 36%; scroll-snap-align: start; background: var(--soft); border-radius: 8px; position: relative; overflow: hidden; }
 .pc__link { display: block; color: inherit; text-decoration: none; }
 .pc__img { aspect-ratio: 3/4; display: grid; place-items: center; }
 .pc__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pc__meta { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px 12px; font-size: 14px; }
-.pc__title { font-size: 12.5px; color: var(--muted); display: block; margin-bottom: 2px; }
+.pc__meta { display: flex; justify-content: space-between; align-items: center; padding: 7px 9px 9px; font-size: 12px; }
+.pc__title { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; color: var(--muted); display: block; margin-bottom: 2px; }
 .pc__add { position: absolute; right: 6px; bottom: 6px; width: 44px; height: 44px; border: 0; background: transparent; display: grid; place-items: center; border-radius: 8px; }
 .pc__add svg { width: 20px; height: 20px; }
 @media (hover: hover) { .pc__add:hover { background: rgba(0,0,0,.06); } }
@@ -940,7 +940,7 @@ body.is-custom-bag-page #gallery { display: none; }
   const MEMBERSHIP = {
     title: 'BYMARCCC MEMBERS',
     text: 'Join the bymarccc circle.',
-    benefits: ['Free shipping on every order', 'Early access to new drops', 'Members-only pieces'],
+    benefits: ['Up to 30% off & free shipping & returns', 'Early access to new drops', 'Your own playlist'],
     comingSoonTitle: 'Membership sign-ups open very soon.',
     comingSoonBody: "We're putting the finishing touches on the members area \u2014 check back in a little while.",
     image: '',                  // original bymarccc image URL (optional)
@@ -1946,19 +1946,33 @@ body.is-custom-bag-page #gallery { display: none; }
   (function explore() { const a = $('cartExplore'); if (LINKS.newArrivals) a.href = LINKS.newArrivals; else { a.setAttribute('aria-disabled', 'true'); a.addEventListener('click', e => e.preventDefault()); a.title = 'New Arrivals link not configured yet'; } })();
   // Popular rail
   const rail = $('popularRail');
-  POPULAR.forEach(p => {
-    const card = document.createElement('article'); card.className = 'pc';
-    card.innerHTML = `<a class="pc__link" href="${LINKS.productBase}${p.handle}"><div class="pc__img"><img src="${p.image}" alt="${p.title}" loading="lazy" width="600" height="800"></div><div class="pc__meta"><span><span class="pc__title">${p.title}</span>${fmtMinor(toMinor(p.price))}</span></div></a>
-      <button class="pc__add" type="button" aria-label="Add ${p.title} to bag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>`;
-    card.querySelector('.pc__add').addEventListener('click', () => quickAdd(p));
-    rail.appendChild(card);
-  });
+  // Popular items: only the gender of what's in the bag (men → men, women → women; mixed → the last piece added,
+  // empty bag → this page's product), burgundy pieces first, then the NEW COLLECTION. Never what's already in the bag.
+  const POP_NEW = ['m-burgundy-hoodie', 'art-jeans', 'w-burgundy-long-sleeve', 'w-burgundy-baby-top', 'w-burgundy-shoulder-bag', 'w-sporty-top-ecru', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-logo-vest', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-jeans', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-logo-bag'];
+  const genderOfP = p => p ? (p.genders || [p.gender || 'men']) : [];
+  const keyOfLine = id => { id = String(id || ''); let best = null; Object.keys(CATALOG).forEach(k => { const pid = CATALOG[k].id; if (pid && (id === pid || id.indexOf(pid + ':') === 0) && (!best || pid.length > CATALOG[best].id.length)) best = k; }); return best; };
+  function renderPopular() {
+    const inBag = BAG.items.map(i => keyOfLine(i.id)).filter(Boolean);
+    const last = [...BAG.items].sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0)).map(i => keyOfLine(i.id)).find(Boolean);
+    const g = genderOfP(CATALOG[last || KEY]); const gender = g.length === 1 ? g[0] : (g.includes(PRODUCT.gender) ? PRODUCT.gender : g[0] || 'men');
+    const keys = POP_NEW.filter(k => CATALOG[k] && genderOfP(CATALOG[k]).length === 1 && genderOfP(CATALOG[k])[0] === gender && !inBag.includes(k) && k !== KEY && !(CATALOG[k].collections || []).includes('sales'));
+    rail.innerHTML = '';
+    keys.forEach(k => {
+      const p = CATALOG[k], img = ((p.cardGallery || p.gallery || [])[0] || {}).src || '', href = 'bymarccc-product.html?p=' + k;
+      const card = document.createElement('article'); card.className = 'pc';
+      card.innerHTML = `<a class="pc__link" href="${href}"><div class="pc__img"><img src="${img}" alt="${p.title}" loading="lazy" width="600" height="800"></div><div class="pc__meta"><span><span class="pc__title">${p.title}</span>${fmt(p.price, p.currency)}</span></div></a>`;
+      card.querySelector('a').addEventListener('click', e => { if (window.BYM_NAV) { e.preventDefault(); BYM_NAV.navigate(href); } });
+      rail.appendChild(card);
+    });
+    rail.parentElement && rail.previousElementSibling && (rail.previousElementSibling.hidden = rail.hidden = !keys.length);
+  }
+  renderPopular(); BAG.listeners.add(renderPopular);
   rail.addEventListener('keydown', e => { if (e.key === 'ArrowRight') rail.scrollBy({ left: 200, behavior: 'smooth' }); if (e.key === 'ArrowLeft') rail.scrollBy({ left: -200, behavior: 'smooth' }); });
   // Membership promo
   (function promo() {
     const el = $('promo'); if (MEMBERSHIP.image) el.style.backgroundImage = `url("${MEMBERSHIP.image}")`;
     const btn = (label, href) => href ? `<a class="pdp-btn" href="${href}">${label}</a>` : `<a class="pdp-btn" href="#" aria-disabled="true" onclick="return false" title="Link not configured yet">${label}</a>`;
-    el.innerHTML = `<h3>${MEMBERSHIP.title}</h3><p>${MEMBERSHIP.text}</p><ul>${MEMBERSHIP.benefits.slice(0, 3).map(b => `<li>${b}</li>`).join('')}</ul><div class="promo__btns">${btn('APPLY NOW', LINKS.membershipApply)}${btn('LOG IN', LINKS.membershipLogin)}</div>`;
+    el.innerHTML = `<h3>${MEMBERSHIP.title}</h3><p>${MEMBERSHIP.text}</p><ul>${MEMBERSHIP.benefits.slice(0, 3).map(b => `<li>${b}</li>`).join('')}</ul><div class="promo__btns">${btn('SIGN UP', LINKS.membershipApply)}${btn('LOG IN', LINKS.membershipLogin)}</div>`;
   })();
   // Quick add
   const qa = $('qa'), qaOpts = $('qaOpts'), qaAdd = $('qaAdd'), qaMsg = $('qaMsg');

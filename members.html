@@ -164,9 +164,9 @@
       </form>
       <div class="ac-tiers"><div><b>bymarccc CIRCLE</b><span></span></div>
         <div><span><span class="tierdot" style="background:var(--bronze)"></span>Bronze</span><span>Welcome · your own playlist</span></div>
-        <div><span><span class="tierdot" style="background:var(--silver)"></span>Silver · 1 500 RON / year</span><span>−10% · free shipping</span></div>
-        <div><span><span class="tierdot" style="background:var(--gold)"></span>Gold · 4 000 RON / year</span><span>−20% · free shipping · early drops</span></div>
-        <div><span><span class="tierdot" style="background:var(--platinum)"></span>Platinum · 10 000 RON / year</span><span>−30% · free shipping · early drops</span></div>
+        <div><span><span class="tierdot" style="background:var(--silver)"></span>Silver · 1 500 RON</span><span>10% off &amp; free shipping &amp; returns</span></div>
+        <div><span><span class="tierdot" style="background:var(--gold)"></span>Gold · 4 000 RON</span><span>20% off &amp; free shipping &amp; returns &amp; early drops</span></div>
+        <div><span><span class="tierdot" style="background:var(--platinum)"></span>Platinum · 10 000 RON</span><span>30% off &amp; free shipping &amp; returns &amp; early drops</span></div>
       </div></div>`;
     root.querySelectorAll('.tierdot').forEach(d => { d.style.display = 'inline-block'; d.style.width = d.style.height = '9px'; d.style.borderRadius = '50%'; d.style.marginRight = '8px'; });
     let email = '';
@@ -218,16 +218,16 @@
   function secCircle(el) {
     const t = P.tier, n = P.next, tiers = P.tiers || [];
     const top = n ? n.min : Math.max(P.spend, 1), pct = Math.max(4, Math.min(100, P.spend / top * 100));
-    const perks = [t.pct ? `−${t.pct}% on everything, applied automatically at checkout` : 'Member prices as you move up the tiers', t.freeShip ? 'Free shipping on every order' : 'Free shipping from Silver', t.drops ? 'Early access to new drops' : 'Early access to drops from Gold', 'Your own playlist of bymarccc music and music videos'];
+    const perks = [t.pct ? `${t.pct}% off everything, applied automatically at checkout` : 'Member prices as you move up the tiers', t.freeShip ? 'Free shipping & returns on every order' : 'Free shipping & returns from Silver', t.drops ? 'Early access to new drops' : 'Early access to drops from Gold', 'Your own playlist of bymarccc music and music videos'];
     el.innerHTML = `<h2>CIRCLE ${esc(t.name)}</h2>
       <div class="tier-head"><div class="brand">CIRCLE<span style="color:${TIER_COL[t.id]}">${esc(t.name)}</span></div><p>${esc((P.name || '').split(' ')[0] || 'Hi')}, this is your progress so far</p></div>
       <div class="bar"><i style="width:${pct}%;background:${TIER_COL[t.id]}"></i></div>
       <div class="bar-legend"><div><b>${ronMoney(P.spend)}</b>Current</div><div><b>${n ? ronMoney(n.min) : '—'}</b>${n ? 'To ' + esc(n.name) : 'Top tier'}</div></div>
-      ${n ? `<p style="text-align:center;color:var(--sub);margin-top:16px">Spend ${ronMoney(P.toNext)} more in the next 12 months to reach ${esc(n.name)} (−${n.pct}%).</p>` : ''}
+      ${n ? `<p style="text-align:center;color:var(--sub);margin-top:16px">Spend ${ronMoney(P.toNext)} more to reach ${esc(n.name)} (${n.pct}% off). Your tier is for life.</p>` : ''}
       <div class="perks"><h5>Your ${esc(t.name)} benefits</h5><ul>${perks.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
       <details class="what"><summary>What does this mean? ⌄</summary>
-        <p style="color:var(--sub);font-size:14px">Your tier is based on what you spend in the last 12 months (after discounts, without shipping; cancelled and returned orders don't count). It updates automatically after every order.</p>
-        <table class="tiers-table"><thead><tr><th>Tier</th><th>Spend / 12 months</th><th>Benefits</th></tr></thead><tbody>${tiers.map(x => `<tr><td><b style="color:${TIER_COL[x.id]}">${esc(x.name)}</b></td><td>${x.min ? ronMoney(x.min) : '0 RON'}</td><td>${[x.pct ? '−' + x.pct + '%' : '', x.freeShip ? 'free shipping' : '', x.drops ? 'early drops' : '', 'own playlist'].filter(Boolean).join(' · ')}</td></tr>`).join('')}</tbody></table>
+        <p style="color:var(--sub);font-size:14px">Your tier is based on everything you have ever spent with us (after discounts, without shipping; cancelled and returned orders don't count). It updates automatically after every order and never expires.</p>
+        <table class="tiers-table"><thead><tr><th>Tier</th><th>Total spend</th><th>Benefits</th></tr></thead><tbody>${tiers.map(x => `<tr><td><b style="color:${TIER_COL[x.id]}">${esc(x.name)}</b></td><td>${x.min ? ronMoney(x.min) : '0 RON'}</td><td>${[x.pct ? x.pct + '% off' : '', x.freeShip ? 'free shipping & returns' : '', x.drops ? 'early drops' : '', x.pct ? '' : 'welcome · your own playlist'].filter(Boolean).join(' & ')}</td></tr>`).join('')}</tbody></table>
       </details>`;
   }
   async function secOrders(el) {
