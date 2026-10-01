@@ -1207,6 +1207,8 @@
   @media (min-width: 900px) { .sales__progress { height: 6px; } }
   @media (prefers-reduced-motion: reduce) { .sales__track { scroll-behavior: auto; } }
   /* ---- compact "sale bar" (men SALES): one card at a time, a bit narrower than the phone, name + price + tiny ADD in one row ---- */
+  .shop__sizeflat { position: absolute; z-index: 2; top: 12px; left: 12px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace; font-size: 13px; font-weight: 400; letter-spacing: .02em; line-height: 1; color: #111; pointer-events: none; white-space: nowrap; }
+  @media (min-width: 900px) { .shop__sizeflat { top: 16px; left: 16px; font-size: 15px; } }
   .salebar__note { margin: 0 0 14px; padding: 0 clamp(16px, 4vw, 48px); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #111; text-align: center; }
   /* sale grid: same cards/ratio as the shop grid; one photo, so a thin ADD TO BAG sits on the photo instead of the dashes */
   .shop__grid > .salegrid__note { grid-column: 1 / -1; margin: 0; padding: 0; }
@@ -1268,7 +1270,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=5b94493537"></script>
+<script src="/assets/catalog.js?v=ec6cea1d6d"></script>
 <script>
 (() => {
   'use strict';
@@ -1282,7 +1284,9 @@
   const NEW_COLLECTION = new Set(NEW_LIST);
   const newTag = key => NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
   // men SALES: the piece's only size, written vertically in the photo's top-left corner (same type as NEW COLLECTION)
-  const sizeTag = size => size ? `<span class="shop__newtag shop__sizetag">SIZE: ${size}</span>` : '';
+  // trial: on these 3 the size is written horizontally (Ksubi-style), so Mark can compare with the vertical one
+  const SIZE_FLAT = new Set(['sale-embroidered-crosses-jeans', 'sale-striped-jeans', 'van-gogh-jacket']);
+  const sizeTag = (size, key) => !size ? '' : SIZE_FLAT.has(key) ? `<span class="shop__sizeflat">SIZE: ${size}</span>` : `<span class="shop__newtag shop__sizetag">SIZE: ${size}</span>`;
   function card(key, p) {
     const imgs = (p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
     const a = document.createElement('a'); a.className = 'shop__card'; a.href = 'bymarccc-product.html?p=' + key;
@@ -1370,7 +1374,7 @@
     const size = (p.chart && p.chart.sizes || []).map(x => x.size)[0] || '';
     const onSale = typeof p.salePrice === 'number', chargePrice = onSale ? p.salePrice : p.price;
     const card = document.createElement('article'); card.className = 'shop__card salegrid__card';
-    card.innerHTML = `<span class="shop__img">${sizeTag(size)}<img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on"><button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
+    card.innerHTML = `<span class="shop__img">${sizeTag(size, key)}<img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on"><button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
       <span class="shop__meta"><span class="shop__name">${p.title}</span>${typeof p.price === 'number' ? `<span class="shop__price salegrid__price">${onSale ? `<s style="color:#9a9a9a;font-weight:400">${fmt(p.price, p.currency)}</s> ${fmt(p.salePrice, p.currency)}` : fmt(p.price, p.currency)}</span>` : ''}</span>`;
     const add = card.querySelector('.salegrid__add');
     add.addEventListener('click', async () => {
@@ -1386,10 +1390,10 @@
     const img = (p.gallery || [])[0] || {};
     const size = (p.chart && p.chart.sizes || []).map(x => x.size)[0] || '';
     const onSale = typeof p.salePrice === 'number', chargePrice = onSale ? p.salePrice : p.price;
-    const words = p.title.split(' '); const name = words.length > 1 ? `${words.slice(0, -1).join(' ')}<br>${words[words.length - 1]}` : p.title;
+    const words = p.title.split(' '), cut = p.nameBreak || words.length - 1; const name = words.length > 1 ? `${words.slice(0, cut).join(' ')}<br>${words.slice(cut).join(' ')}` : p.title;
     const card = document.createElement(link ? 'a' : 'article'); card.className = 'sales__card salegrid__card';
     if (link) card.href = 'bymarccc-product.html?p=' + key;   // MEN → DENIM rails: the card opens the product page (no quick add)
-    card.innerHTML = `<span class="shop__img">${link ? newTag(key) : sizeTag(size) || newTag(key)}<img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on"><button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
+    card.innerHTML = `<span class="shop__img">${link ? newTag(key) : sizeTag(size, key) || newTag(key)}<img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on"><button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
       <span class="salerail__meta"><span class="salerail__name">${name}</span>${typeof p.price === 'number' ? `<span class="salerail__price">${onSale ? `<s>${fmt(p.price, p.currency)}</s><b>${fmt(p.salePrice, p.currency)}</b>` : `<span class="salerail__price--plain">${fmt(p.price, p.currency)}</span>`}</span>` : ''}</span>`;
     const add = card.querySelector('.salegrid__add');
     if (link) { add.remove(); return card; }
