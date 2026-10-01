@@ -2134,7 +2134,7 @@ __name(seoHeadFor, "seoHeadFor");
 // visitors who picked a language (cookie bym_lang) or browse from Hungary / Italy / Bulgaria.
 // Prefixed pages price in that country's currency, so Google and Merchant Center see one price.
 // ---------------------------------------------------------------------------------------------
-var I18N_VERSION = "3";
+var I18N_VERSION = "4";
 var I18N_LANGS = ["fr", "de", "it", "es", "nl", "pt", "pl", "ro", "hu", "cs", "bg", "el", "sv"];
 var I18N_AUTO = ["fr", "de", "it", "es", "nl", "pt", "pl", "hu", "cs", "bg", "el", "sv"];   // picked automatically from the browser language (Romanian visitors keep English unless they choose RO)
 var I18N_RE = new RegExp("^/(" + I18N_LANGS.join("|") + ")(/.*)?$");

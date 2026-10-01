@@ -1760,7 +1760,7 @@ body.is-custom-bag-page #gallery { display: none; }
   function membersPanelHTML() {
     return `<div class="pdp-members"><div class="pdp-members__top"><p class="pdp-members__brand">${MEMBERSHIP.title}</p><p class="pdp-members__lead">${MEMBERSHIP.text}</p><ul class="pdp-members__benefits">${MEMBERSHIP.benefits.map(b => `<li><span class="pdp-members__check" aria-hidden="true">\u2713</span>${b}</li>`).join('')}</ul></div><div class="pdp-members__bottom"><p class="pdp-members__soon">${MEMBERSHIP.comingSoonTitle}</p><p class="pdp-members__note">${MEMBERSHIP.comingSoonBody}</p></div></div>`;
   }
-  const freeReturnsText = [POLICY.freeReturns && 'Free returns.', POLICY.freeShippingMembers && 'Free shipping for members only.'].filter(Boolean).join(' ');
+  const freeReturnsText = [POLICY.freeReturns && ((window.BYM_GEO && window.BYM_GEO.cc && window.BYM_GEO.cc !== 'RO') ? 'Returns within 14 days.' : 'Free returns.'), POLICY.freeShippingMembers && 'Free shipping for members only.'].filter(Boolean).join(' ');
   if (freeReturnsText) svcRow(ICON.ret, freeReturnsText, membersPanelHTML(), 'svc-member');
   if (SERVICE.expressRomania.enabled) svcRow(ICON.ro, SERVICE.expressRomania.text, SERVICE.expressRomania.body, 'svc-ro');
   if (SERVICE.euDuties.enabled) svcRow(ICON.box, SERVICE.euDuties.text, null, 'svc-eu');

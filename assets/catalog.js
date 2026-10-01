@@ -28,7 +28,7 @@
      The TRY ON button appears only for designs whose garment + PNG files exist on the site.
    ===================================================================== */
 window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
-  "shipping": "Romania: 3–5 working days.\nEU & UK: DHL Express — 5–7 working days.\nUSA & Canada: UPS Express — 7–9 working days.\nAustralia: DHL Express — 8–12 working days.\n\nReturns accepted within 14 days of delivery, unworn and with tags. Free returns.",
+  "shipping": "Romania: 3–5 working days.\nEU & UK: DHL Express — 5–7 working days.\nUSA & Canada: UPS Express — 7–9 working days.\nAustralia: DHL Express — 8–12 working days.\n\nReturns accepted within 14 days of delivery, unworn and with tags. Free returns in Romania; from other countries the return shipping is paid by the customer.",
   "reviews": {"rating":4.8,"count":1000,"label":"1000+ Reviews","anchor":null},
   "model": {"height":176,"weight":62,"size":"36","modelMedia":[]},
   "apparelModel": {"height":184,"weight":74,"size":"M","modelMedia":[0],"text":"Model measurements: 184 cm & 74 kg. Model is wearing size M"},
