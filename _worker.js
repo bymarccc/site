@@ -1779,7 +1779,7 @@ function toGoatifyOrder(o, { pay, totals = null, siteKey = 'bymarccc', placedAt 
   const c = o.customer || {};
   const country = geoCountryCode(c.country); if (!country) throw Object.assign(new Error('Unsupported country: ' + c.country), { code: 'COUNTRY_UNSUPPORTED' });
   if (!o.order_id) throw Object.assign(new Error('Missing order_id'), { code: 'NO_ORDER_ID' });
-  const items = (o.items || []).map(it => ({ ...(it.sku ? { sku: String(it.sku).slice(0, 64) } : {}), name: it.name, ...(it.variant ? { variant: it.variant } : {}), qty: Number(it.qty) || 1, price: gCents(it.price) / 100, ...(gHttps(it.image) ? { image: gHttps(it.image) } : {}) }));
+  const items = (o.items || []).map(it => ({ ...(it.sku ? { sku: String(it.sku).slice(0, 64) } : {}), name: it.name, ...(it.variant ? { variant: it.variant } : {}), qty: Number(it.qty) || 1, price: gCents(it.price) / 100, ...(gHttps(it.image) ? { image: gHttps(it.image) } : {}), ...(gHttps(it.url) ? { url: gHttps(it.url) } : {}) }));
   const sub = items.reduce((a, it) => a + gCents(it.price) * it.qty, 0);
   if (totals && gCents(totals.sub) !== sub) throw Object.assign(new Error('Subtotal does not match the items'), { code: 'TOTALS_MISMATCH' });
   const ship = gCents(totals ? totals.ship : 0);
@@ -1839,7 +1839,7 @@ async function goatifyItemCheck(rawItems) {
     const price = Math.max(0, Math.round(Number(it.price || 0) * 100) / 100);
     const ok = p && (p.price === price || (p.variants || []).some((v) => v.price === price));
     if (!ok) warn.push(name + (p ? ` (catalogue ${p.price} RON, bag ${price} RON)` : " (not in catalogue)"));
-    extras.push({ ...(p ? { sku: String(p.id).slice(0, 64) } : {}), ...(p && p.images && p.images[0] ? { image: p.images[0] } : {}) });
+    extras.push({ ...(p ? { sku: String(p.id).slice(0, 64) } : {}), ...(p && p.images && p.images[0] ? { image: p.images[0] } : {}), ...(p && p.url ? { url: p.url } : {}) });
   }
   return { extras, notes: warn.length ? "⚠ Price not verified against the catalogue: " + warn.join("; ") : "" };
 }
