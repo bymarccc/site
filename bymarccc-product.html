@@ -1847,15 +1847,15 @@ body.is-custom-bag-page #gallery { display: none; }
     if (CTL_LOOKS[KEY]) looks = CTL_LOOKS[KEY].filter(k => CATALOG[k]).map(k => ({ key: k, title: CATALOG[k].title, price: CATALOG[k].price, currency: CATALOG[k].currency, image: ((CATALOG[k].gallery || [])[0] || {}).src || '' }));
     else {
       // Zebra Patch: jean (cut-out on #f0f0f0) + the jacket in the same colour, with prices.
-      //   Skinny page → green + white pairs · Relaxed page → pink pair · Jacket page → skinny jean in the selected colour
+      //   Skinny / Relaxed page → jacket + jean in the selected colour · Jacket page → skinny jean in the selected colour
       const jacket = CATALOG['zebra-jacket'];
       if (!jacket) return;
       const cname = id => { const c = (jacket.colours || []).find(x => x.id === id); return c ? c.name : ''; };
-      const jeanRow = (k, id) => { const j = CATALOG[k]; return j && { key: k, colour: id, title: `${cname(id)} ${k === 'relaxed' ? 'Relaxed ' : ''}Zebra Patch Jeans`, price: j.price, currency: j.currency, image: `assets/img/zebra-${k}-${id}-f0.webp` }; };
+      const jeanRow = (k, id) => { const j = CATALOG[k]; return j && { key: k, colour: id, title: `${k === 'relaxed' ? 'Relaxed' : 'Skinny'} ${cname(id)} Zebra Patch Jeans`, price: j.price, currency: j.currency, image: `assets/img/zebra-${k}-${id}-f0.webp` }; };
       const jacketRow = id => ({ key: 'zebra-jacket', colour: id, title: `${cname(id)} Zebra Patch Jacket`, price: jacket.price, currency: jacket.currency, image: ctlImageFor(jacket, id) });
-      const pairs = KEY === 'skinny' ? [['skinny', 'green'], ['skinny', 'white']] : KEY === 'relaxed' ? [['relaxed', 'pink']] : [['skinny', state.colour || 'green']];
-      looks = [];
-      pairs.forEach(([k, id]) => { const j = jeanRow(k, id); if (KEY === 'zebra-jacket') looks.push(j); else looks.push(j, jacketRow(id)); });
+      // the look for the colour that is selected right now: jacket + jeans in that same colour (follows the swatches)
+      const id = state.colour || 'green';
+      looks = KEY === 'zebra-jacket' ? [jeanRow('skinny', id)] : [jacketRow(id), jeanRow(KEY, id)];
       looks = looks.filter(Boolean);
     }
     looks.forEach(p => {
