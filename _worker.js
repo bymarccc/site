@@ -1912,9 +1912,9 @@ __name(orderRecommendations, "orderRecommendations");
 //   US + rest of world: USD, +40%, $30 shipping · UK: GBP, +40%, £25 shipping
 //   Europe: local currency (EUR / CHF / PLN / CZK / HUF / SEK / DKK / NOK), +30%, €15 shipping (converted)
 //   Bulgaria (euro since 2026): EUR, +20%, €15 shipping
-// Exchange rates: ECB via frankfurter.app, cached 6h; fallback below if the fetch fails.
+// Exchange rates: ECB via frankfurter.dev, cached 6h; fallback below if the fetch fails.
 // ---------------------------------------------------------------------------------------------
-var GEO_FALLBACK_RATES = { RON: 1, EUR: 0.1966, USD: 0.2265, GBP: 0.17, CHF: 0.183, PLN: 0.835, CZK: 4.88, HUF: 76.5, SEK: 2.18, DKK: 1.467, NOK: 2.29 };
+var GEO_FALLBACK_RATES = { RON: 1, EUR: 0.18944, USD: 0.21511, GBP: 0.1619, CHF: 0.17955, PLN: 0.82765, CZK: 4.6298, HUF: 69.372, SEK: 2.1465, DKK: 1.4161, NOK: 2.0651 };   // ECB 30 Sep 2026
 var GEO_COUNTRIES = {
   RO: ["Romania", "RON"], BG: ["Bulgaria", "EUR"],
   AT: ["Austria", "EUR"], BE: ["Belgium", "EUR"], HR: ["Croatia", "EUR"], CY: ["Cyprus", "EUR"], EE: ["Estonia", "EUR"], FI: ["Finland", "EUR"],
@@ -1937,7 +1937,7 @@ async function geoRates() {
     const cache = typeof caches !== "undefined" && caches.default;
     let hit = cache ? await cache.match(ck) : null;
     if (!hit) {
-      const res = await fetch("https://api.frankfurter.app/latest?from=RON&to=EUR,USD,GBP,CHF,PLN,CZK,HUF,SEK,DKK,NOK", { cf: { cacheTtl: 21600 } });
+      const res = await fetch("https://api.frankfurter.dev/v1/latest?base=RON&symbols=EUR,USD,GBP,CHF,PLN,CZK,HUF,SEK,DKK,NOK", { cf: { cacheTtl: 21600 } });
       if (res.ok) {
         const d = await res.json();
         if (d && d.rates && d.rates.EUR) {
@@ -1998,7 +1998,13 @@ async function geoInjectHtml(request, res) {
   if (res.status !== 200 || !/text\/html/i.test(ct) || typeof HTMLRewriter === "undefined") return res;
   let js;
   try { js = await geoClientScript(request); } catch { return res; }
-  const out = new HTMLRewriter().on("head", { element(el) { el.prepend(`<script>${js}</script>`, { html: true }); } }).transform(res);
+  let seo = "";
+  try { seo = await seoHeadFor(new URL(request.url)); } catch {}
+  const titleM = /<script>window\.BYM_SEO_TITLE=(".*?");<\/script>/.exec(seo);
+  const seoTitle = titleM ? JSON.parse(titleM[1]) : "";
+  let rw = new HTMLRewriter().on("head", { element(el) { el.prepend(`<script>${js}</script>`, { html: true }); if (seo) el.append(seo, { html: true }); } });
+  if (seoTitle) rw = rw.on("title", { element(el) { el.setInnerContent(seoTitle); } });
+  const out = rw.transform(res);
   const h = new Headers(out.headers);
   h.delete("etag"); h.set("Cache-Control", "private, no-cache");
   return new Response(out.body, { status: out.status, statusText: out.statusText, headers: h });
@@ -2009,6 +2015,72 @@ async function geoApi(request) {
   return new Response(js, { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "private, no-cache" } });
 }
 __name(geoApi, "geoApi");
+
+// ---------------------------------------------------------------------------------------------
+// SEO — robots.txt, sitemap.xml (home + every product, with images) and per-product <title>,
+// meta description, canonical, Open Graph and schema.org Product JSON-LD injected server-side,
+// so Google sees real content for bymarccc-product.html?p=… without running the page's JS.
+// ---------------------------------------------------------------------------------------------
+var SEO_BASE = "https://bymarccc.com";
+var SEO_NOINDEX = ["/checkout", "/members", "/order", "/pay-in-2-terms"];
+var seoEsc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function seoProductKeys(D) {
+  return Object.keys((D && D.products) || {}).filter((k) => { const p = D.products[k]; return p && p.title && Array.isArray(p.gallery) && p.gallery.length && !p.hidden; });
+}
+__name(seoProductKeys, "seoProductKeys");
+async function seoRobots() {
+  const body = ["User-agent: *", "Allow: /", "Disallow: /api/", "Disallow: /checkout", "Disallow: /members", "Disallow: /order", "", `Sitemap: ${SEO_BASE}/sitemap.xml`, ""].join("\n");
+  return new Response(body, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+}
+__name(seoRobots, "seoRobots");
+async function seoSitemap() {
+  const D = await loadCatalogData();
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = [`<url><loc>${SEO_BASE}/</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`];
+  for (const k of seoProductKeys(D)) {
+    const p = D.products[k];
+    const imgs = p.gallery.slice(0, 10).map((g) => `<image:image><image:loc>${seoEsc(SEO_BASE + "/" + String(g.src).replace(/^\//, ""))}</image:loc><image:title>${seoEsc(p.title)}</image:title></image:image>`).join("");
+    urls.push(`<url><loc>${seoEsc(`${SEO_BASE}/bymarccc-product?p=${encodeURIComponent(k)}`)}</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>${imgs}</url>`);
+  }
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls.join("\n")}\n</urlset>\n`;
+  return new Response(xml, { headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+}
+__name(seoSitemap, "seoSitemap");
+function seoTitleCase(t) { return String(t || "").toLowerCase().replace(/(^|\s|-)([a-zà-ž])/g, (m, a, b) => a + b.toUpperCase()); }
+__name(seoTitleCase, "seoTitleCase");
+// extra <head> HTML for one page (empty string = nothing to add)
+async function seoHeadFor(url) {
+  const path = url.pathname.replace(/\.html$/, "");   // Pages serves /x.html as /x
+  if (SEO_NOINDEX.includes(path)) return `<meta name="robots" content="noindex, follow">`;
+  if (path !== "/bymarccc-product") return "";
+  const key = (url.searchParams.get("p") || "").toLowerCase();
+  const D = await loadCatalogData();
+  const p = D && D.products && D.products[key];
+  if (!p || !p.title) return `<meta name="robots" content="noindex, follow">`;
+  const name = seoTitleCase(p.title);
+  const gender = p.gender === "women" ? "Women's" : p.gender === "men" ? "Men's" : "";
+  const title = `${name}${gender ? " — " + gender : ""} | bymarccc`;
+  const desc = String(p.description || [p.cut, ...(p.details || []).slice(0, 2)].filter(Boolean).join(". ")).replace(/\s+/g, " ").slice(0, 155);
+  const canon = `${SEO_BASE}/bymarccc-product?p=${encodeURIComponent(key)}`;
+  const imgs = (p.gallery || []).slice(0, 6).map((g) => SEO_BASE + "/" + String(g.src).replace(/^\//, ""));
+  const price = typeof p.salePrice === "number" ? p.salePrice : p.price;
+  const ld = {
+    "@context": "https://schema.org", "@type": "Product", name, description: desc, image: imgs, sku: p.id || key,
+    brand: { "@type": "Brand", name: "bymarccc" },
+    ...(typeof price === "number" ? { offers: { "@type": "Offer", url: canon, priceCurrency: p.currency || "RON", price: String(price), availability: p.soldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock", itemCondition: "https://schema.org/NewCondition", seller: { "@type": "Organization", name: "bymarccc" } } } : {})
+  };
+  return [
+    `<meta name="description" content="${seoEsc(desc)}">`,
+    `<link rel="canonical" href="${seoEsc(canon)}">`,
+    `<meta property="og:type" content="product">`, `<meta property="og:site_name" content="bymarccc">`,
+    `<meta property="og:title" content="${seoEsc(title)}">`, `<meta property="og:description" content="${seoEsc(desc)}">`,
+    `<meta property="og:url" content="${seoEsc(canon)}">`, imgs[0] ? `<meta property="og:image" content="${seoEsc(imgs[0])}">` : "",
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`,
+    `<script>window.BYM_SEO_TITLE=${JSON.stringify(title).replace(/</g, "\\u003c")};</script>`
+  ].filter(Boolean).join("");
+}
+__name(seoHeadFor, "seoHeadFor");
 
 // [[path]].js
 var ROUTES = {
@@ -2036,6 +2108,8 @@ async function onRequest(context) {
   const m = /^\/(?:\.netlify\/functions|api)\/([a-z0-9-]+)\/?$/.exec(url.pathname);
   if (!m) {
     setEnv(env2);
+    if (url.pathname === "/robots.txt") return seoRobots();
+    if (url.pathname === "/sitemap.xml") return seoSitemap();
     const res = await env2.ASSETS.fetch(request);
     try { return await geoInjectHtml(request, res); } catch { return res; }
   }
