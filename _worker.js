@@ -403,7 +403,8 @@ async function cronChargeInstallments(request) {
   // itself has no Cron Triggers — see the separate cron worker this is designed to be called
   // from). Set CRON_SECRET in this project's environment variables to enable it.
   if (request.method !== "POST") return json(405, { error: "Method not allowed" });
-  const secret = env("CRON_SECRET");
+  // CRON_SECRET if set, otherwise the GOATIFY connector secret the site already has (the cron worker holds the same value).
+  const secret = env("CRON_SECRET") || env("GOATIFY_SITE_SECRET");
   if (!secret) return json(503, { error: "CRON_NOT_CONFIGURED" });
   if (request.headers.get("x-cron-secret") !== secret) return json(403, { error: "Forbidden" });
   if (!env("STRIPE_SECRET_KEY")) return json(503, { error: "STRIPE_NOT_CONFIGURED" });
