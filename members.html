@@ -3,76 +3,111 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Members — bymarccc</title>
+<title>My account — bymarccc</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   /* =====================================================================
-     bymarccc members — apply (sign up) / log in / your membership.
-     Same black / white / #F5F4F1 language as the site.
+     bymarccc account — CIRCLE (Bronze · Silver · Gold · Platinum), orders & returns, credits, details,
+     addresses, wishlist, my playlist, preferences, refer a friend. Same black / white / #F5F4F1 language.
      ===================================================================== */
-  :root{
-    --ink:#111; --sub:#6b6b68; --line:#e4e4e1; --bg:#F5F4F1; --err:#d21f3c; --ok:#1f7a3e;
-    --ease:cubic-bezier(0.22,1,0.36,1);
-  }
+  :root{ --ink:#111; --sub:#6b6b68; --line:#e4e4e1; --bg:#F5F4F1; --err:#d21f3c; --ok:#1f7a3e; --bronze:#b5522f; --silver:#7d8288; --gold:#a8822b; --platinum:#4a4f57; }
   *{ box-sizing:border-box; }
-  html,body{ background:var(--bg); }
-  body{ margin:0; min-height:100vh; min-height:100svh; font-family:"Jost","Helvetica Neue",Helvetica,Arial,sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased; display:flex; flex-direction:column; }
-  a{ color:inherit; }
-  input,button{ font-family:inherit; }
-  .caps{ text-transform:uppercase; letter-spacing:.18em; }
-
-  /* ---------- top bar ---------- */
+  html,body{ background:#fff; }
+  body{ margin:0; min-height:100vh; font-family:"Jost","Helvetica Neue",Helvetica,Arial,sans-serif; color:var(--ink); -webkit-font-smoothing:antialiased; display:flex; flex-direction:column; }
+  a{ color:inherit; } input,button,select{ font-family:inherit; }
   .top{ display:flex; align-items:center; justify-content:space-between; padding:16px clamp(16px,4vw,48px); background:#fff; border-bottom:1px solid var(--line); }
   .top__logo{ display:flex; align-items:center; gap:10px; text-decoration:none; font-weight:600; font-size:13px; letter-spacing:.28em; }
   .top__logo img{ width:30px; height:30px; object-fit:contain; display:block; }
   .top__back{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; text-decoration:none; color:var(--sub); }
-
-  /* ---------- card ---------- */
-  main{ flex:1; display:grid; place-items:start center; padding:clamp(20px,5vw,56px) 16px 56px; }
-  .card{ width:100%; max-width:440px; background:#fff; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.08); overflow:hidden; }
-  .hero{ background:#111; color:#fff; padding:28px 24px 24px; }
-  .hero h1{ margin:0 0 6px; font-size:20px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; }
-  .hero p{ margin:0 0 16px; color:#c9c9c6; font-size:14px; }
-  .hero ul{ list-style:none; margin:0; padding:0; display:grid; gap:8px; font-size:14px; }
-  .hero li::before{ content:"✓"; margin-right:10px; }
-
-  /* tabs */
-  .tabs{ display:grid; grid-template-columns:1fr 1fr; border-bottom:1px solid var(--line); }
-  .tabs button{ border:0; background:none; padding:16px 8px 14px; font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--sub); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
-  .tabs button[aria-selected="true"]{ color:var(--ink); border-bottom-color:var(--ink); }
-
-  /* forms */
-  .panel{ padding:22px 24px 26px; }
-  .panel[hidden]{ display:none; }
+  #membersMain{ flex:1; width:100%; max-width:1180px; margin:0 auto; padding:clamp(22px,4vw,48px) clamp(16px,4vw,40px) 72px; }
+  .ac-load{ padding:60px 0; text-align:center; color:var(--sub); font-size:14px; }
+  /* signed out */
+  .ac-in{ max-width:460px; margin:0 auto; }
+  .ac-in h1{ font-size:clamp(26px,4vw,34px); font-weight:500; margin:0 0 8px; }
+  .ac-in p.lead{ color:var(--sub); margin:0 0 22px; font-size:15px; line-height:1.55; }
+  .ac-gift{ background:#111; color:#fff; border-radius:14px; padding:14px 16px; margin:0 0 18px; font-size:14px; line-height:1.45; }
   .f{ display:grid; gap:6px; margin-bottom:14px; }
   .f label{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--sub); }
-  .f input{ height:46px; padding:0 14px; border:1px solid #c9c9c5; border-radius:4px; background:#fff; font-size:16px; color:var(--ink); width:100%; }
-  .f input:focus{ outline:2px solid #5B95C3; outline-offset:1px; }
-  .f input.is-invalid{ border-color:var(--err); box-shadow:0 0 0 1px var(--err) inset; }
-  .f small{ font-size:12px; color:var(--sub); }
-  .btn{ display:flex; align-items:center; justify-content:center; width:100%; height:50px; border:0; border-radius:4px; background:#111; color:#fff; font-size:12px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; cursor:pointer; text-decoration:none; transition:opacity .2s; }
-  .btn:disabled{ opacity:.55; cursor:default; }
+  .f input,.f select{ height:48px; padding:0 14px; border:1px solid #c9c9c5; border-radius:6px; background:#fff; font-size:16px; color:var(--ink); width:100%; }
+  .f input:focus,.f select:focus{ outline:2px solid #111; outline-offset:1px; }
+  .f.code input{ letter-spacing:.5em; text-align:center; font-size:22px; font-weight:600; }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 22px; border:0; border-radius:6px; background:#111; color:#fff; font-size:12px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; cursor:pointer; text-decoration:none; }
+  .btn.full{ width:100%; } .btn:disabled{ opacity:.5; cursor:default; }
   .btn--ghost{ background:none; color:var(--ink); border:1px solid #c9c9c5; }
-  .msg{ min-height:20px; margin:0 0 12px; font-size:13px; color:var(--err); }
-  .msg.is-ok{ color:var(--ok); }
-  .switch{ margin:16px 0 0; text-align:center; font-size:13px; color:var(--sub); }
-  .switch button{ border:0; background:none; padding:0; color:var(--ink); text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-size:13px; }
-
-  /* signed-in state */
-  .me{ padding:26px 24px 28px; }
-  .me__badge{ display:inline-block; padding:5px 10px; border-radius:999px; background:#111; color:#fff; font-size:10px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; margin-bottom:14px; }
-  .me h2{ margin:0 0 4px; font-size:22px; font-weight:600; }
-  .me p{ margin:0; color:var(--sub); font-size:14px; }
-  .me dl{ display:grid; grid-template-columns:auto 1fr; gap:8px 16px; margin:20px 0 22px; padding:16px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); font-size:14px; }
-  .me dt{ color:var(--sub); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; align-self:center; }
-  .me dd{ margin:0; }
-  .me .btn + .btn{ margin-top:10px; }
-
-  .note{ padding:26px 24px 30px; font-size:14px; color:var(--sub); line-height:1.5; }
-  .note b{ color:var(--ink); font-weight:600; }
+  .btn--sm{ min-height:36px; padding:0 14px; font-size:10.5px; }
+  .msg{ min-height:20px; margin:0 0 12px; font-size:13px; color:var(--err); } .msg.ok{ color:var(--ok); }
+  .ac-tiers{ margin-top:30px; border-top:1px solid var(--line); padding-top:20px; display:grid; gap:12px; }
+  .ac-tiers div{ display:flex; justify-content:space-between; gap:12px; font-size:14px; }
+  .ac-tiers b{ font-weight:600; }
+  @media (max-width:560px){ .ac-tiers div{ flex-direction:column; gap:2px; } .ac-tiers div span:last-child{ color:var(--sub); font-size:13px; } }
+  /* signed in: Farfetch-style two columns */
+  .ac{ display:grid; grid-template-columns:280px 1fr; gap:56px; }
+  .ac-nav h3{ margin:0 0 14px; font-size:13px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; }
+  .ac-nav ul{ list-style:none; margin:0 0 22px; padding:0 0 22px; border-bottom:1px solid var(--line); }
+  .ac-nav ul:last-child{ border-bottom:0; }
+  .ac-nav a{ display:block; padding:9px 0 9px 18px; text-decoration:none; font-size:15px; color:#222; }
+  .ac-nav a[aria-current="page"]{ font-weight:600; }
+  .ac-nav .tierdot{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:8px; vertical-align:1px; }
+  .ac-main h2{ font-size:clamp(24px,3vw,30px); font-weight:400; margin:0 0 28px; }
+  .ac-main h4{ font-size:20px; font-weight:400; margin:34px 0 12px; }
+  .ac-main p{ line-height:1.6; }
+  .ac-back{ display:none; margin:0 0 18px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; text-decoration:none; color:var(--sub); }
+  @media (max-width:860px){
+    .ac{ grid-template-columns:1fr; gap:0; }
+    .ac.is-section .ac-nav{ display:none; } .ac:not(.is-section) .ac-main{ display:none; }
+    .ac-back{ display:inline-block; }
+  }
+  /* CIRCLE */
+  .tier-head{ text-align:center; margin:10px 0 34px; }
+  .tier-head .brand{ font-size:clamp(30px,5vw,44px); letter-spacing:.18em; font-weight:300; }
+  .tier-head .brand span{ font-size:.5em; letter-spacing:.04em; font-weight:500; margin-left:10px; vertical-align:middle; }
+  .tier-head p{ margin:8px 0 0; font-size:16px; }
+  .bar{ position:relative; height:28px; border-radius:999px; background:#f2f2f0; margin:0 auto; max-width:620px; }
+  .bar i{ position:absolute; left:0; top:0; bottom:0; border-radius:999px; min-width:28px; transition:width .6s; }
+  .bar-legend{ display:flex; justify-content:space-between; max-width:620px; margin:16px auto 0; text-align:center; font-size:14px; }
+  .bar-legend b{ display:block; font-size:18px; font-weight:400; margin-bottom:2px; }
+  .perks{ max-width:620px; margin:30px auto 0; border:1px solid var(--line); padding:20px 22px; }
+  .perks h5{ margin:0 0 10px; font-size:13px; letter-spacing:.12em; text-transform:uppercase; font-weight:500; }
+  .perks ul{ margin:0; padding-left:18px; line-height:1.8; }
+  details.what{ max-width:620px; margin:22px auto 0; border-top:1px solid var(--line); padding-top:14px; }
+  details.what summary{ cursor:pointer; text-align:center; font-size:14px; list-style:none; } details.what summary::-webkit-details-marker{ display:none; }
+  .tiers-table{ width:100%; border-collapse:collapse; margin-top:16px; font-size:14px; }
+  .tiers-table th,.tiers-table td{ border-bottom:1px solid var(--line); padding:10px 6px; text-align:left; vertical-align:top; }
+  .tiers-table th{ font-weight:500; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--sub); }
+  /* orders */
+  .ord{ border:1px solid var(--line); padding:18px; margin-bottom:14px; }
+  .ord-top{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:14px; }
+  .ord-top b{ font-weight:600; }
+  .pill{ display:inline-block; padding:3px 10px; border-radius:999px; background:#f2f2f0; font-size:12px; text-transform:capitalize; }
+  .ord-items{ display:flex; gap:10px; margin:14px 0; flex-wrap:wrap; }
+  .ord-items img{ width:64px; height:80px; object-fit:cover; background:#f5f4f1; }
+  .ord-line{ font-size:13px; color:var(--sub); }
+  .empty{ font-size:20px; margin:8px 0 6px; } .empty + p{ color:var(--sub); margin:0; }
+  .kv{ font-size:16px; line-height:2; } .big{ font-size:34px; font-weight:400; margin:0 0 6px; }
+  .card2{ border:1px solid var(--line); padding:20px; margin-bottom:14px; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:0 14px; } @media (max-width:560px){ .grid2{ grid-template-columns:1fr; } }
+  .copy{ display:flex; gap:10px; } .copy input{ flex:1; height:48px; border:0; background:#f5f4f1; padding:0 14px; font-size:15px; }
+  .toggle{ display:flex; justify-content:space-between; align-items:center; gap:16px; padding:16px 0; border-bottom:1px solid var(--line); font-size:15px; }
+  .toggle input{ width:22px; height:22px; accent-color:#111; }
+  /* wishlist */
+  .wl-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:22px 14px; }
+  .wl-grid a{ text-decoration:none; } .wl-grid img{ width:100%; aspect-ratio:2/3; object-fit:cover; background:#f5f4f1; display:block; }
+  .wl-grid .t{ font-size:12px; letter-spacing:.06em; text-transform:uppercase; margin-top:8px; } .wl-grid .p{ font-size:13px; color:var(--sub); }
+  .wl-grid button{ border:0; background:none; padding:4px 0; font-size:12px; text-decoration:underline; cursor:pointer; color:var(--sub); }
+  /* playlist */
+  .pl-tabs{ display:inline-flex; gap:8px; margin:0 0 20px; }
+  .pl-tabs button{ border:1px solid #111; background:#fff; border-radius:999px; padding:10px 18px; font-size:11px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; }
+  .pl-tabs button[aria-pressed="true"]{ background:#111; color:#fff; }
+  .trk{ display:grid; grid-template-columns:52px 1fr auto auto; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
+  .trk img{ width:52px; height:52px; object-fit:cover; border-radius:8px; background:#eee; }
+  .trk .n{ font-size:15px; } .trk .d{ font-size:12px; color:var(--sub); }
+  .trk button{ width:38px; height:38px; border-radius:50%; border:1px solid #ddd; background:#fff; cursor:pointer; font-size:15px; display:grid; place-items:center; }
+  .trk button.play{ background:#111; color:#fff; border-color:#111; }
+  .trk.is-on .n{ font-weight:600; }
 </style>
 <script src="/assets/catalog.js?v=09c70765a9" defer></script>
 </head>
@@ -87,149 +122,251 @@
 </header>
 
 <main id="membersMain">
-  <section class="card" aria-live="polite">
-    <div class="hero">
-      <h1>bymarccc Members</h1>
-      <p id="heroText">Join the bymarccc circle.</p>
-      <ul>
-        <li>Free shipping on every order</li>
-        <li>Early access to new drops</li>
-        <li>Members-only pieces</li>
-      </ul>
-    </div>
-
-    <!-- loading -->
-    <div class="note" id="loading">Checking your membership…</div>
-
-    <!-- not configured yet -->
-    <div class="note" id="notReady" hidden><b>Membership sign-ups open very soon.</b><br>We're putting the finishing touches on the members area — check back in a little while.</div>
-
-    <!-- signed out: tabs -->
-    <div id="auth" hidden>
-      <div class="tabs" role="tablist">
-        <button type="button" role="tab" id="tabApply" aria-selected="true" aria-controls="panelApply">Apply now</button>
-        <button type="button" role="tab" id="tabLogin" aria-selected="false" aria-controls="panelLogin">Log in</button>
-      </div>
-
-      <form class="panel" id="panelApply" role="tabpanel" novalidate>
-        <div class="f"><label for="suName">Name</label><input id="suName" name="name" type="text" autocomplete="name" required maxlength="80"></div>
-        <div class="f"><label for="suEmail">Email</label><input id="suEmail" name="email" type="email" autocomplete="email" inputmode="email" required></div>
-        <div class="f"><label for="suPass">Password</label><input id="suPass" name="password" type="password" autocomplete="new-password" minlength="8" required><small>At least 8 characters.</small></div>
-        <p class="msg" id="suMsg" role="alert"></p>
-        <button class="btn" type="submit" id="suBtn">Become a member</button>
-        <p class="switch">Already a member? <button type="button" data-go="login">Log in</button></p>
-      </form>
-
-      <form class="panel" id="panelLogin" role="tabpanel" novalidate hidden>
-        <div class="f"><label for="liEmail">Email</label><input id="liEmail" name="email" type="email" autocomplete="email" inputmode="email" required></div>
-        <div class="f"><label for="liPass">Password</label><input id="liPass" name="password" type="password" autocomplete="current-password" required></div>
-        <p class="msg" id="liMsg" role="alert"></p>
-        <button class="btn" type="submit" id="liBtn">Log in</button>
-        <p class="switch">Not a member yet? <button type="button" data-go="apply">Apply now</button></p>
-      </form>
-    </div>
-
-    <!-- signed in -->
-    <div class="me" id="me" hidden>
-      <span class="me__badge">Member</span>
-      <h2 id="meName"></h2>
-      <p id="meEmail"></p>
-      <dl>
-        <dt>Status</dt><dd>Active member</dd>
-        <dt>Since</dt><dd id="meSince"></dd>
-      </dl>
-      <a class="btn" href="index.html">Continue shopping</a>
-      <button class="btn btn--ghost" type="button" id="logoutBtn">Log out</button>
-    </div>
-  </section>
+  <div class="ac-load" id="acLoad">Loading your account…</div>
+  <div id="acRoot" hidden></div>
 </main>
 
 <script>
 (() => {
   'use strict';
-  const $ = id => document.getElementById(id);
-  const API = p => `/api/${p}`;
-  const els = {
-    loading: $('loading'), notReady: $('notReady'), auth: $('auth'), me: $('me'),
-    tabApply: $('tabApply'), tabLogin: $('tabLogin'), panelApply: $('panelApply'), panelLogin: $('panelLogin'),
-  };
+  const root = document.getElementById('acRoot'), load = document.getElementById('acLoad');
+  if (!root) return;
+  const API = (action, body) => fetch('/api/account' + (body ? '' : '?action=' + action), body ? { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ action }, body)) } : { credentials: 'same-origin' })
+    .then(r => r.json().then(d => { if (!r.ok) throw Object.assign(new Error(d.error || 'Something went wrong.'), { status: r.status }); return d; }));
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const G = window.BYM_GEO && window.BYM_GEO.rule ? window.BYM_GEO : null;
+  const money = ron => G ? G.fmt(ron) : (Math.round(ron * 100) / 100).toLocaleString('ro-RO') + ' RON';
+  const ronMoney = ron => Math.round(ron).toLocaleString('ro-RO') + ' RON';
+  const dateF = s => { try { return new Date(s).toLocaleDateString(document.documentElement.lang || 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return s; } };
+  const TIER_COL = { bronze: 'var(--bronze)', silver: 'var(--silver)', gold: 'var(--gold)', platinum: 'var(--platinum)' };
+  const CAT = () => (window.BYMARCCC_CATALOG && window.BYMARCCC_CATALOG.CATALOG) || {};
+  const qs = new URLSearchParams(location.search);
+  let P = null;   // profile
 
-  const show = (which) => {
-    ['loading', 'notReady', 'auth', 'me'].forEach(k => { els[k].hidden = k !== which; });
-  };
-  const tab = (which) => {
-    const apply = which === 'apply';
-    els.tabApply.setAttribute('aria-selected', String(apply));
-    els.tabLogin.setAttribute('aria-selected', String(!apply));
-    els.panelApply.hidden = !apply;
-    els.panelLogin.hidden = apply;
-    (apply ? $('suName') : $('liEmail')).focus({ preventScroll: true });
-    history.replaceState(null, '', apply ? '#apply' : '#login');
-  };
-  els.tabApply.addEventListener('click', () => tab('apply'));
-  els.tabLogin.addEventListener('click', () => tab('login'));
-  document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => tab(b.dataset.go)));
+  /* ---------------- signed out: e-mail → code ---------------- */
+  function signedOut() {
+    const ref = qs.get('ref') || (document.cookie.match(/(?:^|; )bym_ref=([A-Z0-9]+)/) || [])[1] || '';
+    root.innerHTML = `<div class="ac-in">
+      <h1>Sign in or create an account</h1>
+      <p class="lead">One account for your orders, returns, wishlist, your own playlist and bymarccc CIRCLE rewards. No password — we e-mail you a code.</p>
+      ${ref ? '<div class="ac-gift">A friend invited you: <b>10% off your first order</b> is waiting in your new account.</div>' : ''}
+      <form id="acStart" novalidate>
+        <div class="f"><label for="acEmail">E-mail</label><input id="acEmail" type="email" autocomplete="email" inputmode="email" required></div>
+        <p class="msg" id="acMsg" role="alert"></p>
+        <button class="btn full" type="submit">Continue</button>
+      </form>
+      <form id="acVerify" hidden novalidate>
+        <p class="lead" id="acSent"></p>
+        <div class="f code"><label for="acCode">6-digit code</label><input id="acCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></div>
+        <p class="msg" id="acMsg2" role="alert"></p>
+        <button class="btn full" type="submit">Sign in</button>
+        <p style="text-align:center;margin-top:14px"><button type="button" class="btn btn--ghost btn--sm" id="acAgain">Use another e-mail</button></p>
+      </form>
+      <div class="ac-tiers"><div><b>bymarccc CIRCLE</b><span></span></div>
+        <div><span><span class="tierdot" style="background:var(--bronze)"></span>Bronze</span><span>Welcome · your own playlist</span></div>
+        <div><span><span class="tierdot" style="background:var(--silver)"></span>Silver · 1 500 RON / year</span><span>−10% · free shipping</span></div>
+        <div><span><span class="tierdot" style="background:var(--gold)"></span>Gold · 4 000 RON / year</span><span>−20% · free shipping · early drops</span></div>
+        <div><span><span class="tierdot" style="background:var(--platinum)"></span>Platinum · 10 000 RON / year</span><span>−30% · free shipping · early drops</span></div>
+      </div></div>`;
+    root.querySelectorAll('.tierdot').forEach(d => { d.style.display = 'inline-block'; d.style.width = d.style.height = '9px'; d.style.borderRadius = '50%'; d.style.marginRight = '8px'; });
+    let email = '';
+    const $ = id => document.getElementById(id);
+    $('acStart').addEventListener('submit', async e => {
+      e.preventDefault(); email = $('acEmail').value.trim(); $('acMsg').textContent = '';
+      const b = e.submitter || $('acStart').querySelector('button'); b.disabled = true;
+      try { await API('start', { email, ref }); $('acStart').hidden = true; $('acVerify').hidden = false; $('acSent').textContent = `We sent a 6-digit code to ${email}. It expires in 15 minutes.`; $('acCode').focus(); }
+      catch (err) { $('acMsg').textContent = err.message; } finally { b.disabled = false; }
+    });
+    $('acVerify').addEventListener('submit', async e => {
+      e.preventDefault(); $('acMsg2').textContent = '';
+      const b = $('acVerify').querySelector('button[type=submit]'); b.disabled = true;
+      try { const d = await API('verify', { email, code: $('acCode').value, ref }); P = d.profile; await mergeWishlist(); signedIn(); }
+      catch (err) { $('acMsg2').textContent = err.message; } finally { b.disabled = false; }
+    });
+    $('acCode').addEventListener('input', () => { if ($('acCode').value.replace(/\D/g, '').length === 6) $('acVerify').requestSubmit(); });
+    $('acAgain').addEventListener('click', () => { $('acVerify').hidden = true; $('acStart').hidden = false; });
+  }
 
-  const fmtDate = iso => { try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); } catch { return ''; } };
-  const showMember = (m) => {
-    $('meName').textContent = m.name;
-    $('meEmail').textContent = m.email;
-    $('meSince').textContent = fmtDate(m.since);
-    $('heroText').textContent = `Welcome back, ${m.name.split(' ')[0]}.`;
-    show('me');
-    // let the rest of the site know (cart promo, checkout) — nothing sensitive, just "is a member"
-    try { window.dispatchEvent(new CustomEvent('bymarccc:member', { detail: { name: m.name } })); } catch {}
-  };
+  /* ---------------- signed in ---------------- */
+  const SECTIONS = [['circle', 'CIRCLE'], ['orders', 'Orders and returns'], ['credits', 'Credits and refunds'], ['details', 'Details and security'], ['addresses', 'Address book'], ['wishlist', 'Wishlist'], ['playlist', 'My playlist'], ['prefs', 'Communication preferences'], ['refer', 'Refer a friend']];
+  function signedIn() {
+    const t = P.tier;
+    root.innerHTML = `<div class="ac" id="ac"><nav class="ac-nav" aria-label="Account">
+      <h3>bymarccc CIRCLE</h3><ul><li><a href="#circle" data-s="circle"><span class="tierdot" style="background:${TIER_COL[t.id]}"></span>CIRCLE ${esc(t.name)}</a></li></ul>
+      <h3>My account</h3><ul>${SECTIONS.slice(1).map(([k, n]) => `<li><a href="#${k}" data-s="${k}">${n}</a></li>`).join('')}<li><a href="#signout" data-s="signout">Sign out</a></li></ul>
+    </nav><section class="ac-main" id="acMain" aria-live="polite"></section></div>`;
+    root.querySelectorAll('.tierdot').forEach(d => Object.assign(d.style, { display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', marginRight: '8px' }));
+    root.querySelector('.ac-nav').addEventListener('click', e => { const a = e.target.closest('a[data-s]'); if (!a) return; e.preventDefault(); go(a.dataset.s); });
+    const h = (location.hash || '').slice(1);
+    go(SECTIONS.some(s => s[0] === h) ? h : (matchMedia('(max-width:860px)').matches ? '' : 'circle'), true);
+  }
+  function go(s, first) {
+    if (s === 'signout') { API('logout', {}).finally(() => { P = null; history.replaceState(null, '', location.pathname); signedOut(); }); return; }
+    const ac = document.getElementById('ac'); if (!ac) return;
+    ac.classList.toggle('is-section', !!s);
+    root.querySelectorAll('.ac-nav a').forEach(a => { if (a.dataset.s === s) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    if (!first) history.replaceState(null, '', s ? '#' + s : location.pathname + location.search);
+    if (!s) return;
+    const main = document.getElementById('acMain');
+    main.innerHTML = '<a href="#" class="ac-back" id="acBack">← Account</a><div id="acSec"><p class="ac-load">Loading…</p></div>';
+    document.getElementById('acBack').addEventListener('click', e => { e.preventDefault(); go(''); });
+    const sec = document.getElementById('acSec');
+    ({ circle: secCircle, orders: secOrders, credits: secCredits, details: secDetails, addresses: secAddresses, wishlist: secWishlist, playlist: secPlaylist, prefs: secPrefs, refer: secRefer }[s] || secCircle)(sec);
+    if (!first && matchMedia('(max-width:860px)').matches) window.scrollTo({ top: 0 });
+  }
 
-  const post = async (path, body) => {
-    const r = await fetch(API(path), { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) });
-    const data = await r.json().catch(() => ({}));
-    return { ok: r.ok, status: r.status, data };
-  };
-
-  function wireForm(form, btn, msg, path, fields) {
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      msg.textContent = ''; msg.classList.remove('is-ok');
-      fields.forEach(f => f.classList.remove('is-invalid'));
-      const body = {}; fields.forEach(f => body[f.name] = f.value);
-      btn.disabled = true;
-      try {
-        const { ok, data } = await post(path, body);
-        if (!ok) {
-          msg.textContent = data.error === 'MEMBERS_NOT_CONFIGURED' ? 'Sign-ups open very soon — please try again later.' : (data.error || 'Something went wrong. Please try again.');
-          const bad = fields.find(f => f.name === data.field); if (bad) { bad.classList.add('is-invalid'); bad.focus(); }
-          return;
-        }
-        showMember(data.member);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } catch {
-        msg.textContent = 'No connection. Please try again.';
-      } finally { btn.disabled = false; }
+  function secCircle(el) {
+    const t = P.tier, n = P.next, tiers = P.tiers || [];
+    const top = n ? n.min : Math.max(P.spend, 1), pct = Math.max(4, Math.min(100, P.spend / top * 100));
+    const perks = [t.pct ? `−${t.pct}% on everything, applied automatically at checkout` : 'Member prices as you move up the tiers', t.freeShip ? 'Free shipping on every order' : 'Free shipping from Silver', t.drops ? 'Early access to new drops' : 'Early access to drops from Gold', 'Your own playlist of bymarccc music and music videos'];
+    el.innerHTML = `<h2>CIRCLE ${esc(t.name)}</h2>
+      <div class="tier-head"><div class="brand">CIRCLE<span style="color:${TIER_COL[t.id]}">${esc(t.name)}</span></div><p>${esc((P.name || '').split(' ')[0] || 'Hi')}, this is your progress so far</p></div>
+      <div class="bar"><i style="width:${pct}%;background:${TIER_COL[t.id]}"></i></div>
+      <div class="bar-legend"><div><b>${ronMoney(P.spend)}</b>Current</div><div><b>${n ? ronMoney(n.min) : '—'}</b>${n ? 'To ' + esc(n.name) : 'Top tier'}</div></div>
+      ${n ? `<p style="text-align:center;color:var(--sub);margin-top:16px">Spend ${ronMoney(P.toNext)} more in the next 12 months to reach ${esc(n.name)} (−${n.pct}%).</p>` : ''}
+      <div class="perks"><h5>Your ${esc(t.name)} benefits</h5><ul>${perks.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+      <details class="what"><summary>What does this mean? ⌄</summary>
+        <p style="color:var(--sub);font-size:14px">Your tier is based on what you spend in the last 12 months (after discounts, without shipping; cancelled and returned orders don't count). It updates automatically after every order.</p>
+        <table class="tiers-table"><thead><tr><th>Tier</th><th>Spend / 12 months</th><th>Benefits</th></tr></thead><tbody>${tiers.map(x => `<tr><td><b style="color:${TIER_COL[x.id]}">${esc(x.name)}</b></td><td>${x.min ? ronMoney(x.min) : '0 RON'}</td><td>${[x.pct ? '−' + x.pct + '%' : '', x.freeShip ? 'free shipping' : '', x.drops ? 'early drops' : '', 'own playlist'].filter(Boolean).join(' · ')}</td></tr>`).join('')}</tbody></table>
+      </details>`;
+  }
+  async function secOrders(el) {
+    const d = await API('orders');
+    const st = s => ({ placed: 'Placed', shipped: 'Shipped', delivered: 'Delivered', return_requested: 'Return requested', returned: 'Returned', cancelled: 'Cancelled', refunded: 'Refunded' }[s] || s);
+    const cur = o => o.currency && o.currency !== 'RON' && G ? G.money(o.total_local, o.currency) : (Math.round(o.total_local * 100) / 100).toLocaleString('ro-RO') + ' ' + (o.currency || 'RON');
+    el.innerHTML = `<h2>Orders and returns</h2>${d.orders.length ? d.orders.map(o => {
+      const canReturn = ['placed', 'shipped', 'delivered'].includes(o.status) && (Date.now() - new Date(o.created_at)) < 45 * 864e5;
+      return `<div class="ord"><div class="ord-top"><div><b>Order ${esc(o.order_id)}</b><div class="ord-line">${dateF(o.created_at)} · ${o.items.reduce((a, i) => a + (i.qty || 1), 0)} item(s)</div></div><div style="text-align:right"><span class="pill">${esc(st(o.status))}</span><div style="margin-top:6px">${cur(o)}</div></div></div>
+        <div class="ord-items">${o.items.map(i => i.image ? `<img src="${esc(/^https?:|^\//.test(i.image) ? i.image : '/' + i.image)}" alt="" title="${esc(i.name)}">` : '').join('')}</div>
+        <div class="ord-line">${o.items.map(i => esc(`${i.qty} × ${i.name}${i.variant ? ' (' + i.variant + ')' : ''}`)).join('<br>')}</div>
+        ${canReturn ? `<p style="margin:14px 0 0"><button class="btn btn--ghost btn--sm" data-ret="${esc(o.order_id)}">Request a return</button></p>` : ''}</div>`;
+    }).join('') : '<p class="empty">You have no orders yet</p><p>When you place an order with this e-mail, it shows up here.</p>'}
+      <h4>Returns</h4><p style="color:var(--sub);font-size:14px">You can return pieces within 14 days of delivery, unworn and with tags. Returns are free in Romania; from other countries you send the parcel back yourself (DHL, post or any courier). Made-to-measure length adjustments are final sale. <a href="/delivery-returns">Delivery &amp; Returns</a></p>`;
+    el.querySelectorAll('[data-ret]').forEach(b => b.addEventListener('click', async () => {
+      const reason = prompt('Tell us briefly why you are returning (optional):', '');
+      if (reason === null) return;
+      b.disabled = true;
+      try { await API('return', { order_id: b.dataset.ret, reason }); b.outerHTML = '<span class="pill">Return requested — we will e-mail you the return address</span>'; } catch (e) { alert(e.message); b.disabled = false; }
+    }));
+  }
+  async function secCredits(el) {
+    const d = await API('credits');
+    const tot = d.available + d.refunds;
+    el.innerHTML = `<h2>Credits and refunds</h2><p class="big">${money(tot)}</p>
+      <div class="kv">Available credit: ${money(d.available)}<br>Available refunds: ${money(d.refunds)}<br>Discount vouchers: ${d.vouchers.length ? d.vouchers.map(v => '−' + v.pct + '%' + (v.expires_at ? ' until ' + dateF(v.expires_at) : '')).join(', ') : 'none'}</div>
+      <p style="color:var(--sub);font-size:14px">Credit and vouchers are applied automatically at checkout when you are signed in.</p>
+      ${d.credits.length ? `<h4>History</h4>${d.credits.map(c => `<div class="ord-line" style="padding:8px 0;border-bottom:1px solid var(--line)">${dateF(c.created_at)} · ${c.kind === 'pct' ? '−' + c.pct + '% voucher' : money(c.amount_ron) + ' ' + c.kind} · ${esc(c.note || '')}${c.used_order ? ' · used on ' + esc(c.used_order) : ''}</div>`).join('')}` : '<h4>Nothing to see here, yet</h4><p style="color:var(--sub)">Your available credits and refunds will show here.</p>'}`;
+  }
+  function secDetails(el) {
+    el.innerHTML = `<h2>Details and security</h2><form id="acDet" style="max-width:460px">
+      <div class="f"><label>Name</label><input id="dName" value="${esc(P.name)}" autocomplete="name"></div>
+      <div class="f"><label>Phone</label><input id="dPhone" value="${esc(P.phone)}" autocomplete="tel" inputmode="tel"></div>
+      <div class="f"><label>E-mail</label><input value="${esc(P.email)}" disabled></div>
+      <p class="msg" id="dMsg"></p><button class="btn" type="submit">Save</button></form>
+      <h4>Security</h4><p style="color:var(--sub);font-size:14px">You sign in with a one-time code sent to ${esc(P.email)} — there is no password to leak. Member since ${dateF(P.since)}.</p>
+      <p class="row"><button class="btn btn--ghost btn--sm" id="dOut">Sign out</button><button class="btn btn--ghost btn--sm" id="dDel">Delete account</button></p>`;
+    el.querySelector('#acDet').addEventListener('submit', async e => { e.preventDefault(); const m = el.querySelector('#dMsg');
+      try { const d = await API('update', { name: el.querySelector('#dName').value, phone: el.querySelector('#dPhone').value }); P = d.profile; m.className = 'msg ok'; m.textContent = 'Saved.'; } catch (err) { m.className = 'msg'; m.textContent = err.message; } });
+    el.querySelector('#dOut').addEventListener('click', () => go('signout'));
+    el.querySelector('#dDel').addEventListener('click', async () => { const c = prompt('This deletes your account, addresses, wishlist and playlist. Type DELETE to confirm.'); if (c !== 'DELETE') return; try { await API('delete', { confirm: 'DELETE' }); P = null; signedOut(); } catch (e) { alert(e.message); } });
+  }
+  async function secAddresses(el) {
+    const d = await API('addresses');
+    const countries = G ? Object.keys(G.rules).filter(k => k !== '_').map(k => G.rules[k][0]).sort() : ['Romania'];
+    const form = (a = {}) => `<form class="card2" id="adForm" data-id="${a.id || ''}"><div class="grid2">
+      <div class="f"><label>Full name</label><input name="full_name" value="${esc(a.full_name)}" required></div><div class="f"><label>Phone</label><input name="phone" value="${esc(a.phone)}"></div>
+      <div class="f"><label>Address</label><input name="address" value="${esc(a.address)}" required></div><div class="f"><label>Number, apartment</label><input name="apartment" value="${esc(a.apartment)}"></div>
+      <div class="f"><label>Postal code</label><input name="postal_code" value="${esc(a.postal_code)}"></div><div class="f"><label>City</label><input name="city" value="${esc(a.city)}" required></div>
+      <div class="f"><label>Country</label><select name="country">${countries.map(c => `<option${c === (a.country || 'Romania') ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+      <label class="toggle" style="border:0"><span>Default address</span><input type="checkbox" name="isDefault"${a.isDefault ? ' checked' : ''}></label></div>
+      <p class="msg" id="adMsg"></p><div class="row"><button class="btn btn--sm" type="submit">Save address</button><button class="btn btn--ghost btn--sm" type="button" id="adCancel">Cancel</button></div></form>`;
+    const render = () => {
+      el.innerHTML = `<h2>Address book</h2><div id="adList">${d.addresses.length ? d.addresses.map(a => `<div class="card2"><div style="line-height:1.6">${a.isDefault ? '<span class="pill">Default</span><br>' : ''}<b>${esc(a.full_name)}</b><br>${esc(a.address)}${a.apartment ? ', ' + esc(a.apartment) : ''}<br>${esc(a.postal_code)} ${esc(a.city)}<br>${esc(a.country)}${a.phone ? '<br>' + esc(a.phone) : ''}</div><div class="row" style="margin-top:12px"><button class="btn btn--ghost btn--sm" data-edit="${a.id}">Edit</button><button class="btn btn--ghost btn--sm" data-del="${a.id}">Delete</button></div></div>`).join('') : '<p class="empty">No saved addresses</p><p>Add one and it fills in automatically at checkout.</p>'}</div>
+        <p style="margin-top:18px"><button class="btn btn--sm" id="adAdd">Add a new address</button></p><div id="adFormWrap"></div>`;
+      const open = a => { el.querySelector('#adFormWrap').innerHTML = form(a); const f = el.querySelector('#adForm');
+        f.querySelector('#adCancel').addEventListener('click', () => { el.querySelector('#adFormWrap').innerHTML = ''; });
+        f.addEventListener('submit', async e => { e.preventDefault(); const o = Object.fromEntries(new FormData(f)); o.isDefault = !!f.isDefault.checked; if (f.dataset.id) o.id = f.dataset.id;
+          try { await API('address-save', o); Object.assign(d, await API('addresses')); render(); } catch (err) { f.querySelector('#adMsg').textContent = err.message; } });
+        f.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+      el.querySelector('#adAdd').addEventListener('click', () => open());
+      el.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => open(d.addresses.find(a => String(a.id) === b.dataset.edit))));
+      el.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => { if (!confirm('Delete this address?')) return; await API('address-delete', { id: b.dataset.del }); Object.assign(d, await API('addresses')); render(); }));
+    };
+    render();
+  }
+  function localWishKeys() { try { return (JSON.parse(localStorage.getItem('bym.wishlist') || '[]') || []).map(x => { const m = /[?&]p=([^&#]+)/.exec(x.url || ''); return m ? decodeURIComponent(m[1]) : ''; }).filter(Boolean); } catch { return []; } }
+  async function mergeWishlist() { const k = localWishKeys(); if (k.length) try { await API('wishlist', { merge: k }); } catch {} }
+  async function secWishlist(el) {
+    const d = await API('wishlist', { merge: localWishKeys() });
+    const C = CAT();
+    const render = list => {
+      el.innerHTML = `<h2>Wishlist</h2>${list.length ? `<div class="wl-grid">${list.map(k => { const p = C[k]; if (!p) return ''; const img = (p.gallery && p.gallery[0] && p.gallery[0].src) || ''; return `<div><a href="bymarccc-product.html?p=${encodeURIComponent(k)}"><img src="${esc(img)}" alt="" loading="lazy"><div class="t">${esc(p.title)}</div><div class="p">${money(typeof p.salePrice === 'number' ? p.salePrice : p.price)}</div></a><button data-rm="${esc(k)}">Remove</button></div>`; }).join('')}</div>` : '<p class="empty">Your wishlist is empty</p><p>Tap the heart on any product to save it here, on every device.</p>'}`;
+      el.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', async () => {
+        try { const w = JSON.parse(localStorage.getItem('bym.wishlist') || '[]'); localStorage.setItem('bym.wishlist', JSON.stringify(w.filter(x => !(x.url || '').includes('p=' + b.dataset.rm)))); } catch {}
+        const r = await API('wishlist', { remove: b.dataset.rm }); render(r.wishlist); }));
+    };
+    render(d.wishlist);
+  }
+  /* ---------- my playlist: the site's songs, saved per account; plays in the site's own player (music or music video) ---------- */
+  let plMode = 'music';
+  async function secPlaylist(el) {
+    const all = (window.BYMARCCC_PLAYLIST || []).slice();
+    let mine = (await API('playlist')).playlist;
+    const byId = id => all.find(t => t.id === id);
+    const playT = t => {
+      if (plMode === 'video' && t.video && window.BYMARCCC_VP) { const A = document.getElementById('miniAudio'); if (A) A.pause(); window.BYMARCCC_VP.play(t); if (window.BYMARCCC_VP.pip) window.BYMARCCC_VP.pip(); return; }
+      if (window.BYMARCCC_VP && window.BYMARCCC_VP.pause) window.BYMARCCC_VP.pause();
+      let A = document.getElementById('miniAudio');
+      if (!A) { A = document.createElement('audio'); A.id = 'miniAudio'; document.body.appendChild(A); }
+      ['miniTitle', 'miniArtist'].forEach(id => { if (!document.getElementById(id)) { const s = document.createElement('span'); s.id = id; s.hidden = true; document.body.appendChild(s); } });
+      const parts = String(t.title).split(' - '); document.getElementById('miniArtist').textContent = parts.length > 1 ? parts[0] : ''; document.getElementById('miniTitle').textContent = parts.length > 1 ? parts.slice(1).join(' - ') : t.title;
+      A.src = t.src; A.play().catch(() => {});
+      A.onended = () => { const list = mine.map(byId).filter(Boolean); const i = list.findIndex(x => x.id === t.id); if (i >= 0 && list[i + 1]) playT(list[i + 1]); };
+    };
+    const row = (t, inList) => `<div class="trk" data-id="${esc(t.id)}"><img src="${esc(t.thumb && !/^https/.test(t.thumb) ? '/' + t.thumb.replace(/^\//, '') : t.thumb || '')}" alt=""><div><div class="n">${esc(t.title)}</div><div class="d">${esc(t.duration || '')}${plMode === 'video' && !t.video ? ' · music only' : ''}</div></div>
+      <button class="play" data-play="${esc(t.id)}" aria-label="Play">▶</button>${inList ? `<button data-rm="${esc(t.id)}" aria-label="Remove from my playlist">−</button>` : `<button data-add="${esc(t.id)}" aria-label="Add to my playlist">+</button>`}</div>`;
+    const render = () => {
+      const list = mine.map(byId).filter(Boolean), rest = all.filter(t => !mine.includes(t.id) && (plMode === 'music' || t.video));
+      el.innerHTML = `<h2>My playlist</h2><div class="pl-tabs"><button data-m="music" aria-pressed="${plMode === 'music'}">Music</button><button data-m="video" aria-pressed="${plMode === 'video'}">Music video</button></div>
+        <div>${list.length ? list.map(t => row(t, true)).join('') : '<p class="empty">Your playlist is empty</p><p>Add songs from the list below — they stay in your account on every device.</p>'}</div>
+        ${list.length ? '<p style="margin-top:16px"><button class="btn btn--sm" id="plAll">Play my playlist</button></p>' : ''}
+        <h4>All bymarccc songs</h4><div>${rest.map(t => row(t, false)).join('')}</div>`;
+      el.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { plMode = b.dataset.m; render(); }));
+      el.querySelectorAll('[data-play]').forEach(b => b.addEventListener('click', () => { const t = byId(b.dataset.play); if (t) playT(t); }));
+      el.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', async () => { mine = (await API('playlist', { add: b.dataset.add })).playlist; render(); }));
+      el.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', async () => { mine = (await API('playlist', { remove: b.dataset.rm })).playlist; render(); }));
+      const pa = el.querySelector('#plAll'); if (pa) pa.addEventListener('click', () => { const l = list.filter(t => plMode === 'music' || t.video); if (l[0]) playT(l[0]); });
+    };
+    render();
+  }
+  function secPrefs(el) {
+    const p = P.prefs || {};
+    el.innerHTML = `<h2>Communication preferences</h2><form id="prF" style="max-width:560px">
+      <label class="toggle"><span>New collections and offers by e-mail</span><input type="checkbox" name="news"${p.news ? ' checked' : ''}></label>
+      <label class="toggle"><span>Early-access drop alerts${P.tier.drops ? '' : ' (from Gold)'}</span><input type="checkbox" name="drops"${p.drops ? ' checked' : ''}></label>
+      <label class="toggle"><span>SMS / WhatsApp updates</span><input type="checkbox" name="sms"${p.sms ? ' checked' : ''}></label>
+      <p class="msg" id="prMsg"></p></form><p style="color:var(--sub);font-size:14px">Order and delivery e-mails are always sent.</p>`;
+    el.querySelector('#prF').addEventListener('change', async () => { const f = el.querySelector('#prF'), m = el.querySelector('#prMsg');
+      try { const d = await API('prefs', { news: f.news.checked, drops: f.drops.checked, sms: f.sms.checked }); P.prefs = d.prefs; m.className = 'msg ok'; m.textContent = 'Saved.'; } catch (e) { m.className = 'msg'; m.textContent = e.message; } });
+  }
+  async function secRefer(el) {
+    const d = await API('referrals'), c = await API('credits');
+    const v = c.vouchers.filter(x => x.pct);
+    el.innerHTML = `<h2>Refer a friend</h2><p style="font-size:24px;margin:0 0 26px">${v.length ? `You have ${v.length} referral reward${v.length > 1 ? 's' : ''} (−${v[0].pct}% on your next order)` : 'No referral rewards available'}</p>
+      <div class="card2"><div style="font-size:22px">🎁</div><p style="margin:8px 0 2px"><b>Give 10% &amp; Get 10%</b></p><p style="margin:0 0 16px">Treat your friends to 10% off their first order and get 10% off your next order in return.</p>
+        <p style="margin:0 0 8px"><b>Your referral link</b></p><div class="copy"><input id="rfLink" value="${esc(P.refLink)}" readonly><button class="btn" id="rfShare">Invite friends</button></div><p class="msg ok" id="rfMsg"></p></div>
+      <h4>How it works</h4><ol style="line-height:1.8;padding-left:20px"><li>Share your unique link with friends.</li><li>They create a bymarccc account from your link and get 10% off their first order.</li><li>You get 10% off your next order once their order is placed.</li></ol>
+      <p style="color:var(--sub);font-size:13px">Your reward is valid for 60 days. The best single discount applies at checkout (CIRCLE tier or referral); discounts don't stack.</p>
+      <h4>Your referral rewards history</h4>${d.referrals.length ? d.referrals.map(r => `<div class="ord-line" style="padding:8px 0;border-bottom:1px solid var(--line)">${dateF(r.created_at)} · ${esc(r.referee)} · ${r.status === 'ordered' ? 'ordered — reward issued' : 'signed up'}</div>`).join('') : '<p>You don\'t have any successful referrals yet — start inviting friends to earn your first reward.</p>'}`;
+    el.querySelector('#rfShare').addEventListener('click', async () => {
+      const link = P.refLink, txt = 'Get 10% off your first bymarccc order with my link:';
+      if (navigator.share) { try { await navigator.share({ title: 'bymarccc', text: txt, url: link }); return; } catch {} }
+      try { await navigator.clipboard.writeText(link); el.querySelector('#rfMsg').textContent = 'Link copied — paste it to your friends.'; } catch { el.querySelector('#rfLink').select(); }
     });
   }
-  wireForm(els.panelApply, $('suBtn'), $('suMsg'), 'members-signup', [$('suName'), $('suEmail'), $('suPass')]);
-  wireForm(els.panelLogin, $('liBtn'), $('liMsg'), 'members-login', [$('liEmail'), $('liPass')]);
 
-  $('logoutBtn').addEventListener('click', async () => {
-    $('logoutBtn').disabled = true;
-    try { await post('members-logout', {}); } catch {}
-    $('heroText').textContent = 'Join the bymarccc circle.';
-    $('logoutBtn').disabled = false;
-    show('auth'); tab('login');
-  });
-
-  // Initial state
-  (async () => {
-    try {
-      const r = await fetch(API('members-me'), { credentials: 'same-origin', cache: 'no-store' });
-      const data = await r.json();
-      if (data.configured === false) return show('notReady');
-      if (data.member) return showMember(data.member);
-    } catch {}
-    show('auth');
-    tab(location.hash === '#login' ? 'login' : 'apply');
-  })();
+  API('me').then(d => { load.hidden = true; root.hidden = false; P = d.profile; if (P) { mergeWishlist(); signedIn(); } else signedOut(); })
+    .catch(() => { load.textContent = 'Accounts are not available right now. Please try again in a moment.'; });
 })();
 </script>
 

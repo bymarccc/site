@@ -306,6 +306,8 @@
     </div>
     <div class="co-totals">
       <div><span data-i18n="subtotal">Subtotal</span><span data-co-subtotal>0 RON</span></div>
+      <div id="coDiscRow" hidden><span data-k>Member</span><span data-v>0</span></div>
+      <div id="coCreditRow" hidden><span>Credit</span><span data-v>0</span></div>
       <div><span data-i18n="shipping">Shipping</span><span data-co-shipping>20 RON</span></div>
       <div class="total"><span data-i18n="total">Total</span><span data-co-total>0 RON</span></div>
     </div>
@@ -515,8 +517,27 @@
     if (GEO.rules[GEO.cc] && GEO.cc !== 'RO') sel.value = GEO.rules[GEO.cc][0];
   })();
   var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); };
-  var shippingFor = function(){ return BAG.items.length && !ADD_TO ? (isRO() || !GEO ? SHIPPING_RON : GEO.rule(destCC()).ship) : 0; };
-  var total = function(){ return BAG.subtotal() + shippingFor(); };
+  /* ---------- customer account (bymarccc CIRCLE): member discount, free shipping and credit — the server applies the same rules ---------- */
+  var ACCT = null;
+  var pctOf = function(local){ var p = ACCT ? ACCT.pct : 0; if (!p) return local; var v = local * (1 - p / 100); return curNow() === 'RON' ? Math.round(v * 100) / 100 : Math.round(v); };
+  var discSubtotal = function(){ return BAG.items.reduce(function(a, b){ return a + (typeof b.price === 'number' ? pctOf(lp(b.price)) * (b.quantity || 1) : 0); }, 0); };
+  var shippingFor = function(){ return BAG.items.length && !ADD_TO && !(ACCT && ACCT.freeShip) ? (isRO() || !GEO ? SHIPPING_RON : GEO.rule(destCC()).ship) : 0; };
+  var creditFor = function(){ return ACCT && ACCT.creditRon > 0 ? Math.min(discSubtotal(), lp(ACCT.creditRon)) : 0; };
+  var total = function(){ return Math.max(0, discSubtotal() + shippingFor() - creditFor()); };
+  (function loadAccount(){
+    fetch('/api/account?action=checkout', { credentials: 'same-origin' }).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+      if (!d || !d.ctx) { var h0 = document.querySelector('.co-summary .co-h'); if (h0 && !document.getElementById('coAcct')) { var s0 = document.createElement('a'); s0.id = 'coAcct'; s0.href = '/members.html'; s0.setAttribute('style', 'display:block;margin:4px 0 16px;padding:12px 14px;border-radius:12px;background:#f5f4f1;color:#111;font-size:13px;text-decoration:none'); s0.textContent = 'Sign in for CIRCLE member prices, free shipping and rewards →'; h0.parentNode.insertBefore(s0, h0.nextSibling); } return; }
+      ACCT = d.ctx;
+      var p = d.profile || {}, a = d.address || {};
+      var fill = function(id, v){ var el = $(id); if (el && !el.value && v) el.value = v; };
+      fill('coEmail', p.email); fill('coName', a.full_name || p.name); fill('coPhone', a.phone || p.phone); fill('coAddress', a.address); fill('coApt', a.apartment); fill('coPostal', a.postal_code); fill('coCity', a.city);
+      if (a.country && $('coCountry')) { var sel = $('coCountry'); for (var i = 0; i < sel.options.length; i++) if (sel.options[i].value === a.country) { sel.value = a.country; sel.dispatchEvent(new Event('change')); break; } }
+      var h = document.querySelector('.co-summary .co-h');
+      if (h && !document.getElementById('coAcct')) { var b = document.createElement('div'); b.id = 'coAcct'; b.setAttribute('style', 'margin:4px 0 16px;padding:12px 14px;border-radius:12px;background:#111;color:#fff;font-size:13px;line-height:1.45');
+        b.textContent = 'CIRCLE ' + (ACCT.tierName || '') + (ACCT.pct ? ' · −' + ACCT.pct + '% applied' : '') + (ACCT.freeShip ? ' · free shipping' : '') + (ACCT.creditRon > 0 ? ' · credit applied' : ''); h.parentNode.insertBefore(b, h.nextSibling); }
+      renderBag();
+    }).catch(function(){});
+  })();
 
   function itemHtml(it, editable){
     var q = it.quantity || 1;
@@ -531,6 +552,9 @@
     var list = $('coItems'); if (list) list.innerHTML = BAG.items.map(function(it){ return itemHtml(it, true); }).join('');
     $('coEmpty').hidden = BAG.items.length > 0;
     document.querySelectorAll('[data-co-subtotal]').forEach(function(el){ el.textContent = fmt(BAG.subtotal()); });
+    var dr = document.getElementById('coDiscRow'), cr = document.getElementById('coCreditRow'), dAmt = BAG.subtotal() - discSubtotal(), cAmt = creditFor();
+    if (dr) { dr.hidden = !(dAmt > 0); dr.querySelector('[data-k]').textContent = (ACCT && ACCT.why ? ACCT.why : 'Member') + ' −' + (ACCT ? ACCT.pct : 0) + '%'; dr.querySelector('[data-v]').textContent = '−' + fmt(dAmt); }
+    if (cr) { cr.hidden = !(cAmt > 0); cr.querySelector('[data-v]').textContent = '−' + fmt(cAmt); }
     document.querySelectorAll('[data-co-shipping]').forEach(function(el){ el.textContent = fmt(shippingFor()); });
     document.querySelectorAll('[data-co-total]').forEach(function(el){ el.textContent = fmt(total()); });
     $('coSubmit').disabled = BAG.items.length === 0;

@@ -143,6 +143,10 @@ async function checkoutCreate(request, origin) {
   const geoCC = geoCountryCode(c.country) || "RO";
   const rule = geoRule(geoCC, await geoRates());
   const currency = rule.cur.toLowerCase();
+  // customer account: tier / referral discount, free shipping, store credit (all decided here, never in the browser)
+  const actx = await acctCheckoutContext(request).catch(() => null);
+  const pct = actx ? actx.pct : 0;
+  try { items.splice(0, items.length, ...(await acctTrustedRon(items))); } catch {}
   let order_id;
   try { order_id = await assignOrderNumber(body.order_id, "card"); }
   catch (e) { console.error("order number failed", String(e && e.message || e)); return json(503, { error: "ORDER_NUMBER_FAILED" }); }
@@ -159,17 +163,20 @@ async function checkoutCreate(request, origin) {
     items_summary: String(body.items_summary || "").slice(0, 480)
   };
   const addTo = await verifyAddTo(body.addto).catch(() => null);
-  const shipping = addTo ? 0 : rule.ship;
+  const shipping = addTo || (actx && actx.freeShip) ? 0 : rule.ship;
   if (addTo) metaBase.add_to = addTo.id;
   metaBase.geo_cc = rule.cc; metaBase.geo_cur = rule.cur; metaBase.geo_fx = String(rule.fx); metaBase.geo_ship = String(shipping);
   const shippingMinor = shipping > 0 ? Math.round(shipping * 100) : 0;
   // Server-side total, in minor units (bani) — never trust a client-sent total for what gets charged.
   const itemsTotalMinor = items.slice(0, 50).reduce((sum, it) => {
-    const unit = Math.max(0, Math.round(geoPrice(it.price, rule) * 100));
+    const unit = Math.max(0, Math.round(acctApplyPct(geoPrice(it.price, rule), pct, rule.cur) * 100));
     const qty = Math.max(1, Math.min(99, Math.round(Number(it.quantity || 1))));
     return sum + unit * qty;
   }, 0);
-  const totalMinor = itemsTotalMinor + shippingMinor;
+  // store credit (RON) → this order's currency, never more than the items
+  const creditMinor = actx && actx.creditRon > 0 ? Math.min(itemsTotalMinor, Math.round(geoPrice(actx.creditRon, rule) * 100)) : 0;
+  const totalMinor = itemsTotalMinor + shippingMinor - creditMinor;
+  if (actx) { metaBase.acct_email = actx.email; metaBase.acct_pct = String(pct); metaBase.acct_why = actx.why || ""; metaBase.acct_voucher = actx.voucher ? String(actx.voucher) : ""; metaBase.acct_credit_minor = String(creditMinor); metaBase.acct_credit_ron = String(creditMinor ? Math.min(actx.creditRon, Math.round(creditMinor / 100 / (rule.fx || 1) * 100) / 100) : 0); }
 
   // "Pay in 2 installments" — card only (the frontend only ever sends this for the card
   // payment method). Charges 50% now via a normal Checkout Session, saves the card for an
@@ -230,7 +237,7 @@ async function checkoutCreate(request, origin) {
         name: String(it.name || "Product").slice(0, 250),
         ...it.variant ? { description: String(it.variant).slice(0, 250) } : {}
       },
-      unit_amount: Math.max(0, Math.round(geoPrice(it.price, rule) * 100))
+      unit_amount: Math.max(0, Math.round(acctApplyPct(geoPrice(it.price, rule), pct, rule.cur) * 100))
     },
     quantity: Math.max(1, Math.min(99, Math.round(Number(it.quantity || 1))))
   }));
@@ -250,6 +257,7 @@ async function checkoutCreate(request, origin) {
         cancel_url: `${origin}/checkout.html?canceled=1`,
         customer_email: c.email || void 0,
         shipping_address_collection: void 0,
+        ...(creditMinor > 0 ? { discounts: [{ coupon: (await stripeRequest("coupons", { method: "POST", params: { amount_off: creditMinor, currency, duration: "once", name: "bymarccc credit", max_redemptions: 1 } })).id }] } : {}),
         metadata: metaBase
       }
     });
@@ -1705,17 +1713,23 @@ async function orderSubmit(request) {
   const o = cleanOrder(b), c = o.customer;
   o.lang = "en";   // customer e-mails are always in English
   if (!o.order_id || !o.items.length) return json(400, { error: "Invalid order" });
-  let pay = "cod", totalOverride = null;
+  let pay = "cod", totalOverride = null, acctInfo = { pct: 0, creditRon: 0, voucher: null, email: c.email };
+  o.items = await acctTrustedRon(o.items.map((it, i) => ({ ...it, id: (b.items[i] && b.items[i].id) || "" }))).catch(() => o.items);
+  o.items = o.items.map(({ id, ...it }) => it);
   if (o.session_id) {
     if (!/^cs_[a-zA-Z0-9_]+$/.test(o.session_id) || !env("STRIPE_SECRET_KEY")) return json(400, { error: "Invalid session" });
     const data = await stripeRequest(`checkout/sessions/${encodeURIComponent(o.session_id)}`);
     if (data.payment_status !== "paid" || (data.metadata?.order_id && data.metadata.order_id !== o.order_id)) return json(400, { error: "Not paid" });
     pay = "card"; totalOverride = (data.amount_total || 0) / 100;
+    const md = data.metadata || {};
+    acctInfo = { pct: Number(md.acct_pct) || 0, creditRon: Number(md.acct_credit_ron) || 0, voucher: md.acct_voucher ? Number(md.acct_voucher) : null, email: md.acct_email || c.email, creditLocal: (Number(md.acct_credit_minor) || 0) / 100, shipRon: md.geo_ship != null && md.geo_ship !== "" ? Number(md.geo_ship) : null };
+    o.ronItems = o.items.map((it) => ({ ...it, price: acctApplyPct(it.price, acctInfo.pct, "RON") }));
     if (data.metadata && data.metadata.geo_cur && data.metadata.geo_cur !== "RON") {   // foreign card order: same conversion as at checkout
       const rule = { cur: data.metadata.geo_cur, fx: Number(data.metadata.geo_fx) || 1 };
-      o.items = o.items.map((it) => ({ ...it, price: geoPrice(it.price, rule) }));
+      o.items = o.items.map((it) => ({ ...it, price: acctApplyPct(geoPrice(it.price, rule), acctInfo.pct, rule.cur) }));
       o.currency = rule.cur; o.geoShip = Number(data.metadata.geo_ship) || 0;
     }
+    if (!o.currency) o.items = o.items.map((it) => ({ ...it, price: acctApplyPct(it.price, acctInfo.pct, "RON") }));
     if (!c.email) c.email = data.customer_details?.email || data.customer_email || "";
   } else {
     const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email);
@@ -1724,6 +1738,11 @@ async function orderSubmit(request) {
     // COD: the order number is assigned here, from the browser's temporary id (a retry gets the same number)
     try { o.order_id = await assignOrderNumber(o.order_id, "cod"); }
     catch (e) { console.error("order number failed", String(e && e.message || e)); return json(503, { error: "ORDER_NUMBER_FAILED" }); }
+    const actx = await acctCheckoutContext(request).catch(() => null);
+    if (actx) {
+      acctInfo = { pct: actx.pct, creditRon: 0, voucher: actx.voucher, email: actx.email, freeShip: actx.freeShip, creditAvail: actx.creditRon };
+      o.items = o.items.map((it) => ({ ...it, price: acctApplyPct(it.price, actx.pct, "RON") }));
+    }
   }
   const addTo = await verifyAddTo(b.addto).catch(() => null);
   if (addTo && addTo.id !== o.order_id) o.addToParent = addTo.id;
@@ -1733,9 +1752,11 @@ async function orderSubmit(request) {
   const store = kv(), key = `ordermail:${o.order_id}`;
   if (sentOrders.has(key) || (store && await store.get(key))) return json(200, { ok: true, duplicate: true, order_id: o.order_id, recs: o.recs });
   const sub = o.items.reduce((a, it) => a + it.price * it.qty, 0);
-  const ship = o.addToParent ? 0 : (o.currency ? o.geoShip : Number(env("SHIPPING_RON", "20")) || 0);
+  const ship = o.addToParent || acctInfo.freeShip ? 0 : (o.currency ? o.geoShip : acctInfo.shipRon != null ? acctInfo.shipRon : Number(env("SHIPPING_RON", "20")) || 0);
   OCUR = o.currency || "RON";
-  const totals = { sub, ship, total: totalOverride != null && pay === "card" && !b.installments ? totalOverride : sub + ship };
+  if (pay === "cod" && acctInfo.creditAvail > 0) acctInfo.creditRon = Math.min(acctInfo.creditAvail, sub);
+  const creditShown = pay === "card" ? (acctInfo.creditLocal || 0) : acctInfo.creditRon;
+  const totals = { sub, ship, total: totalOverride != null && pay === "card" && !b.installments ? totalOverride : Math.max(0, sub + ship - creditShown) };
   const chk = await goatifyItemCheck(b.items).catch(() => ({ extras: [], notes: "" }));
   const m = orderEmails(o, pay, totals, chk.extras.map((e) => e && e.image), CURRENT_ORIGIN || "https://bymarccc.com");
   const from = env("ORDER_EMAIL_FROM");
@@ -1746,6 +1767,11 @@ async function orderSubmit(request) {
   }
   sentOrders.add(key);
   if (store) await store.put(key, "1", { expirationTtl: 60 * 60 * 24 * 60 }).catch(() => {});
+  try {
+    const ronItems = o.currency ? (o.ronItems || []) : o.items;
+    const ronSub = (ronItems.length ? ronItems : o.items).reduce((a, it) => a + it.price * it.qty, 0);
+    await acctRecordOrder(o, { email: acctInfo.email || c.email, pay, currency: o.currency || "RON", totalLocal: totals.total, shipLocal: ship, totalRon: Math.max(0, ronSub - (acctInfo.creditRon || 0)), pct: acctInfo.pct, creditRon: acctInfo.creditRon || 0, voucher: acctInfo.voucher, items: o.items.map((it, i) => ({ name: it.name, variant: it.variant, qty: it.qty, price: it.price, image: (chk.extras[i] && chk.extras[i].image) || (b.items[i] && b.items[i].image) || "" })) });
+  } catch (e) { console.error("account order record failed", String(e && e.message || e)); }
   // GOATIFY: forward the accepted order (no-op unless GOATIFY_FORWARDING=on). Never changes the answer to the customer.
   try {
     const fo = { ...o, items: o.items.map((it, i) => ({ ...it, ...(chk.extras[i] || {}) })) };
@@ -2395,6 +2421,361 @@ async function contentSitemapEntries() {
 }
 __name(contentSitemapEntries, "contentSitemapEntries");
 
+// ---------------------------------------------------------------------------------------------
+// Customer accounts — bymarccc CIRCLE (D1 binding ORDERS_DB). Sign in with an e-mailed 6-digit code (no passwords).
+// Tiers on spend in the last 12 months (RON, before shipping, after discounts; cancelled/returned orders excluded):
+//   Bronze 0 · Silver 1 500 (−10 %, free shipping) · Gold 4 000 (−20 %, free shipping, early access to drops)
+//   Platinum 10 000 (−30 %, free shipping, early access). Everyone gets their own playlist.
+// Also: orders & returns, credits, address book, wishlist, communication preferences, refer a friend
+// (friend −10 % on the first order, you −10 % on your next order). Discounts are applied on the server at checkout.
+// GOATIFY reads/updates customers through /api/account-admin (signed with GOATIFY_SITE_SECRET).
+// ---------------------------------------------------------------------------------------------
+var ACCT_COOKIE = "bym_acct";
+var ACCT_TTL = 60 * 60 * 24 * 180;
+var ACCT_TIERS = [
+  { id: "bronze", name: "Bronze", min: 0, pct: 0, freeShip: false, drops: false },
+  { id: "silver", name: "Silver", min: 1500, pct: 10, freeShip: true, drops: false },
+  { id: "gold", name: "Gold", min: 4000, pct: 20, freeShip: true, drops: true },
+  { id: "platinum", name: "Platinum", min: 10000, pct: 30, freeShip: true, drops: true }
+];
+var ACCT_REF_PCT = 10;
+var acctReady = null;
+function acctDb() { return ordersDb(); }
+__name(acctDb, "acctDb");
+async function acctInit() {
+  const db = acctDb();
+  if (!db) throw Object.assign(new Error("ACCOUNTS_NOT_CONFIGURED"), { status: 503 });
+  if (!acctReady) acctReady = db.batch([
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_customers (email TEXT PRIMARY KEY, name TEXT, phone TEXT, created_at TEXT NOT NULL, ref_code TEXT UNIQUE, referred_by TEXT, prefs TEXT, spend_import REAL DEFAULT 0, tier_override TEXT)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_codes (email TEXT PRIMARY KEY, code_hash TEXT NOT NULL, expires INTEGER NOT NULL, tries INTEGER NOT NULL DEFAULT 0, sent_at INTEGER NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_sessions (token TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_addresses (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL, data TEXT NOT NULL, is_default INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_wishlist (email TEXT NOT NULL, pkey TEXT NOT NULL, added_at TEXT NOT NULL, PRIMARY KEY (email, pkey))"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_playlist (email TEXT NOT NULL, track TEXT NOT NULL, added_at TEXT NOT NULL, PRIMARY KEY (email, track))"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_orders (order_id TEXT PRIMARY KEY, email TEXT NOT NULL, created_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'placed', pay TEXT, currency TEXT, total_local REAL, ship_local REAL, total_ron REAL NOT NULL DEFAULT 0, discount_pct REAL DEFAULT 0, credit_ron REAL DEFAULT 0, items TEXT, ship_to TEXT)"),
+    db.prepare("CREATE INDEX IF NOT EXISTS acct_orders_email ON acct_orders (email, created_at)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_credits (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL, kind TEXT NOT NULL, amount_ron REAL NOT NULL DEFAULT 0, pct REAL NOT NULL DEFAULT 0, note TEXT, created_at TEXT NOT NULL, expires_at TEXT, used_order TEXT)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_referrals (id INTEGER PRIMARY KEY AUTOINCREMENT, referrer TEXT NOT NULL, referee TEXT NOT NULL UNIQUE, order_id TEXT, status TEXT NOT NULL, created_at TEXT NOT NULL)")
+  ]).catch((e) => { acctReady = null; throw e; });
+  await acctReady;
+  return db;
+}
+__name(acctInit, "acctInit");
+var acctNow = () => new Date().toISOString();
+var acctRand = (n) => { const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; const r = crypto.getRandomValues(new Uint8Array(n)); return [...r].map((x) => a[x % a.length]).join(""); };
+async function acctSha(s) { const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)); return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join(""); }
+__name(acctSha, "acctSha");
+var acctCookie = (token, maxAge) => `${ACCT_COOKIE}=${token}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
+async function acctSessionEmail(request) {
+  const db = acctDb(); if (!db) return null;
+  const token = readCookie(request, ACCT_COOKIE);
+  if (!token || !/^[A-Za-z0-9_-]{24,}$/.test(token)) return null;
+  try { await acctInit(); } catch { return null; }
+  const r = await db.prepare("SELECT email, expires FROM acct_sessions WHERE token = ?1").bind(await acctSha(token)).first();
+  if (!r || r.expires < Date.now() / 1e3) return null;
+  return r.email;
+}
+__name(acctSessionEmail, "acctSessionEmail");
+async function acctSpend(db, email) {
+  const since = new Date(Date.now() - 365 * 864e5).toISOString();
+  const r = await db.prepare("SELECT COALESCE(SUM(total_ron),0) AS s, COUNT(*) AS n FROM acct_orders WHERE email = ?1 AND created_at >= ?2 AND status NOT IN ('cancelled','returned','refunded')").bind(email, since).first();
+  const c = await db.prepare("SELECT spend_import, tier_override FROM acct_customers WHERE email = ?1").bind(email).first();
+  return { spend: Math.round(((r && r.s) || 0) + ((c && c.spend_import) || 0)), orders: (r && r.n) || 0, override: c && c.tier_override };
+}
+__name(acctSpend, "acctSpend");
+function acctTierFor(spend, override) {
+  let t = ACCT_TIERS[0];
+  for (const x of ACCT_TIERS) if (spend >= x.min) t = x;
+  if (override) { const o = ACCT_TIERS.find((x) => x.id === override); if (o && o.min > t.min) t = o; }
+  const i = ACCT_TIERS.indexOf(t), next = ACCT_TIERS[i + 1] || null;
+  return { tier: t, next, toNext: next ? Math.max(0, next.min - spend) : 0 };
+}
+__name(acctTierFor, "acctTierFor");
+// discount context for a checkout: best single percentage (tier / first-order referral / referral reward) + free shipping + credit
+async function acctCheckoutContext(request) {
+  const email = await acctSessionEmail(request);
+  if (!email) return null;
+  const db = acctDb();
+  const sp = await acctSpend(db, email), tf = acctTierFor(sp.spend, sp.override);
+  let pct = tf.tier.pct, why = tf.tier.pct ? tf.tier.name : "", voucher = null;
+  const cust = await db.prepare("SELECT referred_by FROM acct_customers WHERE email = ?1").bind(email).first();
+  const anyOrder = await db.prepare("SELECT 1 FROM acct_orders WHERE email = ?1 LIMIT 1").bind(email).first();
+  if (cust && cust.referred_by && !anyOrder && ACCT_REF_PCT > pct) { pct = ACCT_REF_PCT; why = "Welcome (referral)"; }
+  const now = acctNow();
+  const v = await db.prepare("SELECT id, pct FROM acct_credits WHERE email = ?1 AND kind = 'pct' AND used_order IS NULL AND (expires_at IS NULL OR expires_at > ?2) ORDER BY pct DESC LIMIT 1").bind(email, now).first();
+  if (v && v.pct > pct) { pct = v.pct; why = "Referral reward"; voucher = v.id; }
+  const cr = await db.prepare("SELECT COALESCE(SUM(amount_ron),0) AS s FROM acct_credits WHERE email = ?1 AND kind IN ('credit','refund') AND used_order IS NULL AND (expires_at IS NULL OR expires_at > ?2)").bind(email, now).first();
+  return { email, tier: tf.tier.id, tierName: tf.tier.name, pct, why, voucher, freeShip: tf.tier.freeShip, creditRon: Math.max(0, Math.round(((cr && cr.s) || 0) * 100) / 100) };
+}
+__name(acctCheckoutContext, "acctCheckoutContext");
+// never charge less than the catalogue price for a known product (the bag's price comes from the browser)
+async function acctTrustedRon(items) {
+  const D = await loadCatalogData().catch(() => null);
+  const byId = new Map();
+  if (D && D.products) for (const k in D.products) { const p = D.products[k]; if (p && p.id) byId.set(String(p.id), p); byId.set(k, p); }
+  return items.map((it) => {
+    const id = String(it.id || "").split(":").slice(0, 2).join(":"), p = byId.get(id) || byId.get(String(it.id || "").split(":")[0]);
+    const floor = p ? (typeof p.salePrice === "number" ? p.salePrice : p.price) : 0;
+    const price = Number(it.price || 0);
+    return { ...it, price: typeof floor === "number" && floor > price ? floor : price };
+  });
+}
+__name(acctTrustedRon, "acctTrustedRon");
+function acctApplyPct(localUnit, pct, cur) {
+  if (!pct) return localUnit;
+  const v = localUnit * (1 - pct / 100);
+  return cur === "RON" ? Math.round(v * 100) / 100 : Math.round(v);
+}
+__name(acctApplyPct, "acctApplyPct");
+// record an accepted order on the customer's account (also: referral rewards, used vouchers/credits)
+async function acctRecordOrder(o, info) {
+  const db = acctDb(); if (!db) return;
+  await acctInit();
+  const email = normEmail(info.email || (o.customer && o.customer.email));
+  if (!validEmail(email)) return;
+  const exists = await db.prepare("SELECT 1 FROM acct_orders WHERE order_id = ?1").bind(o.order_id).first();
+  if (exists) return;
+  const c = o.customer || {};
+  await db.prepare("INSERT INTO acct_orders (order_id, email, created_at, status, pay, currency, total_local, ship_local, total_ron, discount_pct, credit_ron, items, ship_to) VALUES (?1,?2,?3,'placed',?4,?5,?6,?7,?8,?9,?10,?11,?12)")
+    .bind(o.order_id, email, acctNow(), info.pay || "", info.currency || "RON", Number(info.totalLocal) || 0, Number(info.shipLocal) || 0, Math.max(0, Number(info.totalRon) || 0), Number(info.pct) || 0, Number(info.creditRon) || 0,
+      JSON.stringify((info.items || []).slice(0, 50)), JSON.stringify({ full_name: c.full_name, address: c.address, apartment: c.apartment, city: c.city, postal_code: c.postal_code, country: c.country, phone: c.phone })).run();
+  if (info.voucher) await db.prepare("UPDATE acct_credits SET used_order = ?2 WHERE id = ?1 AND used_order IS NULL").bind(info.voucher, o.order_id).run();
+  if (info.creditRon > 0) {
+    let left = info.creditRon;
+    const rows = (await db.prepare("SELECT id, amount_ron FROM acct_credits WHERE email = ?1 AND kind IN ('credit','refund') AND used_order IS NULL ORDER BY created_at").bind(email).all()).results || [];
+    for (const r of rows) {
+      if (left <= 0) break;
+      if (r.amount_ron <= left + 0.001) { await db.prepare("UPDATE acct_credits SET used_order = ?2 WHERE id = ?1").bind(r.id, o.order_id).run(); left -= r.amount_ron; }
+      else { await db.prepare("UPDATE acct_credits SET amount_ron = ?2 WHERE id = ?1").bind(r.id, Math.round((r.amount_ron - left) * 100) / 100).run(); await db.prepare("INSERT INTO acct_credits (email, kind, amount_ron, note, created_at, used_order) VALUES (?1,'credit',?2,'Used at checkout',?3,?4)").bind(email, left, acctNow(), o.order_id).run(); left = 0; }
+    }
+  }
+  // first order of a referred customer → the friend who invited them gets −10 % on their next order (valid 60 days)
+  const cust = await db.prepare("SELECT referred_by FROM acct_customers WHERE email = ?1").bind(email).first();
+  if (cust && cust.referred_by) {
+    const ref = await db.prepare("SELECT id, status FROM acct_referrals WHERE referee = ?1").bind(email).first();
+    if (ref && ref.status === "signed_up") {
+      await db.prepare("UPDATE acct_referrals SET status = 'ordered', order_id = ?2 WHERE id = ?1").bind(ref.id, o.order_id).run();
+      await db.prepare("INSERT INTO acct_credits (email, kind, pct, note, created_at, expires_at) VALUES (?1,'pct',?2,?3,?4,?5)").bind(cust.referred_by, ACCT_REF_PCT, `Referral reward — ${email.replace(/(.).+(@.+)/, "$1…$2")} placed their first order`, acctNow(), new Date(Date.now() + 60 * 864e5).toISOString()).run();
+    }
+  }
+}
+__name(acctRecordOrder, "acctRecordOrder");
+async function acctProfile(db, email) {
+  const c = await db.prepare("SELECT * FROM acct_customers WHERE email = ?1").bind(email).first();
+  if (!c) return null;
+  const sp = await acctSpend(db, email), tf = acctTierFor(sp.spend, sp.override);
+  let prefs = {}; try { prefs = JSON.parse(c.prefs || "{}"); } catch {}
+  return {
+    email, name: c.name || "", phone: c.phone || "", since: c.created_at, prefs,
+    refCode: c.ref_code, refLink: `${SEO_BASE}/r/${c.ref_code}`,
+    spend: sp.spend, orders: sp.orders,
+    tier: { id: tf.tier.id, name: tf.tier.name, pct: tf.tier.pct, freeShip: tf.tier.freeShip, drops: tf.tier.drops },
+    next: tf.next ? { id: tf.next.id, name: tf.next.name, min: tf.next.min, pct: tf.next.pct } : null, toNext: tf.toNext,
+    tiers: ACCT_TIERS
+  };
+}
+__name(acctProfile, "acctProfile");
+async function accountApi(request) {
+  let db;
+  try { db = await acctInit(); } catch (e) { return json(e.status || 500, { error: "ACCOUNTS_NOT_CONFIGURED" }); }
+  const url = new URL(request.url);
+  const b = request.method === "POST" ? (await readJson(request)) || {} : {};
+  const action = String(b.action || url.searchParams.get("action") || "me");
+  if (request.method === "POST" && !checkOrigin(request)) return json(403, { error: "Forbidden origin" });
+  // ---- sign in: e-mail → 6-digit code → session ----
+  if (action === "start") {
+    if (!rateLimit(request, 6)) return json(429, { error: "Too many attempts. Please wait a minute." });
+    const email = normEmail(b.email);
+    if (!validEmail(email)) return json(400, { error: "Please enter a valid e-mail address." });
+    if (!env("RESEND_API_KEY") || !env("ORDER_EMAIL_FROM")) return json(503, { error: "EMAIL_NOT_CONFIGURED" });
+    const prev = await db.prepare("SELECT sent_at FROM acct_codes WHERE email = ?1").bind(email).first();
+    if (prev && Date.now() / 1e3 - prev.sent_at < 30) return json(429, { error: "We just sent you a code. Please check your inbox." });
+    const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1e6).padStart(6, "0");
+    await db.prepare("INSERT INTO acct_codes (email, code_hash, expires, tries, sent_at) VALUES (?1,?2,?3,0,?4) ON CONFLICT(email) DO UPDATE SET code_hash = excluded.code_hash, expires = excluded.expires, tries = 0, sent_at = excluded.sent_at")
+      .bind(email, await acctSha(`${email}:${code}`), Math.floor(Date.now() / 1e3) + 900, Math.floor(Date.now() / 1e3)).run();
+    const F = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+    const html = `<!doctype html><html><body style="margin:0;background:#f4f3ef"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" style="max-width:480px;background:#fff;border-radius:20px"><tr><td style="padding:28px;font-family:${F}"><div style="font-size:15px;font-weight:700;letter-spacing:5px">bymarccc</div><h1 style="margin:22px 0 8px;font-size:22px">Your sign-in code</h1><p style="margin:0 0 18px;color:#6b6b68;font-size:15px">Enter this code on bymarccc.com to open your account. It expires in 15 minutes.</p><div style="font-size:34px;font-weight:800;letter-spacing:10px;padding:16px 0;text-align:center;background:#f4f3ef;border-radius:14px">${code}</div><p style="margin:18px 0 0;color:#9a9a96;font-size:12px">If you didn't ask for this, you can ignore this e-mail.</p></td></tr></table></td></tr></table></body></html>`;
+    try { await resendSend({ from: env("ORDER_EMAIL_FROM"), to: [email], subject: `${code} is your bymarccc code`, html, text: `Your bymarccc sign-in code: ${code} (expires in 15 minutes).` }); }
+    catch (e) { return json(502, { error: "We couldn't send the e-mail. Please try again." }); }
+    return json(200, { ok: true });
+  }
+  if (action === "verify") {
+    if (!rateLimit(request, 12)) return json(429, { error: "Too many attempts. Please wait a minute." });
+    const email = normEmail(b.email), code = String(b.code || "").replace(/\D/g, "");
+    const row = await db.prepare("SELECT * FROM acct_codes WHERE email = ?1").bind(email).first();
+    if (!row || row.expires < Date.now() / 1e3 || row.tries >= 5) return json(400, { error: "This code has expired. Ask for a new one." });
+    if (row.code_hash !== await acctSha(`${email}:${code}`)) { await db.prepare("UPDATE acct_codes SET tries = tries + 1 WHERE email = ?1").bind(email).run(); return json(400, { error: "Wrong code. Please check and try again." }); }
+    await db.prepare("DELETE FROM acct_codes WHERE email = ?1").bind(email).run();
+    let cust = await db.prepare("SELECT email FROM acct_customers WHERE email = ?1").bind(email).first();
+    if (!cust) {
+      let refBy = null;
+      const refCode = String(readCookie(request, "bym_ref") || b.ref || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (refCode) { const r = await db.prepare("SELECT email FROM acct_customers WHERE ref_code = ?1").bind(refCode).first(); if (r && r.email !== email) refBy = r.email; }
+      const prev = await db.prepare("SELECT 1 FROM acct_orders WHERE email = ?1 LIMIT 1").bind(email).first();
+      if (prev) refBy = null;   // referral is for new customers only
+      let code7 = acctRand(7);
+      for (let i = 0; i < 3; i++) { const x = await db.prepare("SELECT 1 FROM acct_customers WHERE ref_code = ?1").bind(code7).first(); if (!x) break; code7 = acctRand(7); }
+      await db.prepare("INSERT INTO acct_customers (email, name, created_at, ref_code, referred_by, prefs) VALUES (?1,?2,?3,?4,?5,?6)").bind(email, String(b.name || "").slice(0, 80), acctNow(), code7, refBy, JSON.stringify({ news: true, drops: true })).run();
+      if (refBy) await db.prepare("INSERT OR IGNORE INTO acct_referrals (referrer, referee, status, created_at) VALUES (?1,?2,'signed_up',?3)").bind(refBy, email, acctNow()).run();
+    }
+    const token = b64(crypto.getRandomValues(new Uint8Array(30))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    await db.prepare("INSERT INTO acct_sessions (token, email, expires) VALUES (?1,?2,?3)").bind(await acctSha(token), email, Math.floor(Date.now() / 1e3) + ACCT_TTL).run();
+    await db.prepare("DELETE FROM acct_sessions WHERE expires < ?1").bind(Math.floor(Date.now() / 1e3)).run().catch(() => {});
+    return json(200, { ok: true, profile: await acctProfile(db, email) }, { "Set-Cookie": acctCookie(token, ACCT_TTL) });
+  }
+  if (action === "logout") {
+    const token = readCookie(request, ACCT_COOKIE);
+    if (token) await db.prepare("DELETE FROM acct_sessions WHERE token = ?1").bind(await acctSha(token)).run().catch(() => {});
+    return json(200, { ok: true }, { "Set-Cookie": acctCookie("", 0) });
+  }
+  // ---- everything below needs a session ----
+  const email = await acctSessionEmail(request);
+  if (action === "me" && !email) return json(200, { profile: null });
+  if (!email) return json(401, { error: "Please sign in." });
+  if (action === "me") return json(200, { profile: await acctProfile(db, email) });
+  if (action === "checkout") {
+    const ctx = await acctCheckoutContext(request);
+    const p = await acctProfile(db, email);
+    const addr = await db.prepare("SELECT data FROM acct_addresses WHERE email = ?1 ORDER BY is_default DESC, id DESC LIMIT 1").bind(email).first();
+    let a = null; try { a = addr ? JSON.parse(addr.data) : null; } catch {}
+    return json(200, { ctx, profile: p && { email: p.email, name: p.name, phone: p.phone, tier: p.tier }, address: a });
+  }
+  if (action === "update") {
+    const name = String(b.name ?? "").trim().slice(0, 80), phone = String(b.phone ?? "").replace(/[^\d+ ()-]/g, "").slice(0, 30);
+    await db.prepare("UPDATE acct_customers SET name = ?2, phone = ?3 WHERE email = ?1").bind(email, name, phone).run();
+    return json(200, { profile: await acctProfile(db, email) });
+  }
+  if (action === "prefs") {
+    const prefs = { news: !!b.news, drops: !!b.drops, sms: !!b.sms };
+    await db.prepare("UPDATE acct_customers SET prefs = ?2 WHERE email = ?1").bind(email, JSON.stringify(prefs)).run();
+    return json(200, { prefs });
+  }
+  if (action === "delete") {
+    if (String(b.confirm || "") !== "DELETE") return json(400, { error: "Type DELETE to confirm." });
+    for (const t of ["acct_sessions", "acct_addresses", "acct_wishlist", "acct_playlist", "acct_codes"]) await db.prepare(`DELETE FROM ${t} WHERE email = ?1`).bind(email).run();
+    await db.prepare("DELETE FROM acct_customers WHERE email = ?1").bind(email).run();
+    return json(200, { ok: true }, { "Set-Cookie": acctCookie("", 0) });
+  }
+  if (action === "orders") {
+    const rows = (await db.prepare("SELECT order_id, created_at, status, pay, currency, total_local, ship_local, total_ron, discount_pct, items, ship_to FROM acct_orders WHERE email = ?1 ORDER BY created_at DESC LIMIT 100").bind(email).all()).results || [];
+    return json(200, { orders: rows.map((r) => ({ ...r, items: (() => { try { return JSON.parse(r.items || "[]"); } catch { return []; } })(), ship_to: (() => { try { return JSON.parse(r.ship_to || "{}"); } catch { return {}; } })() })) });
+  }
+  if (action === "return") {
+    const id = String(b.order_id || "");
+    const o = await db.prepare("SELECT order_id, status, created_at FROM acct_orders WHERE email = ?1 AND order_id = ?2").bind(email, id).first();
+    if (!o) return json(404, { error: "Order not found." });
+    if (o.status === "return_requested") return json(200, { ok: true });
+    await db.prepare("UPDATE acct_orders SET status = 'return_requested' WHERE order_id = ?1").bind(id).run();
+    try { await resendSend({ from: env("ORDER_EMAIL_FROM"), to: env("ORDER_NOTIFY_TO").split(",").map((x) => x.trim()).filter(Boolean), reply_to: email, subject: `Return request — ${id}`, text: `Return requested from the customer account.\n\nOrder: ${id}\nCustomer: ${email}\nReason: ${String(b.reason || "").slice(0, 500)}` }); } catch {}
+    return json(200, { ok: true });
+  }
+  if (action === "credits") {
+    const rows = (await db.prepare("SELECT id, kind, amount_ron, pct, note, created_at, expires_at, used_order FROM acct_credits WHERE email = ?1 ORDER BY created_at DESC LIMIT 100").bind(email).all()).results || [];
+    const now = acctNow();
+    const avail = rows.filter((r) => !r.used_order && (!r.expires_at || r.expires_at > now));
+    return json(200, { credits: rows, available: Math.round(avail.filter((r) => r.kind === "credit").reduce((a, r) => a + r.amount_ron, 0) * 100) / 100, refunds: Math.round(avail.filter((r) => r.kind === "refund").reduce((a, r) => a + r.amount_ron, 0) * 100) / 100, vouchers: avail.filter((r) => r.kind === "pct") });
+  }
+  if (action === "referrals") {
+    const rows = (await db.prepare("SELECT referee, status, created_at FROM acct_referrals WHERE referrer = ?1 ORDER BY created_at DESC LIMIT 100").bind(email).all()).results || [];
+    return json(200, { referrals: rows.map((r) => ({ ...r, referee: r.referee.replace(/(.).+(@.+)/, "$1…$2") })) });
+  }
+  if (action === "addresses") {
+    const rows = (await db.prepare("SELECT id, data, is_default FROM acct_addresses WHERE email = ?1 ORDER BY is_default DESC, id DESC").bind(email).all()).results || [];
+    return json(200, { addresses: rows.map((r) => { let d = {}; try { d = JSON.parse(r.data); } catch {} return { id: r.id, isDefault: !!r.is_default, ...d }; }) });
+  }
+  if (action === "address-save") {
+    const s = (v, n) => String(v ?? "").trim().slice(0, n);
+    const d = { full_name: s(b.full_name, 120), phone: s(b.phone, 40), address: s(b.address, 200), apartment: s(b.apartment, 100), city: s(b.city, 80), postal_code: s(b.postal_code, 20), country: s(b.country, 60) };
+    if (!d.full_name || !d.address || !d.city || !d.country) return json(400, { error: "Please fill in name, address, city and country." });
+    const cnt = await db.prepare("SELECT COUNT(*) AS n FROM acct_addresses WHERE email = ?1").bind(email).first();
+    const makeDefault = !!b.isDefault || !cnt || !cnt.n;
+    if (makeDefault) await db.prepare("UPDATE acct_addresses SET is_default = 0 WHERE email = ?1").bind(email).run();
+    if (b.id) await db.prepare("UPDATE acct_addresses SET data = ?3, is_default = CASE WHEN ?4 THEN 1 ELSE is_default END WHERE id = ?1 AND email = ?2").bind(Number(b.id), email, JSON.stringify(d), makeDefault ? 1 : 0).run();
+    else { if (cnt && cnt.n >= 10) return json(400, { error: "You can save up to 10 addresses." }); await db.prepare("INSERT INTO acct_addresses (email, data, is_default, created_at) VALUES (?1,?2,?3,?4)").bind(email, JSON.stringify(d), makeDefault ? 1 : 0, acctNow()).run(); }
+    return json(200, { ok: true });
+  }
+  if (action === "address-delete") { await db.prepare("DELETE FROM acct_addresses WHERE id = ?1 AND email = ?2").bind(Number(b.id), email).run(); return json(200, { ok: true }); }
+  if (action === "wishlist") {
+    if (Array.isArray(b.merge)) for (const k of b.merge.slice(0, 100)) { const key = String(k).replace(/[^a-z0-9:-]/gi, "").slice(0, 80); if (key) await db.prepare("INSERT OR IGNORE INTO acct_wishlist (email, pkey, added_at) VALUES (?1,?2,?3)").bind(email, key, acctNow()).run(); }
+    if (b.add) await db.prepare("INSERT OR IGNORE INTO acct_wishlist (email, pkey, added_at) VALUES (?1,?2,?3)").bind(email, String(b.add).replace(/[^a-z0-9:-]/gi, "").slice(0, 80), acctNow()).run();
+    if (b.remove) await db.prepare("DELETE FROM acct_wishlist WHERE email = ?1 AND pkey = ?2").bind(email, String(b.remove)).run();
+    const rows = (await db.prepare("SELECT pkey FROM acct_wishlist WHERE email = ?1 ORDER BY added_at DESC").bind(email).all()).results || [];
+    return json(200, { wishlist: rows.map((r) => r.pkey) });
+  }
+  if (action === "playlist") {
+    const clean = (t) => String(t || "").replace(/[^a-z0-9-]/gi, "").slice(0, 60);
+    if (b.add) await db.prepare("INSERT OR IGNORE INTO acct_playlist (email, track, added_at) VALUES (?1,?2,?3)").bind(email, clean(b.add), acctNow()).run();
+    if (b.remove) await db.prepare("DELETE FROM acct_playlist WHERE email = ?1 AND track = ?2").bind(email, clean(b.remove)).run();
+    const rows = (await db.prepare("SELECT track FROM acct_playlist WHERE email = ?1 ORDER BY added_at").bind(email).all()).results || [];
+    return json(200, { playlist: rows.map((r) => r.track) });
+  }
+  return json(400, { error: "Unknown action" });
+}
+__name(accountApi, "accountApi");
+// /r/<code> — referral link: remembers the code for 30 days and opens the shop
+function accountRefRedirect(url, code) {
+  const c = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  const h = new Headers({ Location: `${url.origin}/members.html?ref=${c}#join` });
+  if (c) h.append("Set-Cookie", `bym_ref=${c}; Path=/; Max-Age=${30 * 86400}; Secure; SameSite=Lax`);
+  return new Response(null, { status: 302, headers: h });
+}
+__name(accountRefRedirect, "accountRefRedirect");
+// POST /api/account-admin — GOATIFY ↔ customer accounts (HMAC-SHA256(GOATIFY_SITE_SECRET, `${ts}.${raw}`), ±5 min)
+//   { action: "customers" }                         → every customer with tier, 12-month spend, orders, referral info
+//   { action: "order-status", order_id, status }    → placed | shipped | delivered | returned | cancelled | refunded
+//   { action: "import-spend", email, spend_ron }    → spend from before accounts existed (counts toward the tier)
+//   { action: "credit", email, amount_ron, note, kind } → store credit / refund credit
+//   { action: "tier-override", email, tier }        → hold a customer at a minimum tier ("" clears)
+async function accountAdmin(request) {
+  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
+  const secret = env("GOATIFY_SITE_SECRET");
+  if (!secret) return json(503, { error: "NOT_CONFIGURED" });
+  const raw = await request.text();
+  if (raw.length > 200000) return json(413, { error: "Too large" });
+  const ts = request.headers.get("x-goatify-timestamp") || "", sig = String(request.headers.get("x-goatify-signature") || "").toLowerCase();
+  if (!/^\d{9,12}$/.test(ts) || Math.abs(Date.now() / 1e3 - Number(ts)) > 300) return json(401, { error: "STALE" });
+  const want = await gHmacHex(secret, `${ts}.${raw}`);
+  let diff = want.length ^ sig.length; for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ (sig.charCodeAt(i) || 0);
+  if (diff) return json(401, { error: "BAD_SIGNATURE" });
+  let b; try { b = JSON.parse(raw); } catch { return json(400, { error: "Invalid JSON" }); }
+  const db = await acctInit();
+  const email = normEmail(b.email);
+  if (b.action === "customers") {
+    const cs = (await db.prepare("SELECT email, name, phone, created_at, ref_code, referred_by, spend_import, tier_override FROM acct_customers ORDER BY created_at DESC LIMIT 5000").all()).results || [];
+    const out = [];
+    for (const c of cs) {
+      const sp = await acctSpend(db, c.email), tf = acctTierFor(sp.spend, sp.override);
+      const last = await db.prepare("SELECT MAX(created_at) AS t, COUNT(*) AS n FROM acct_orders WHERE email = ?1").bind(c.email).first();
+      out.push({ email: c.email, name: c.name, phone: c.phone, since: c.created_at, tier: tf.tier.id, tierName: tf.tier.name, discountPct: tf.tier.pct, spend12mRon: sp.spend, ordersTotal: (last && last.n) || 0, lastOrderAt: last && last.t, toNextTier: tf.toNext, nextTier: tf.next && tf.next.name, referredBy: c.referred_by, refCode: c.ref_code, tierOverride: c.tier_override });
+    }
+    return json(200, { customers: out, tiers: ACCT_TIERS });
+  }
+  if (b.action === "order-status") {
+    const st = String(b.status || "");
+    if (!["placed", "shipped", "delivered", "return_requested", "returned", "cancelled", "refunded"].includes(st)) return json(400, { error: "Bad status" });
+    await db.prepare("UPDATE acct_orders SET status = ?2 WHERE order_id = ?1").bind(String(b.order_id || ""), st).run();
+    return json(200, { ok: true });
+  }
+  if (!validEmail(email)) return json(400, { error: "Bad email" });
+  const ensure = async () => { const c = await db.prepare("SELECT 1 FROM acct_customers WHERE email = ?1").bind(email).first(); if (!c) await db.prepare("INSERT INTO acct_customers (email, name, created_at, ref_code, prefs) VALUES (?1,?2,?3,?4,?5)").bind(email, String(b.name || "").slice(0, 80), acctNow(), acctRand(7), JSON.stringify({ news: true, drops: true })).run(); };
+  if (b.action === "import-spend-bulk") {
+    let n = 0;
+    for (const it of (Array.isArray(b.items) ? b.items : []).slice(0, 500)) {
+      const em = normEmail(it.email); if (!validEmail(em)) continue;
+      const c = await db.prepare("SELECT 1 FROM acct_customers WHERE email = ?1").bind(em).first();
+      if (!c) await db.prepare("INSERT INTO acct_customers (email, name, created_at, ref_code, prefs, spend_import) VALUES (?1,?2,?3,?4,?5,?6)").bind(em, String(it.name || "").slice(0, 80), acctNow(), acctRand(7), JSON.stringify({ news: true, drops: true }), Math.max(0, Number(it.spend_ron) || 0)).run();
+      else await db.prepare("UPDATE acct_customers SET spend_import = ?2, name = CASE WHEN name IS NULL OR name = '' THEN ?3 ELSE name END WHERE email = ?1").bind(em, Math.max(0, Number(it.spend_ron) || 0), String(it.name || "").slice(0, 80)).run();
+      n++;
+    }
+    return json(200, { ok: true, imported: n });
+  }
+  if (b.action === "import-spend") { await ensure(); await db.prepare("UPDATE acct_customers SET spend_import = ?2 WHERE email = ?1").bind(email, Math.max(0, Number(b.spend_ron) || 0)).run(); return json(200, { ok: true }); }
+  if (b.action === "credit") { await ensure(); await db.prepare("INSERT INTO acct_credits (email, kind, amount_ron, note, created_at, expires_at) VALUES (?1,?2,?3,?4,?5,?6)").bind(email, b.kind === "refund" ? "refund" : "credit", Math.max(0, Number(b.amount_ron) || 0), String(b.note || "").slice(0, 200), acctNow(), b.expires_at || null).run(); return json(200, { ok: true }); }
+  if (b.action === "tier-override") { await ensure(); const t = ACCT_TIERS.find((x) => x.id === b.tier); await db.prepare("UPDATE acct_customers SET tier_override = ?2 WHERE email = ?1").bind(email, t ? t.id : null).run(); return json(200, { ok: true }); }
+  return json(400, { error: "Unknown action" });
+}
+__name(accountAdmin, "accountAdmin");
+
 // [[path]].js
 var ROUTES = {
   "assistant-chat": assistantChat,
@@ -2412,7 +2793,9 @@ var ROUTES = {
   "order-submit": orderSubmit,
   "goatify-mail": goatifyMail,
   "cron-charge-installments": cronChargeInstallments,
-  "geo": geoApi
+  "geo": geoApi,
+  "account": accountApi,
+  "account-admin": accountAdmin
 };
 async function onRequest(context) {
   const { request, env: env2 } = context;
@@ -2425,6 +2808,8 @@ async function onRequest(context) {
   const m = /^\/(?:\.netlify\/functions|api)\/([a-z0-9-]+)\/?$/.exec(path);
   if (!m) {
     setEnv(env2);
+    const rm = /^\/r\/([A-Za-z0-9]{4,12})\/?$/.exec(path);
+    if (rm) return accountRefRedirect(url, rm[1]);
     if (path === "/robots.txt") return seoRobots();
     if (path === "/sitemap.xml") return seoSitemap();
     const sml = /^\/sitemap-([a-z]{2})\.xml$/.exec(path);
