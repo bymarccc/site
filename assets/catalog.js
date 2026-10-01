@@ -1144,17 +1144,17 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
     "w-white-shoulder-bag": {
       "gender": "women",
       "id": "bymarccc:white-shoulder-bag",
-      "title": "WHITE SHOULDER BAG",
+      "title": "ECRU SHOULDER BAG",
       "price": 350,
       "currency": "RON",
       "cut": "Accessory",
       "collections": ["accessories"],
       "hideModelText": true,
-      "details": ["Structured shoulder bag in glossy crocodile-effect faux leather","Two long rounded shoulder straps","Top zip fastening","Black alien logo on the front","White","Approx. 16 × 31.4 × 10.5 cm (H × W × D)","Outer: 100% polyurethane · Lining: 100% polyester","Clean with a damp cloth only","Each piece is custom created."],
-      "description": "A structured white shoulder bag in crocodile-effect faux leather with long rounded straps, a top zip and a black alien logo on the front.",
+      "details": ["Structured shoulder bag in glossy crocodile-effect faux leather","Two long rounded shoulder straps","Top zip fastening","Black alien logo on the front","Ecru","Approx. 16 × 31.4 × 10.5 cm (H × W × D)","Outer: 100% polyurethane · Lining: 100% polyester","Clean with a damp cloth only","Each piece is custom created."],
+      "description": "A structured ecru shoulder bag in crocodile-effect faux leather with long rounded straps, a top zip and a black alien logo on the front.",
       "unavailable": [],
-      "colours": [{"id":"white","name":"White","hex":"#f2f0ea"}],
-      "gallery": [{"src":"assets/img/gallery/w-white-shoulder-bag-1-63d73c5c.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-shoulder-bag-2-590ced37.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-shoulder-bag-3-027ebbaa.webp","w":1024,"h":1534}]
+      "colours": [{"id":"white","name":"Ecru","hex":"#f2f0ea"}],
+      "gallery": [{"src":"assets/img/gallery/w-white-shoulder-bag-1-63d73c5c.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-shoulder-bag-2-590ced37.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-shoulder-bag-3-027ebbaa.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-14-21aeb101.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-16-118f8abe.webp","w":1024,"h":1534}]
     },
     "w-burgundy-shoulder-bag": {
       "gender": "women",
@@ -1265,7 +1265,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"ecru","name":"Ecru","hex":"#efe9dc"}],
       "chart": ["S","M","L"],
-      "gallery": [{"src":"assets/img/gallery/w-sporty-top-ecru-1-bb0fab32.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-2-ac34d425.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-3-23565e67.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-4-be35a535.webp","w":1024,"h":1534}]
+      "gallery": [{"src":"assets/img/gallery/w-sporty-top-ecru-11-a77dd443.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-12-ae91d27a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-13-d1847dc6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-14-21aeb101.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-15-5c0457fb.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-16-118f8abe.webp","w":1024,"h":1534}]
     },
     "w-purple-sweatpants": {
       "gender": "women",
