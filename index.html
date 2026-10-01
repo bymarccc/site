@@ -2080,88 +2080,85 @@
      src   = MUSIC tab (audio, .m4a)          video = MUSIC VIDEO tab (mp4, floating player)
      Cloudinary serves the audio track of an uploaded video on demand via the .m4a extension. */
   const CLD = 'https://res.cloudinary.com/lpj7yftl/video/upload/';
+  const M = '/assets/media/';   // self-hosted on Cloudflare (moved off Cloudinary 2026-10-01)
   const SEED = [
-    { id: 'madness',   title: 'Central Cee x Nemzzz - Madness', channel: '', duration: '4:28',
-      src:   CLD + 'v1790104516/Central_Cee_x_Nemzzz_-_Madness.mp3',
-      video: CLD + 'q_auto,f_auto/v1790104856/Central_Cee_x_Nemzzz_-_Madnesss.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790104856/Central_Cee_x_Nemzzz_-_Madnesss.jpg',
+    { id: 'trojan-horse', title: 'Dave x Central Cee - Trojan Horse', channel: '', duration: '3:56',
+      src:   M + 'trojan-horse.m4a',
+      video: M + 'trojan-horse.mp4', poster: M + 'trojan-horse.jpg',
+      thumb: 'assets/img/thumb-trojan-horse.jpg' },
+    { id: 'madness',   title: 'Central Cee x Nemzzz - Madness', channel: '', duration: '4:29',
+      src:   M + 'madness.m4a',
+      video: M + 'madness.mp4', poster: M + 'madness.jpg',
       thumb: 'assets/img/thumb-madness.jpg' },
     { id: 'killin-em', title: "Nemzzz - Killin' Em",            channel: '', duration: '2:10',
-      src:   CLD + 'v1790101740/Nemzzz_Killin_Em_compressed.m4a',
-      video: CLD + 'c_fill,ar_16:9,g_center/q_auto,f_auto/v1790098937/Nemzzz_-_Killin_Em.mp4', poster: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790098937/Nemzzz_-_Killin_Em.jpg',
+      src:   M + 'killin-em.m4a',
+      video: M + 'killin-em.mp4', poster: M + 'killin-em.jpg',
       thumb: 'assets/img/thumb-killin-em.jpg' },
-    { id: 'chanel',    title: 'Tyla - CHANEL',                  channel: '', duration: '1:47',
-      src:   CLD + 'v1790104743/Tyla_-_chhanell.m4a',
-      video: CLD + 'c_fill,ar_16:9,g_center/q_auto,f_auto/v1790104707/Tyla_-_CHANEL.mp4', poster: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790104707/Tyla_-_CHANEL.jpg',
-      rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790104707/Tyla_-_CHANEL.mp4',
+    { id: 'chanel',    title: 'Tyla - CHANEL',                  channel: '', duration: '3:09',
+      src:   M + 'chanel.m4a',
+      video: M + 'chanel.mp4', poster: M + 'chanel.jpg',
       thumb: 'assets/img/thumb-tyla-chanel.jpg' },
-    { id: 'paradise',  title: 'Sade - Paradise',                 channel: '', duration: '4:02',
-      src:   CLD + 'v1790162082/Sade_Paradise_.m4a',
-      video: CLD + 'c_fill,ar_16:9,g_center/q_auto,f_auto/v1790162088/Sade_-_Paradise.mp4', poster: 'assets/img/thumb-sade-paradise.jpg',
+    { id: 'paradise',  title: 'Sade - Paradise',                 channel: '', duration: '3:38',
+      src:   M + 'paradise.m4a',
+      video: M + 'paradise.mp4', poster: M + 'paradise.jpg',
       thumb: 'assets/img/thumb-sade-paradise.jpg' },
-    { id: 'weeknd-earned-it', title: 'The Weeknd - Earned It',   channel: '', duration: '3:32',
-      src:   CLD + 'v1790321199/The_Weeknd_-_Earned_itt.m4a',
-      video: CLD + 'c_crop,w_1.0,h_0.734,g_center/c_fill,ar_16:9,g_center/q_auto,f_auto/v1790321215/The_Weeknd_-_Earned_It_Fifty_Shades_Of_Grey.mp4',
-      poster: CLD + 'so_3/c_crop,w_1.0,h_0.734,g_center/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790321215/The_Weeknd_-_Earned_It_Fifty_Shades_Of_Grey.jpg',
+    { id: 'weeknd-earned-it', title: 'The Weeknd - Earned It',   channel: '', duration: '4:36',
+      src:   M + 'earned-it.m4a',
+      video: M + 'earned-it.mp4',
+      poster: M + 'earned-it.jpg',
       thumb: 'assets/img/thumb-weeknd-earned-it.jpg' },
-    { id: 'goosebumps', title: 'Travis Scott - Goosebumps',      channel: '', duration: '3:56',
-      src:   CLD + 'v1790322008/Travis_Scott_-_Goosebumps.mp4',
-      video: CLD + 'c_crop,w_1.0,h_0.89,g_center/c_fill,ar_16:9,g_center/q_auto,f_auto/v1790321227/Travis_Scott_-_goosebumps_Official_Video_ft._Kendrick_Lamar.mp4',
-      poster: CLD + 'so_3/c_crop,w_1.0,h_0.89,g_center/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790321227/Travis_Scott_-_goosebumps_Official_Video_ft._Kendrick_Lamar.jpg',
+    { id: 'goosebumps', title: 'Travis Scott - Goosebumps',      channel: '', duration: '4:11',
+      src:   M + 'goosebumps.m4a',
+      video: M + 'goosebumps.mp4',
+      poster: M + 'goosebumps.jpg',
       thumb: 'assets/img/thumb-goosebumps.jpg' },
-    { id: 'miley-flowers', title: 'Miley Cyrus - Flowers',       channel: '', duration: '3:09',
-      src:   CLD + 'v1790321201/Miley_Cyrus_-_Flowerss.m4a',
-      video: CLD + 'c_fill,ar_16:9,g_center/q_auto,f_auto/v1790321227/Miley_Cyrus_-_Flowers_Official_Video.mp4',
-      poster: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790321227/Miley_Cyrus_-_Flowers_Official_Video.jpg',
+    { id: 'miley-flowers', title: 'Miley Cyrus - Flowers',       channel: '', duration: '3:22',
+      src:   M + 'flowers.m4a',
+      video: M + 'flowers.mp4',
+      poster: M + 'flowers.jpg',
       thumb: 'assets/img/thumb-miley-flowers.jpg' },
-    { id: 'carbonne-imagine', title: 'Carbonne - Imagine',       channel: '', duration: '2:43',
-      src:   CLD + 'v1790321282/Carbonne_Imagine.m4a',
-      video: CLD + 'q_auto,f_auto/v1790321296/Carbonne_-_Imagine_Clip_Officiel.mp4',
-      poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790321296/Carbonne_-_Imagine_Clip_Officiel.jpg',
+    { id: 'carbonne-imagine', title: 'Carbonne - Imagine',       channel: '', duration: '2:55',
+      src:   M + 'imagine.m4a',
+      video: M + 'imagine.mp4',
+      poster: M + 'imagine.jpg',
       thumb: 'assets/img/thumb-carbonne-imagine.jpg' },
     { id: 'mj-heal-the-world', title: 'Michael Jackson - Heal the World', channel: '', duration: '',
       src:   CLD + 'v1790321282/Michael_Jackson_Heal_The_World_44s-346s.m4a',
       thumb: 'assets/img/thumb-mj-heal-the-world.jpg' },
       /* no `video` on purpose — track 5 is music-only, per instructions */
-    { id: 'gvx', title: 'Je veux - ZaZ', channel: '', duration: '',
-      src:   CLD + 'v1790425042/Je_veux_-_Zaz.m4a',
-      video: CLD + 'c_fill,ar_16:9,g_center/q_auto,f_auto/v1790426043/ZAZ_-_Je_veux_Clip_officiel.mp4', poster: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790426043/ZAZ_-_Je_veux_Clip_officiel.jpg',
-      rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790426043/ZAZ_-_Je_veux_Clip_officiel.mp4',
-      thumb: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790426043/ZAZ_-_Je_veux_Clip_officiel.jpg' },
-    { id: 'nems-art', title: 'Nemzzz - Art', channel: '', duration: '',
-      src:   CLD + 'v1790425035/Nemzzz_-_Art.m4a',
-      video: CLD + 'c_fill,ar_16:9,g_center/q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.mp4', poster: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.jpg',
-      rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.mp4',
-      thumb: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790425053/NEMZZZ_-_ART_FEAT._LATTO_OFFICIAL_VIDEO.jpg' },
-    { id: 'dave-raindance', title: 'Dave - Raindance (ft. Tems)', channel: '', duration: '',
-      src:   CLD + 'v1790439187/Dave_-_Raindance.m4a',
-      video: CLD + 'c_fill,ar_16:9,g_center/q_auto,f_auto/v1790437537/Dave_-_Raindance_ft._Tems_1.mp4', poster: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790437537/Dave_-_Raindance_ft._Tems_1.jpg',
-      rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790437537/Dave_-_Raindance_ft._Tems_1.mp4',
-      thumb: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790437537/Dave_-_Raindance_ft._Tems_1.jpg' },
+    { id: 'gvx', title: 'Je veux - ZaZ', channel: '', duration: '3:36',
+      src:   M + 'je-veux.m4a',
+      video: M + 'je-veux.mp4', poster: M + 'je-veux.jpg',
+      thumb: 'assets/img/thumb-je-veux.jpg' },
+    { id: 'nems-art', title: 'Nemzzz - Art', channel: '', duration: '1:49',
+      src:   M + 'art.m4a',
+      video: M + 'art.mp4', poster: M + 'art.jpg',
+      thumb: 'assets/img/thumb-art.jpg' },
+    { id: 'dave-raindance', title: 'Dave - Raindance (ft. Tems)', channel: '', duration: '3:41',
+      src:   M + 'raindance.m4a',
+      video: M + 'raindance.mp4', poster: M + 'raindance.jpg',
+      thumb: 'assets/img/thumb-raindance.jpg' },
     { id: 'mj-chicago', title: 'Michael Jackson - Chicago', channel: '', duration: '4:07',
-      src:   CLD + 'v1790675954/Michael_Jackson_-_Chicago_Lyrics.m4a',
-      video: CLD + 'c_fill,ar_16:9,g_center/q_auto,f_auto/v1790675954/Michael_Jackson_-_Chicago_Lyrics.mp4', poster: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790675954/Michael_Jackson_-_Chicago_Lyrics.jpg',
-      rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790675954/Michael_Jackson_-_Chicago_Lyrics.mp4',
-      thumb: CLD + 'so_3/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790675954/Michael_Jackson_-_Chicago_Lyrics.jpg' },
+      src:   M + 'chicago.m4a',
+      video: M + 'chicago.mp4', poster: M + 'chicago.jpg',
+      thumb: 'assets/img/thumb-chicago.jpg' },
     { id: 'billie-birds', title: 'Billie Eilish - Birds of a Feather', channel: '', duration: '',
       src:   CLD + 'v1790439185/Billie_Eilish_-_BIRDS_OF_A_FEATHER.m4a',
       thumb: 'assets/img/thumb-billie-birds.jpg' },
       /* no `video` on purpose — audio-only, per instructions; no local thumbnail supplied yet */
     /* added 2026-09-28 — files uploaded to Cloudinary that day; durations read from the MP3s themselves */
-    { id: 'bieber-sorry', title: 'Justin Bieber - Sorry', channel: '', duration: '3:19',
-      src:   CLD + 'v1790595832/Justin_Bieber_-_Sorry_Lyrics.mp3',
-      video: CLD + 'q_auto,f_auto/v1790595857/Justin_Bieber_-_Sorry_PURPOSE___The_Movement.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790595857/Justin_Bieber_-_Sorry_PURPOSE___The_Movement.jpg',
-      rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790595857/Justin_Bieber_-_Sorry_PURPOSE___The_Movement.mp4',
-      thumb: CLD + 'so_3,w_800,q_auto,f_auto/v1790595857/Justin_Bieber_-_Sorry_PURPOSE___The_Movement.jpg' },
+    { id: 'bieber-sorry', title: 'Justin Bieber - Sorry', channel: '', duration: '3:25',
+      src:   M + 'sorry.m4a',
+      video: M + 'sorry.mp4', poster: M + 'sorry.jpg',
+      thumb: 'assets/img/thumb-sorry.jpg' },
     { id: 'cench-no-talking', title: 'Central Cee x Nemzzz - No Talking', channel: '', duration: '4:38',
-      src:   CLD + 'v1790597396/Central_Cee_ft._Nemzzz_No_Talking.mp3',
-      video: CLD + 'q_auto,f_auto/v1790597773/Central_Cee_ft._Nemzzz_No_Talking_Music_Video.mp4', poster: CLD + 'so_3,w_800,q_auto,f_auto/v1790597773/Central_Cee_ft._Nemzzz_No_Talking_Music_Video.jpg',
-      rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790597773/Central_Cee_ft._Nemzzz_No_Talking_Music_Video.mp4',
-      thumb: 'assets/img/thumb-madness.jpg' },
+      src:   M + 'no-talking.m4a',
+      video: M + 'no-talking.mp4', poster: M + 'no-talking.jpg',
+      thumb: 'assets/img/thumb-no-talking.jpg' },
     { id: 'sade-never-as-good', title: 'Sade - Never As Good As The First Time', channel: '', duration: '3:55',
-      src:   CLD + 'v1790597400/Sade_-_Never_As_Good_As_The_First_Time.mp3',
-      video: CLD + 'c_crop,w_0.89,h_1.0,g_center/c_fill,ar_16:9,g_center/q_auto,f_auto/v1790597739/Sade_-_Never_As_Good_As_The_First_Time_-_Official_-_1986.mp4', poster: CLD + 'so_3/c_crop,w_0.89,h_1.0,g_center/c_fill,ar_16:9,g_center/w_800,q_auto,f_auto/v1790597739/Sade_-_Never_As_Good_As_The_First_Time_-_Official_-_1986.jpg',
-      rawVideo: 'https://res.cloudinary.com/lpj7yftl/video/upload/v1790597739/Sade_-_Never_As_Good_As_The_First_Time_-_Official_-_1986.mp4',
-      thumb: 'assets/img/thumb-sade-paradise.jpg' },
+      src:   M + 'never-as-good.m4a',
+      video: M + 'never-as-good.mp4', poster: M + 'never-as-good.jpg',
+      thumb: 'assets/img/thumb-never-as-good.jpg' },
     { id: 'sade-love-is-found', title: 'Sade - Love Is Found', channel: '', duration: '4:11',
       src:   CLD + 'v1790595819/Sade_-_Love_Is_Found_Audio_1.mp3',
       thumb: 'assets/img/thumb-sade-paradise.jpg' },
@@ -2962,16 +2959,16 @@
   const { CATALOG } = window.BYMARCCC_CATALOG;
   const CLD = 'https://res.cloudinary.com/lpj7yftl/video/upload/';
   /* Cloudinary derives a jpg poster frame on the fly from the same video — no separate poster upload needed. */
-  const posterFor = url => url.replace('/upload/', '/upload/so_2,w_800,q_auto,f_auto/').replace(/\.\w+$/, '.jpg');
+  const posterFor = url => /^\/assets\/media\//.test(url) ? url.replace(/\.\w+$/, '.jpg') : url.replace('/upload/', '/upload/so_2,w_800,q_auto,f_auto/').replace(/\.\w+$/, '.jpg');
   /* Each reel → the product(s) it shows. `p` can be a single product key, an array of keys (video features
      more than one piece), or omitted entirely (video with no shoppable product yet). Video files are hosted
      on Cloudinary — nothing here is bundled with the site. */
   const REELS = [
-    { v: CLD + 'v1790252473/delulu_blazer.mp4', p: 'w-hg-delulu-blazer' },
-    { v: CLD + 'v1790252474/paris_hoodie_sold_out.mp4', p: 'w-black-hoodie', design: 'PARIS' },
-    { v: CLD + 'v1790252468/delulu_dress.mp4' },   // no matching catalog product yet — video only, no card
-    { v: CLD + 'v1790252468/white_baby_top_and_black_sequin_shorts.mp4', p: ['w-white-baby-top-1', 'w-black-sequin-shorts'] },
-    { v: CLD + 'v1790252465/red_baby_top.mp4', p: 'w-red-baby-top' },
+    { v: '/assets/media/reel-delulu-blazer.mp4', p: 'w-hg-delulu-blazer' },
+    { v: '/assets/media/reel-paris-hoodie.mp4', p: 'w-black-hoodie', design: 'PARIS' },
+    { v: '/assets/media/reel-delulu-dress.mp4' },   // no matching catalog product yet — video only, no card
+    { v: '/assets/media/reel-white-baby-top.mp4', p: ['w-white-baby-top-1', 'w-black-sequin-shorts'] },
+    { v: '/assets/media/reel-red-baby-top.mp4', p: 'w-red-baby-top' },
   ];
   const track = document.getElementById('reelTrack');
   const fmt = (n, c) => (c === 'RON' || !c) && window.BYM_FMT ? window.BYM_FMT(n) : (Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',')) + ' ' + c;   // geo pricing: visitor's currency
@@ -3634,7 +3631,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   // both at the source, with no timing workaround.
   if (window.BYMARCCC_VP_INIT) return;
   window.BYMARCCC_VP_INIT = true;
-  const VIDEOS = (window.BYMARCCC_PLAYLIST || []).filter(t => t.video).map(t => ({ src: t.video, raw: t.rawVideo || '', poster: t.poster || '', title: t.title }));
+  const VIDEOS = (window.BYMARCCC_PLAYLIST || []).filter(t => t.video).map(t => ({ src: t.video, raw: t.rawVideo || '', poster: t.poster || '', title: t.title, aud: /^\/assets\/media\//.test(t.src || '') ? t.src : '' }));
   const KEY_POS = 'bymarccc:vp:pos', KEY_OPEN = 'bymarccc:vp:open', KEY_NOW = 'bym.play.now';
   const $ = id => document.getElementById(id);
   const vp = $('vp'), handle = $('vpHandle'), video = $('vpVideo'), big = $('vpBig'), tab = $('vpTab');
@@ -3709,7 +3706,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
      If the twin can't load, or while it is still buffering, the video's own sound is used instead. */
   const snd = new Audio(); snd.preload = 'auto'; snd.setAttribute('playsinline', ''); snd.setAttribute('webkit-playsinline', '');
   let sndOn = false, sndBroken = false, bgPlay = false, userMuted = false, lastSndSaveT = 0;
-  const sndUrl = v => { const u = (v && (v.raw || v.src)) || ''; const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/[^?#]+)\.(?:mp4|mov|webm)(?:[?#].*)?$/i.exec(u); return m ? m[1] + m[2] + '.m4a' : ''; };
+  const sndUrl = v => { if (v && v.aud) return v.aud; const u = (v && (v.raw || v.src)) || ''; const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/[^?#]+)\.(?:mp4|mov|webm)(?:[?#].*)?$/i.exec(u); return m ? m[1] + m[2] + '.m4a' : ''; };
   // iPhone/iPad: Safari floats an inline video only from a tap (never by itself), so on iPhone a music video starts
   // straight in the system Picture-in-Picture window — that window then follows you Home and into other apps
   const AUTO_PIP = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
