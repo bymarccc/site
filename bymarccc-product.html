@@ -115,6 +115,17 @@
 .pdp-hanger { padding: 0; line-height: 0; }
 .pdp-hanger svg { width: 20px; height: 20px; display: block; margin: 0 auto; transform: translateY(1px); }   /* the drawing sits ~2 units high in its 32-unit box */
 
+/* hanger on the right (Zebra Patch only); wishlist heart removed for now (code kept) */
+.pdp-wish { display: none !important; }
+.pdp-hanger { left: auto; right: 16px; }
+.pdp-hanger[hidden] { display: none !important; }   /* only the Zebra Patch pieces have Complete the Look */
+.pdp-modelbar { left: 16px; right: 16px; }
+.pdp-gallery:has(#hangerBtn:not([hidden])) .pdp-modelbar { right: 60px; }
+/* image counter, bottom-left of the photo — like ourlegacy (2/10) */
+.pdp-gcount { position: absolute; left: 16px; bottom: 14px; z-index: 3; pointer-events: none; font-size: 11px; letter-spacing: .04em; color: #111; font-variant-numeric: tabular-nums; }
+.pdp-gcount[hidden] { display: none; }
+.pdp-gallery:has(#modelText:not([hidden]), #hwToggle:not([hidden]), #hwForm:not([hidden])) .pdp-gcount { bottom: 58px; }
+
 /* ---------- Product info ---------- */
 .pdp-info { padding: 22px 16px 0; max-width: 640px; margin: 0 auto; }
 .pdp-summary__row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
@@ -402,7 +413,10 @@ body.is-custom-bag-page #gallery { display: none; }
   .pdp-gallery__slide { display: flex; align-items: center; justify-content: center; }
   .pdp-gallery__slide img { width: 100%; height: 100vh; height: 100svh; object-fit: contain; }
   .pdp-modelbar { bottom: 24px; left: 72px; right: 72px; max-width: 560px; }
-  .pdp-hanger { bottom: 24px; left: 24px; }
+  .pdp-gallery:has(#hangerBtn:not([hidden])) .pdp-modelbar { right: 72px; }
+  .pdp-hanger { bottom: 24px; left: auto; right: 24px; }
+  .pdp-gcount { left: 24px; bottom: 26px; }
+  .pdp-gallery:has(#modelText:not([hidden]), #hwToggle:not([hidden]), #hwForm:not([hidden])) .pdp-gcount { bottom: 70px; }
   .pdp-wish { bottom: 24px; right: 24px; }
   .pdp-info { padding: calc(var(--header-h) + 40px) 40px 60px; max-width: none; margin: 0; }
   .pdp-bar { position: static; border: 0; padding: 22px 0 0; transition: none; }
@@ -589,7 +603,10 @@ body.is-custom-bag-page #gallery { display: none; }
   body:not(.is-custom-bag-page) .pdp-gallery { grid-column: 3; grid-row: 1; width: min(calc(var(--gh) * 2 / 3), 44vw); height: auto; aspect-ratio: 2 / 3; position: sticky; top: calc(var(--header-h) + 28px); }
   body:not(.is-custom-bag-page) .pdp-gallery__slide img { height: 100%; }
   body:not(.is-custom-bag-page) .pdp-modelbar { left: 12px; right: 12px; bottom: 12px; max-width: none; }
-  body:not(.is-custom-bag-page) .pdp-hanger { bottom: 60px; left: 12px; }
+  body:not(.is-custom-bag-page) .pdp-hanger { bottom: 60px; left: auto; right: 12px; }
+  body:not(.is-custom-bag-page) .pdp-gallery:has(#hangerBtn) .pdp-modelbar { right: 12px; }
+  body:not(.is-custom-bag-page) .pdp-gcount { left: 12px; bottom: 14px; }
+  body:not(.is-custom-bag-page) .pdp-gallery:has(#modelText:not([hidden]), #hwToggle:not([hidden]), #hwForm:not([hidden])) .pdp-gcount { bottom: 60px; }
   body:not(.is-custom-bag-page) .pdp-wish { bottom: 60px; right: 12px; }
   body:not(.is-custom-bag-page) .pdp-info { grid-column: 4; grid-row: 1; align-self: center; width: min(100%, 400px); padding: 0 0 0 48px; }
   body:not(.is-custom-bag-page) .pdp-info .pdp-summary__row { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 26px; }
@@ -621,6 +638,7 @@ body.is-custom-bag-page #gallery { display: none; }
       <div class="pdp-gallery__track" id="galleryTrack"></div>
       <button class="pdp-gallery__arrow pdp-gallery__arrow--prev" id="galPrev" type="button" aria-label="Previous image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
       <button class="pdp-gallery__arrow pdp-gallery__arrow--next" id="galNext" type="button" aria-label="Next image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+      <span class="pdp-gcount" id="galNum" aria-hidden="true"></span>
       <div class="pdp-modelbar" id="modelBar">
         <!-- Height / weight popover — jeans only (made-to-measure). Opens from the compact bar or from a blocked Add to Bag. -->
         <div class="pdp-bars" id="galBars" aria-hidden="true"></div>
@@ -1009,6 +1027,7 @@ body.is-custom-bag-page #gallery { display: none; }
     track.classList.toggle('no-anim', !anim || reduced.matches);
     track.style.transform = `translate3d(calc(${-gi * 100}% + ${dx}px), 0, 0)`;
     count.textContent = `${gi + 1} / ${GALLERY.length}`;
+    const gc = $('galNum'); if (gc) { gc.textContent = `${gi + 1}/${GALLERY.length}`; gc.hidden = GALLERY.length < 2; }   // ourlegacy-style 2/10 counter
     [...bars.children].forEach((b, i) => b.classList.toggle('is-on', i === gi));
     document.querySelectorAll('.pdp-thumbs > button').forEach((b, i) => b.classList.toggle('is-on', i === gi));
     slides.forEach((s, i) => s.setAttribute('aria-hidden', String(i !== gi)));
