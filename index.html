@@ -3435,7 +3435,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .vp__aartist { display: none !important; font-size: 10.5px; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 /* nudged a touch inward from the edge (was right:6px) so there's a hair more empty margin to grab past it, and given an invisible ::after hit-area — its visual size and position stay put */
 .vp__ax { position: absolute; top: 6px; right: 11px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(255,255,255,.1); color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; touch-action: manipulation; }
-.vp__ax::after { content: ""; position: absolute; inset: -6px; }
+.vp__ax::after { content: ""; position: absolute; inset: -10px; }
 .vp__ax svg { width: 12px; height: 12px; }
 .vp__scrub { position: relative; height: 4px; margin: 10px auto 0; width: 57%; border-radius: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
 .vp__scrub::before { content: ""; position: absolute; inset: -6px 0; }
@@ -3446,9 +3446,9 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
    empty (still draggable) margins on the left/right of the row for grabbing the whole PiP. */
 .vp__atimes { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; margin: 6px 0 0; padding: 6px 0; font-size: 9px; color: rgba(255,255,255,.6); font-variant-numeric: tabular-nums; }
 .vp__atimes span { flex: 0 0 auto; }
-.vp__actr { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.vp__actr { display: flex; align-items: center; justify-content: center; gap: 12px; }
 .vp__abtn { position: relative; border: 0; background: none; color: #fff; padding: 0; width: 26px; height: 26px; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
-.vp__abtn::after { content: ""; position: absolute; inset: -5px; }   /* a bit more touch target without growing the visible icon, kept short of the 10px gap so adjacent buttons never overlap */
+.vp__abtn::after { content: ""; position: absolute; inset: -9px -6px; }   /* a bit more touch target without growing the visible icon, kept short of the 10px gap so adjacent buttons never overlap */
 .vp__abtn svg { width: 14px; height: 14px; }
 .vp__abtn--play svg { width: 17px; height: 17px; }
 .vp__big {
@@ -3677,18 +3677,23 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const snd = new Audio(); snd.preload = 'auto'; snd.setAttribute('playsinline', ''); snd.setAttribute('webkit-playsinline', '');
   let sndOn = false, sndBroken = false, bgPlay = false, userMuted = false, lastSndSaveT = 0;
   const sndUrl = v => { const u = (v && (v.raw || v.src)) || ''; const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/[^?#]+)\.(?:mp4|mov|webm)(?:[?#].*)?$/i.exec(u); return m ? m[1] + m[2] + '.m4a' : ''; };
-  const applySound = () => { if (sndOn && !pipOwn) { video.muted = true; snd.muted = userMuted; } else { video.muted = userMuted; } };
+  // iPhone/iPad: while you watch, the video carries its own sound (the twin runs silently in sync) — that is what lets Safari
+  // float it in Picture-in-Picture by itself when you go Home / to another app, no PiP tap needed
+  const AUTO_PIP = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const applySound = () => { if (pipOwn) { video.muted = userMuted; return; } if (sndOn && AUTO_PIP && !bgPlay) { video.muted = userMuted; snd.muted = true; return; } if (sndOn) { video.muted = true; snd.muted = userMuted; } else { video.muted = userMuted; } };
   const sndSync = () => { if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.3) { try { snd.currentTime = video.currentTime || 0; } catch {} } };
   /* while the twin plays, the SOUND is the clock: a lagging picture is moved to the song (throttled), the song is never
      re-seeked to the picture — re-seeking it made the music stop/start every half second after coming back to the site */
   let picSeek = false, lastPicSync = 0;
-  const picSync = force => { const now = Date.now(); if (!force && now - lastPicSync < 2000) return; if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.5) { lastPicSync = now; picSeek = true; try { video.currentTime = snd.currentTime || 0; } catch { picSeek = false; } } };
+  const picSync = force => { if (AUTO_PIP && !bgPlay) { const now = Date.now(); if (!force && now - lastPicSync < 2000) return; if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.6) { lastPicSync = now; try { snd.currentTime = video.currentTime || 0; } catch {} } return; }   // silent twin follows the picture
+    const now = Date.now(); if (!force && now - lastPicSync < 2000) return; if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.5) { lastPicSync = now; picSeek = true; try { video.currentTime = snd.currentTime || 0; } catch { picSeek = false; } } };
   function sndLoad(v) { sndOn = false; sndBroken = false; snd.pause(); const u = sndUrl(v); if (u) snd.src = u; else { snd.removeAttribute('src'); sndBroken = true; } applySound(); }
   let pipOwn = false;   // true while the video plays its own sound in the Picture-in-Picture window
   function sndPlay() {
     if (sndBroken || !snd.getAttribute('src') || bgPlay || pipOwn) return;
     if (!snd.paused) { if (sndOn) picSync(); else sndSync(); return; }
     try { snd.currentTime = video.currentTime || 0; } catch {}
+    if (AUTO_PIP) snd.muted = true;
     const p = snd.play(); if (p) p.catch(() => {});
   }
   snd.addEventListener('playing', () => { if (bgPlay) return; if (video.paused) { snd.pause(); return; } picSync(true); sndOn = true; applySound(); });
@@ -3790,7 +3795,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   let vIntent = false;
   { const nativePause = video.pause.bind(video); video.pause = () => { vIntent = true; nativePause(); }; }
   const inPiP = () => document.pictureInPictureElement === video || video.webkitPresentationMode === 'picture-in-picture';
-  const goBg = () => { if (bgPlay || sndBroken || snd.paused) return false; bgPlay = true; sndOn = true; snd.muted = userMuted; return true; };
+  const goBg = () => { if (bgPlay || sndBroken || snd.paused) return false; if (AUTO_PIP) { try { if (Math.abs(snd.currentTime - video.currentTime) > 0.3) snd.currentTime = video.currentTime || 0; } catch {} } bgPlay = true; sndOn = true; snd.muted = userMuted; return true; };
   video.addEventListener('pause', () => {
     const intended = vIntent; vIntent = false;
     if (bgPlay) return;
@@ -3871,7 +3876,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
         if (inPiP()) { if (document.pictureInPictureElement && document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {}); else video.webkitSetPresentationMode?.('inline'); return; }
         // the PiP window carries its own sound: hand the song from the audio twin back to the video itself
         // (iPhone won't keep a muted video floating over other apps)
-        const at = sndOn && !snd.paused ? snd.currentTime : null;
+        const at = sndOn && !snd.paused && !AUTO_PIP ? snd.currentTime : null;
         pipOwn = true; sndOn = false; snd.pause(); video.muted = userMuted;
         if (at !== null) { try { video.currentTime = at; } catch {} }
         if (video.paused) video.play().catch(() => {});
@@ -3883,6 +3888,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const pipLeft = () => { if (!pipOwn || inPiP()) return; pipOwn = false; applySound(); if (!video.paused) sndPlay(); };
     video.addEventListener('webkitpresentationmodechanged', () => setTimeout(pipLeft, 50));
     video.addEventListener('leavepictureinpicture', () => setTimeout(pipLeft, 50));
+    // Safari floated the video by itself after the twin had already taken the song → the PiP window gets the sound back
+    video.addEventListener('webkitpresentationmodechanged', () => { if (AUTO_PIP && inPiP() && bgPlay) { bgPlay = false; applySound(); if (video.paused) video.play().catch(() => {}); } });
   }
   tab.addEventListener('click', () => { if (!docked) open(); });   // docked: handled by the drag/tap logic above
 
@@ -3927,21 +3934,24 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     }
     drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: x, oy: y, moved: false, tab: !!fromTab, surface };
     vp.classList.add('is-dragging'); document.documentElement.classList.add('is-vp-drag');
-    if (typeof e.pointerId === 'number') surface.setPointerCapture?.(e.pointerId);   // real Pointer Events only — the touch-sentinel id below has no pointer capture
+    if (typeof e.pointerId === 'number') { try { surface.setPointerCapture?.(e.pointerId); } catch {} }   // real Pointer Events only — the touch-sentinel id below has no pointer capture
     e.preventDefault();
   }
   function dragMove(e) {
     if (!drag || e.pointerId !== drag.id) return;
     const b = bounds();
-    if (Math.abs(e.clientX - drag.sx) > 6 || Math.abs(e.clientY - drag.sy) > 6) drag.moved = true;
+    const th = e.pointerType === 'mouse' ? 6 : 12;   // a finger wobbles: a tap that slips a few px must stay a tap
+    if (Math.abs(e.clientX - drag.sx) > th || Math.abs(e.clientY - drag.sy) > th) drag.moved = true;
     if (!drag.moved) return;
     x = Math.min(vw(), Math.max(-vp.offsetWidth, drag.ox + (e.clientX - drag.sx)));   // may go past either edge → dock there
     y = Math.min(b.maxY, Math.max(b.minY, drag.oy + (e.clientY - drag.sy)));
     apply();
   }
+  const tapNearest = e => { let best = null, bd = 30; for (const b of $('vpAudio').querySelectorAll('button, .vp__scrub')) { const r = b.getBoundingClientRect(); if (!r.width) continue; const d = Math.hypot(Math.max(r.left - e.clientX, 0, e.clientX - r.right), Math.max(r.top - e.clientY, 0, e.clientY - r.bottom)); if (d < bd) { bd = d; best = b; } } if (best && best.tagName === 'BUTTON') { best.click(); return true; } return !!best; };
   const endDrag = e => {
     if (!drag || (e && e.pointerId !== drag.id)) return;
     const wasTap = !drag.moved, fromTab = drag.tab, surface = drag.surface; drag = null; vp.classList.remove('is-dragging'); document.documentElement.classList.remove('is-vp-drag');
+    if (wasTap && !fromTab && e && e.type === 'pointerup' && surface === $('vpAudio') && tapNearest(e)) return;   // a tap that just missed play / pause / X still presses it
     if (wasTap) { if (fromTab) { undock(true); } else { if (e && e.type === 'pointerup' && surface === handle) toggleCtrls(); settleToCorner(); } return; }   // a tap never moves it — except finishing a glide it interrupted
     const w = vp.offsetWidth, W = vw();
     // release: how much of the player is still on screen decides — less than 40% → glide out and dock; otherwise glide back fully inside
@@ -4104,7 +4114,11 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const cur = list[idx] && (window.BYMARCCC_PLAYLIST || []).find(t => t.video === list[idx].src);
     if (document.hidden) {
       // the twin is already playing the song → just let the picture stop; the song carries on
-      if (!video.paused && !video.ended && inPiP()) return;   // Picture-in-Picture: picture and song both keep going
+      if (!video.paused && !video.ended && inPiP()) return;
+      if (AUTO_PIP && !video.paused && !video.ended && !snd.paused) {   // give Safari a moment to float the video by itself; if it doesn't, the song carries on from the twin
+        setTimeout(() => { if (!document.hidden || inPiP() || bgPlay) return; if (!video.paused) { goBg(); applySound(); video.pause(); } }, 700);
+        return;
+      }   // Picture-in-Picture: picture and song both keep going
       if (!video.paused && !video.ended && goBg()) { video.pause(); return; }   // the twin is playing the song → only the picture stops
       if (bgPlay) return;   // Safari already stopped the picture and the song carried on
       if (!video.paused && !video.ended && cur && cur.src && window.BYMARCCC?.audioTrack) { const at = video.currentTime; video.pause(); if (window.BYMARCCC.audioTrack.play(cur, at)) handedOff = cur; }
