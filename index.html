@@ -1254,7 +1254,7 @@
 (() => {
   'use strict';
   const { CATALOG, COLLECTIONS, WOMEN_COLLECTIONS, CUSTOMIZE_COLLECTIONS, WOMEN_FEATURED } = window.BYMARCCC_CATALOG;
-  const fmt = (n, c) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',')) + ' ' + c;
+  const fmt = (n, c) => (c === 'RON' || !c) && window.BYM_FMT ? window.BYM_FMT(n) : (Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',')) + ' ' + c;   // geo pricing: visitor's currency
   const hover = matchMedia('(hover: hover)').matches;
   const genderOf = p => p.genders || [p.gender || 'men'];
   // products marked NEW COLLECTION on their homepage card (vertical label, Diesel-style)
@@ -2963,7 +2963,7 @@
     { v: CLD + 'v1790252465/red_baby_top.mp4', p: 'w-red-baby-top' },
   ];
   const track = document.getElementById('reelTrack');
-  const fmt = (n, c) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',')) + ' ' + c;
+  const fmt = (n, c) => (c === 'RON' || !c) && window.BYM_FMT ? window.BYM_FMT(n) : (Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',')) + ' ' + c;   // geo pricing: visitor's currency
   const bag = () => window.BYMARCCC && window.BYMARCCC.bag;
   const muteSvg = `<svg class="off" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 8l5 8M22 8l-5 8"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg>`;
   let unmuted = null;

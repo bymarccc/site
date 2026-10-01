@@ -459,7 +459,7 @@
     save(){ try { sessionStorage.setItem('bym.bag', JSON.stringify(this.items)); } catch(e){} },
     setQty(id, q){ var it = this.items.find(function(i){ return i.id === id; }); if (!it) return; if (q <= 0) this.items = this.items.filter(function(i){ return i.id !== id; }); else it.quantity = q; this.save(); renderBag(); },
     count(){ return this.items.reduce(function(a,b){ return a + (b.quantity || 1); }, 0); },
-    subtotal(){ return this.items.reduce(function(a,b){ return a + (typeof b.price === 'number' ? b.price * (b.quantity || 1) : 0); }, 0); },
+    subtotal(){ return this.items.reduce(function(a,b){ return a + (typeof b.price === 'number' ? lp(b.price) * (b.quantity || 1) : 0); }, 0); },   // in the delivery country's currency (geo pricing)
     clear(){ this.items = []; this.save(); }
   };
   BAG.load();
@@ -481,9 +481,25 @@
     d.setAttribute('style', 'margin:4px 0 18px;padding:14px 16px;border-radius:14px;background:#eef4fe;color:#1268F3;font-weight:600;font-size:14px;line-height:1.45');
     d.textContent = 'Adding to your order ' + ADD_TO.order_id + ' — it ships together, no extra shipping.';
     h.parentNode.insertBefore(d, h.nextSibling); })();
-  var fmt = function(n, cur){ return (Math.round(n * 100) / 100).toLocaleString(LANG === 'ro' ? 'ro-RO' : 'en-GB') + ' ' + (cur || 'RON'); };
+  /* ---------- geo pricing: bag prices are RON; the delivery country decides currency, markup and shipping
+     (window.BYM_GEO is injected by the server; without it everything stays RON exactly as before) ---------- */
+  var GEO = window.BYM_GEO && window.BYM_GEO.rule ? window.BYM_GEO : null, TY_CC = null;
+  function destCC(){ if (TY_CC) return TY_CC; var sel = $('coCountry'), o = sel && sel.options[sel.selectedIndex]; return (o && o.getAttribute('data-cc')) || 'RO'; }
+  function curNow(){ return GEO ? GEO.rule(destCC()).cur : 'RON'; }
+  function lp(ron){ return GEO ? GEO.local(ron, destCC()) : ron; }
+  function isRO(){ return destCC() === 'RO'; }
+  var fmt = function(n, cur){ cur = cur && cur !== 'RON' ? cur : curNow(); if (cur !== 'RON' && GEO) return GEO.money(n, cur); return (Math.round(n * 100) / 100).toLocaleString(LANG === 'ro' ? 'ro-RO' : 'en-GB') + ' ' + cur; };
+  (function fillCountries(){
+    var sel = $('coCountry'); if (!sel) return;
+    if (sel.options[0]) sel.options[0].setAttribute('data-cc', 'RO');
+    if (!GEO) return;
+    Object.keys(GEO.rules).filter(function(k){ return k !== '_' && k !== 'RO'; })
+      .sort(function(a, b){ return GEO.rules[a][0].localeCompare(GEO.rules[b][0]); })
+      .forEach(function(k){ var o = document.createElement('option'); o.value = GEO.rules[k][0]; o.textContent = GEO.rules[k][0]; o.setAttribute('data-cc', k); sel.appendChild(o); });
+    if (GEO.rules[GEO.cc] && GEO.cc !== 'RO') sel.value = GEO.rules[GEO.cc][0];
+  })();
   var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); };
-  var shippingFor = function(){ return BAG.items.length && !ADD_TO ? SHIPPING_RON : 0; };
+  var shippingFor = function(){ return BAG.items.length && !ADD_TO ? (isRO() || !GEO ? SHIPPING_RON : GEO.rule(destCC()).ship) : 0; };
   var total = function(){ return BAG.subtotal() + shippingFor(); };
 
   function itemHtml(it, editable){
@@ -492,7 +508,7 @@
       '<div class="co-item__thumb">' + (it.image ? '<img src="' + esc(it.image) + '" alt="">' : '<img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">') + (q > 1 ? '<span>' + q + '</span>' : '') + '</div>' +
       '<div class="co-item__info"><span class="co-item__name">' + esc(it.name) + '</span>' + (it.variant ? '<span class="co-item__var">' + esc(it.variant) + '</span>' : '') +
       '</div>' +
-      '<div><div class="co-item__price">' + fmt((it.price || 0) * q, it.currency) + '</div>' + (editable ? '<button type="button" class="co-item__rm" data-rm="' + esc(it.id) + '">' + t('remove') + '</button>' : '') + '</div>' +
+      '<div><div class="co-item__price">' + fmt(lp(it.price || 0) * q) + '</div>' + (editable ? '<button type="button" class="co-item__rm" data-rm="' + esc(it.id) + '">' + t('remove') + '</button>' : '') + '</div>' +
     '</li>';
   }
   function renderBag(){
@@ -530,8 +546,8 @@
     /* pay in 2 installments is card-only: hide the cash-on-delivery option while it is selected */
     var codOpt = $('coPayCodOpt');
     if (codOpt) {
-      codOpt.style.display = wantsSplit ? 'none' : '';
-      if (wantsSplit && payCod.checked) { payCard.checked = true; payCard.dispatchEvent(new Event('change')); }
+      codOpt.style.display = wantsSplit || !isRO() ? 'none' : '';   // cash on delivery: Romania only
+      if ((wantsSplit || !isRO()) && payCod.checked) { payCard.checked = true; payCard.dispatchEvent(new Event('change')); }
     }
   }
   splitFull.addEventListener('change', updateSplitView); splitTwoRadio.addEventListener('change', updateSplitView);
@@ -545,6 +561,15 @@
     submitBtn.textContent = isCard ? t('btnContinuePayment') : t('btnCompleteOrder');
   }
   payCard.addEventListener('change', updatePaymentView); payCod.addEventListener('change', updatePaymentView);
+  /* delivery country → currency, shipping price/label and payment options follow it */
+  function updateShipLabel(){
+    var r = document.querySelector('input[name="coShipping"]'), box = r && r.closest('.co-opt'); if (!box) return;
+    var b = box.querySelector('.co-opt__text b'), d = box.querySelector('.co-opt__text span');
+    if (b) b.textContent = isRO() ? 'Fan Courier' : 'International courier';
+    if (d) { if (isRO()) { d.setAttribute('data-i18n', 'shipDays'); d.textContent = t('shipDays'); } else { d.removeAttribute('data-i18n'); d.textContent = LANG === 'ro' ? '5–10 zile lucrătoare' : '5–10 business days'; } }
+  }
+  $('coCountry').addEventListener('change', function(){ renderBag(); updateSplitView(); updateShipLabel(); });
+  updateShipLabel(); renderBag(); updateSplitView();
   /* arrived from a product page's "Checkout · Pay in 2" button: card + 2 installments preselected */
   try { if (sessionStorage.getItem('bym.wantSplit') === '1') {
     sessionStorage.removeItem('bym.wantSplit');
@@ -582,7 +607,7 @@
     tyLast = d;
     var pay = $('coTyPay'), isCard = /card|stripe/i.test(String(d.payment_method || ''));
     pay.setAttribute('data-i18n', isCard ? 'payCard' : 'payCod'); pay.textContent = t(isCard ? 'payCard' : 'payCod');
-    var sub = items.reduce(function(a, it){ return a + (typeof it.price === 'number' ? it.price * (it.quantity || 1) : 0); }, 0);
+    var sub = items.reduce(function(a, it){ return a + (typeof it.price === 'number' ? lp(it.price) * (it.quantity || 1) : 0); }, 0);
     var ship = typeof d.shipping_amount === 'number' ? d.shipping_amount : (items.length ? SHIPPING_RON : 0);
     $('coTySubtotal').textContent = fmt(sub); $('coTyShipping').textContent = fmt(ship); $('coTyTotal').textContent = fmt(sub + ship);
     loadShipMap(d);
@@ -694,7 +719,7 @@
     if (wantsSplit && !splitConsent.checked) { setStatus(t('errSplitConsent'), 'is-error'); splitConsent.focus(); return; }
     var items = BAG.items.slice(), customer = collectCustomer(), oid = orderRef();
     persistSavedInfo();
-    try { sessionStorage.setItem('bym.pendingOrder', JSON.stringify({ order_id: oid, customer: customer, items: items, language: LANG, installments: wantsSplit ? 2 : 1, addto: ADD_TO || null })); } catch(e){}
+    try { sessionStorage.setItem('bym.pendingOrder', JSON.stringify({ order_id: oid, customer: customer, items: items, language: LANG, installments: wantsSplit ? 2 : 1, addto: ADD_TO || null, cc: destCC(), ship: shippingFor() })); } catch(e){}
     var lines = items.map(function(it){ return (it.quantity || 1) + ' × ' + it.name + (it.variant ? ' (' + it.variant + ')' : ''); });
     submitBtn.disabled = true; setStatus(t('statusSending'), 'is-sending');
     fetch('/api/checkout-create', {
@@ -726,8 +751,9 @@
     var pending = null; try { pending = JSON.parse(sessionStorage.getItem('bym.pendingOrder') || 'null'); } catch(e){}
     var items = (pending && pending.items) || BAG.items.slice();
     var customer = (pending && pending.customer) || {};
-    var subtotal = items.reduce(function(a,b){ return a + (typeof b.price === 'number' ? b.price * (b.quantity || 1) : 0); }, 0);
-    var ship = items.length && !(pending && pending.addto) ? SHIPPING_RON : 0;
+    if (pending && pending.cc) TY_CC = pending.cc;   // thank-you totals in the currency the customer paid in
+    var subtotal = items.reduce(function(a,b){ return a + (typeof b.price === 'number' ? lp(b.price) * (b.quantity || 1) : 0); }, 0);
+    var ship = items.length && !(pending && pending.addto) ? (pending && typeof pending.ship === 'number' ? pending.ship : SHIPPING_RON) : 0;
     fetch('/api/checkout-session?id=' + encodeURIComponent(sid)).then(function(r){ return r.json(); }).then(function(d){
       history.replaceState(null, '', location.pathname);
       if (!d || !d.paid) { setStatus(t('errSendFailed'), 'is-error'); return; }
@@ -736,7 +762,7 @@
         product_name: items.map(function(it){ return (it.quantity || 1) + ' × ' + it.name + (it.variant ? ' (' + it.variant + ')' : ''); }).join('\n'),
         items_count: String(items.reduce(function(a,b){ return a + (b.quantity || 1); }, 0)),
         quantity: String(items.reduce(function(a,b){ return a + (b.quantity || 1); }, 0)),
-        price: fmt(subtotal), shipping_cost: fmt(ship), shipping_method: 'Fan Courier',
+        price: fmt(subtotal), shipping_cost: fmt(ship), shipping_method: isRO() ? 'Fan Courier' : 'International courier',
         total: fmt(subtotal + ship), payment_method: 'Card (Stripe)',
         full_name: customer.full_name || '', phone: customer.phone || '', email: d.email || customer.email || '',
         address: customer.address || '', apartment: customer.apartment || '', city: customer.city || '',
@@ -762,14 +788,14 @@
     if (phoneDigits.length < 10) { setStatus(t('errPhone'), 'is-error'); $('coPhone').focus(); return; }
 
     var items = BAG.items.slice();
-    var lines = items.map(function(it){ return (it.quantity || 1) + ' × ' + it.name + (it.variant ? ' (' + it.variant + ')' : '') + ' — ' + fmt((it.price || 0) * (it.quantity || 1), it.currency); });
+    var lines = items.map(function(it){ return (it.quantity || 1) + ' × ' + it.name + (it.variant ? ' (' + it.variant + ')' : '') + ' — ' + fmt(lp(it.price || 0) * (it.quantity || 1)); });
     var params = {
       order_id: orderRef(),
       product_name: lines.join('\n'),               // every bag line, one per row
       items_count: String(BAG.count()),
       quantity: String(BAG.count()),
       price: fmt(BAG.subtotal()),
-      shipping_cost: fmt(shippingFor()), shipping_method: 'Fan Courier',
+      shipping_cost: fmt(shippingFor()), shipping_method: isRO() ? 'Fan Courier' : 'International courier',
       total: fmt(total()), payment_method: 'Cash on delivery',
       full_name: $('coName').value.trim(), phone: $('coPhone').value.trim(), email: $('coEmail').value.trim(),
       address: $('coAddress').value.trim(), apartment: $('coApt').value.trim(), city: $('coCity').value.trim(),

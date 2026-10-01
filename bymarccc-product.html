@@ -887,7 +887,7 @@ body.is-custom-bag-page #gallery { display: none; }
   };
   /* money helpers — minor units (bani), never floats */
   const toMinor = ron => Math.round(ron * 100);
-  const fmtMinor = (m, c = 'RON') => (m % 100 === 0 ? String(m / 100) : (m / 100).toFixed(2).replace('.', ',')) + ' ' + c;
+  const fmtMinor = (m, c = 'RON') => c === 'RON' && window.BYM_FMT ? window.BYM_FMT(m / 100) : (m % 100 === 0 ? String(m / 100) : (m / 100).toFixed(2).replace('.', ',')) + ' ' + c;   // geo pricing
   /* exactly two instalments; the extra ban goes to the first payment */
   const splitTwo = minor => { const first = Math.ceil(minor / 2); return [first, minor - first]; };
   const COMPLETE_THE_LOOK = [
@@ -901,7 +901,7 @@ body.is-custom-bag-page #gallery { display: none; }
       image: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/BB74A44A-FF46-4A4B-B5F3-30618061A0B0.jpg?v=1783803621&width=600',
       variants: [{ id: 58254658634076, title: 'ONE SIZE', available: true }] },
   ];
-  const fmt = (n, c = 'RON') => `${n} ${c}`;
+  const fmt = (n, c = 'RON') => c === 'RON' && window.BYM_FMT ? window.BYM_FMT(n) : `${n} ${c}`;   // geo pricing: visitor's currency
 
   /* ==================================================================
      BAG (shared, session-persisted)

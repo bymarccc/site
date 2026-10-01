@@ -138,8 +138,11 @@ async function checkoutCreate(request, origin) {
   if (!body) return json(400, { error: "Invalid JSON" });
   const items = Array.isArray(body.items) ? body.items : [];
   if (!items.length) return json(400, { error: "Empty bag" });
-  const currency = String(items[0].currency || "RON").toLowerCase();
   const c = body.customer || {};
+  // geo pricing: the shipping country decides currency, markup and shipping (Romania = RON exactly as before)
+  const geoCC = geoCountryCode(c.country) || "RO";
+  const rule = geoRule(geoCC, await geoRates());
+  const currency = rule.cur.toLowerCase();
   let order_id;
   try { order_id = await assignOrderNumber(body.order_id, "card"); }
   catch (e) { console.error("order number failed", String(e && e.message || e)); return json(503, { error: "ORDER_NUMBER_FAILED" }); }
@@ -156,12 +159,13 @@ async function checkoutCreate(request, origin) {
     items_summary: String(body.items_summary || "").slice(0, 480)
   };
   const addTo = await verifyAddTo(body.addto).catch(() => null);
-  const shipping = addTo ? 0 : Number(env("SHIPPING_RON", "20")) || 0;
+  const shipping = addTo ? 0 : rule.ship;
   if (addTo) metaBase.add_to = addTo.id;
+  metaBase.geo_cc = rule.cc; metaBase.geo_cur = rule.cur; metaBase.geo_fx = String(rule.fx); metaBase.geo_ship = String(shipping);
   const shippingMinor = shipping > 0 ? Math.round(shipping * 100) : 0;
   // Server-side total, in minor units (bani) — never trust a client-sent total for what gets charged.
   const itemsTotalMinor = items.slice(0, 50).reduce((sum, it) => {
-    const unit = Math.max(0, Math.round(Number(it.price || 0) * 100));
+    const unit = Math.max(0, Math.round(geoPrice(it.price, rule) * 100));
     const qty = Math.max(1, Math.min(99, Math.round(Number(it.quantity || 1))));
     return sum + unit * qty;
   }, 0);
@@ -226,7 +230,7 @@ async function checkoutCreate(request, origin) {
         name: String(it.name || "Product").slice(0, 250),
         ...it.variant ? { description: String(it.variant).slice(0, 250) } : {}
       },
-      unit_amount: Math.max(0, Math.round(Number(it.price || 0) * 100))
+      unit_amount: Math.max(0, Math.round(geoPrice(it.price, rule) * 100))
     },
     quantity: Math.max(1, Math.min(99, Math.round(Number(it.quantity || 1))))
   }));
@@ -1580,7 +1584,8 @@ var ORDER_T = {
     qty: "Cant.", shop: "Continuă cumpărăturile" }
 };
 var oesc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-var ofmt = (n) => (Math.round(n * 100) / 100).toFixed(2) + " RON";
+var OCUR = "RON";   // set per order (geo pricing); e-mails show the currency the customer paid in
+var ofmt = (n, cur = OCUR) => (Math.round(n * 100) / 100).toFixed(2) + " " + cur;
 var sentOrders = /* @__PURE__ */ new Set();
 async function resendSend(msg) {
   const r = await fetch("https://api.resend.com/emails", {
@@ -1706,9 +1711,15 @@ async function orderSubmit(request) {
     const data = await stripeRequest(`checkout/sessions/${encodeURIComponent(o.session_id)}`);
     if (data.payment_status !== "paid" || (data.metadata?.order_id && data.metadata.order_id !== o.order_id)) return json(400, { error: "Not paid" });
     pay = "card"; totalOverride = (data.amount_total || 0) / 100;
+    if (data.metadata && data.metadata.geo_cur && data.metadata.geo_cur !== "RON") {   // foreign card order: same conversion as at checkout
+      const rule = { cur: data.metadata.geo_cur, fx: Number(data.metadata.geo_fx) || 1 };
+      o.items = o.items.map((it) => ({ ...it, price: geoPrice(it.price, rule) }));
+      o.currency = rule.cur; o.geoShip = Number(data.metadata.geo_ship) || 0;
+    }
     if (!c.email) c.email = data.customer_details?.email || data.customer_email || "";
   } else {
     const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email);
+    if ((geoCountryCode(c.country) || "RO") !== "RO") return json(400, { error: "COD_ROMANIA_ONLY" });   // cash on delivery: Romania only
     if (!c.full_name || !c.phone || !c.address || !c.city || !okEmail) return json(400, { error: "Missing customer details" });
     // COD: the order number is assigned here, from the browser's temporary id (a retry gets the same number)
     try { o.order_id = await assignOrderNumber(o.order_id, "cod"); }
@@ -1722,7 +1733,8 @@ async function orderSubmit(request) {
   const store = kv(), key = `ordermail:${o.order_id}`;
   if (sentOrders.has(key) || (store && await store.get(key))) return json(200, { ok: true, duplicate: true, order_id: o.order_id, recs: o.recs });
   const sub = o.items.reduce((a, it) => a + it.price * it.qty, 0);
-  const ship = o.addToParent ? 0 : Number(env("SHIPPING_RON", "20")) || 0;
+  const ship = o.addToParent ? 0 : (o.currency ? o.geoShip : Number(env("SHIPPING_RON", "20")) || 0);
+  OCUR = o.currency || "RON";
   const totals = { sub, ship, total: totalOverride != null && pay === "card" && !b.installments ? totalOverride : sub + ship };
   const chk = await goatifyItemCheck(b.items).catch(() => ({ extras: [], notes: "" }));
   const m = orderEmails(o, pay, totals, chk.extras.map((e) => e && e.image), CURRENT_ORIGIN || "https://bymarccc.com");
@@ -1765,7 +1777,7 @@ const gHttps = (u) => (typeof u === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(u
 /** Builds the GOATIFY site-order payload (pure; throws on data GOATIFY would reject). */
 function toGoatifyOrder(o, { pay, totals = null, siteKey = 'bymarccc', placedAt = new Date().toISOString(), sourceUrl, notes } = {}) {
   const c = o.customer || {};
-  const country = gCountryCode(c.country); if (!country) throw Object.assign(new Error('Unsupported country: ' + c.country), { code: 'COUNTRY_UNSUPPORTED' });
+  const country = geoCountryCode(c.country); if (!country) throw Object.assign(new Error('Unsupported country: ' + c.country), { code: 'COUNTRY_UNSUPPORTED' });
   if (!o.order_id) throw Object.assign(new Error('Missing order_id'), { code: 'NO_ORDER_ID' });
   const items = (o.items || []).map(it => ({ ...(it.sku ? { sku: String(it.sku).slice(0, 64) } : {}), name: it.name, ...(it.variant ? { variant: it.variant } : {}), qty: Number(it.qty) || 1, price: gCents(it.price) / 100, ...(gHttps(it.image) ? { image: gHttps(it.image) } : {}) }));
   const sub = items.reduce((a, it) => a + gCents(it.price) * it.qty, 0);
@@ -1775,7 +1787,7 @@ function toGoatifyOrder(o, { pay, totals = null, siteKey = 'bymarccc', placedAt 
     site: siteKey, idempotencyKey: 'bym_' + String(o.order_id).replace(/[^A-Za-z0-9._:-]/g, ''),
     customer: { name: c.full_name, email: String(c.email || '').toLowerCase(), phone: c.phone, lang: o.lang === 'ro' ? 'ro' : 'en' },
     shippingAddress: { line1: c.address, ...(c.apartment ? { line2: c.apartment } : {}), city: c.city, postcode: c.postal_code, country },
-    items, subtotal: sub / 100, shipping: ship / 100, discount: 0, total: (sub + ship) / 100, currency: 'RON',
+    items, subtotal: sub / 100, shipping: ship / 100, discount: 0, total: (sub + ship) / 100, currency: o.currency || 'RON',
     payment: pay === 'card' ? { method: 'card', status: 'paid', ...(o.session_id ? { reference: String(o.session_id).slice(0, 120) } : {}) } : { method: 'cod' },
     ...(gHttps(sourceUrl) ? { sourceUrl: gHttps(sourceUrl) } : {}), ...(notes ? { notes: String(notes).slice(0, 1000) } : {}), placedAt,
   };
@@ -1893,6 +1905,111 @@ async function orderRecommendations(rawItems, parentOrderId, max = 3, parentT = 
 }
 __name(orderRecommendations, "orderRecommendations");
 
+// ---------------------------------------------------------------------------------------------
+// GEO PRICING — one place for country → currency / markup / shipping. Used for (1) the prices the
+// visitor sees (injected into every HTML page as window.BYM_GEO) and (2) what Stripe charges.
+// Base prices in the catalogue are RON. Romania stays exactly as before (RON, no markup, SHIPPING_RON).
+//   US + rest of world: USD, +40%, $30 shipping · UK: GBP, +40%, £25 shipping
+//   Europe: local currency (EUR / CHF / PLN / CZK / HUF / SEK / DKK / NOK), +30%, €15 shipping (converted)
+//   Bulgaria (euro since 2026): EUR, +20%, €15 shipping
+// Exchange rates: ECB via frankfurter.app, cached 6h; fallback below if the fetch fails.
+// ---------------------------------------------------------------------------------------------
+var GEO_FALLBACK_RATES = { RON: 1, EUR: 0.1966, USD: 0.2265, GBP: 0.17, CHF: 0.183, PLN: 0.835, CZK: 4.88, HUF: 76.5, SEK: 2.18, DKK: 1.467, NOK: 2.29 };
+var GEO_COUNTRIES = {
+  RO: ["Romania", "RON"], BG: ["Bulgaria", "EUR"],
+  AT: ["Austria", "EUR"], BE: ["Belgium", "EUR"], HR: ["Croatia", "EUR"], CY: ["Cyprus", "EUR"], EE: ["Estonia", "EUR"], FI: ["Finland", "EUR"],
+  FR: ["France", "EUR"], DE: ["Germany", "EUR"], GR: ["Greece", "EUR"], IE: ["Ireland", "EUR"], IT: ["Italy", "EUR"], LV: ["Latvia", "EUR"],
+  LT: ["Lithuania", "EUR"], LU: ["Luxembourg", "EUR"], MT: ["Malta", "EUR"], NL: ["Netherlands", "EUR"], PT: ["Portugal", "EUR"], SK: ["Slovakia", "EUR"],
+  SI: ["Slovenia", "EUR"], ES: ["Spain", "EUR"], MC: ["Monaco", "EUR"], AD: ["Andorra", "EUR"], SM: ["San Marino", "EUR"], ME: ["Montenegro", "EUR"],
+  XK: ["Kosovo", "EUR"], AL: ["Albania", "EUR"], BA: ["Bosnia and Herzegovina", "EUR"], MK: ["North Macedonia", "EUR"], RS: ["Serbia", "EUR"],
+  MD: ["Moldova", "EUR"], IS: ["Iceland", "EUR"],
+  CH: ["Switzerland", "CHF"], LI: ["Liechtenstein", "CHF"], PL: ["Poland", "PLN"], CZ: ["Czechia", "CZK"], HU: ["Hungary", "HUF"],
+  SE: ["Sweden", "SEK"], DK: ["Denmark", "DKK"], NO: ["Norway", "NOK"],
+  GB: ["United Kingdom", "GBP"], US: ["United States", "USD"]
+};
+var GEO_RATES_MEM = null;
+async function geoRates() {
+  const now = Date.now();
+  if (GEO_RATES_MEM && now - GEO_RATES_MEM.t < 6 * 3600e3) return GEO_RATES_MEM.r;
+  let r = null;
+  const ck = "https://bymarccc.com/__fx/RON";
+  try {
+    const cache = typeof caches !== "undefined" && caches.default;
+    let hit = cache ? await cache.match(ck) : null;
+    if (!hit) {
+      const res = await fetch("https://api.frankfurter.app/latest?from=RON&to=EUR,USD,GBP,CHF,PLN,CZK,HUF,SEK,DKK,NOK", { cf: { cacheTtl: 21600 } });
+      if (res.ok) {
+        const d = await res.json();
+        if (d && d.rates && d.rates.EUR) {
+          hit = new Response(JSON.stringify(d.rates), { headers: { "Content-Type": "application/json", "Cache-Control": "max-age=21600" } });
+          if (cache) await cache.put(ck, hit.clone()).catch(() => {});
+        }
+      }
+    }
+    if (hit) r = await hit.json();
+  } catch {}
+  r = Object.assign({}, GEO_FALLBACK_RATES, r || {}, { RON: 1 });
+  GEO_RATES_MEM = { t: now, r };
+  return r;
+}
+__name(geoRates, "geoRates");
+function geoRule(cc, rates) {
+  cc = String(cc || "").toUpperCase();
+  const r = rates || GEO_FALLBACK_RATES;
+  const row = GEO_COUNTRIES[cc];
+  if (cc === "RO" || (!row && cc === "")) return { cc: "RO", cur: "RON", fx: 1, ship: Number(env("SHIPPING_RON", "20")) || 0 };
+  let cur, mk, ship;
+  if (cc === "US" || !row) { cur = "USD"; mk = 1.4; ship = 30; }
+  else if (cc === "GB") { cur = "GBP"; mk = 1.4; ship = 25; }
+  else if (cc === "BG") { cur = "EUR"; mk = 1.2; ship = 15; }
+  else { cur = row[1]; mk = 1.3; ship = cur === "EUR" ? 15 : Math.ceil(15 * r[cur] / r.EUR); }
+  return { cc: row ? cc : "US", cur, fx: (r[cur] || 1) * mk, ship };
+}
+__name(geoRule, "geoRule");
+// RON price → local whole-unit price (rounded up; HUF/CZK/SEK… to whole units as well)
+function geoPrice(ron, rule) { if (rule.cur === "RON") return Math.round(Number(ron || 0) * 100) / 100; return Math.ceil(Number(ron || 0) * rule.fx - 1e-9); }
+__name(geoPrice, "geoPrice");
+function geoCountryCode(v) {
+  const s = String(v || "").trim();
+  if (/^[A-Za-z]{2}$/.test(s)) return s.toUpperCase();
+  const low = s.toLowerCase();
+  for (const k in GEO_COUNTRIES) if (GEO_COUNTRIES[k][0].toLowerCase() === low) return k;
+  return gCountryCode(s);
+}
+__name(geoCountryCode, "geoCountryCode");
+// what the browser gets: visitor's country + every supported country's rule, and a tiny formatter
+async function geoClientScript(request) {
+  const rates = await geoRates();
+  const visitor = String((request.cf && request.cf.country) || request.headers.get("cf-ipcountry") || "RO").toUpperCase();
+  const rules = {};
+  for (const k in GEO_COUNTRIES) { const g = geoRule(k, rates); rules[k] = [GEO_COUNTRIES[k][0], g.cur, +g.fx.toFixed(6), g.ship]; }
+  const w = geoRule("ZZ", rates); rules._ = ["", w.cur, +w.fx.toFixed(6), w.ship];
+  const data = { cc: visitor, rules };
+  return `window.BYM_GEO=${JSON.stringify(data)};(function(G){var L={RON:'ro-RO',EUR:'de-DE',USD:'en-US',GBP:'en-GB',CHF:'de-CH',PLN:'pl-PL',CZK:'cs-CZ',HUF:'hu-HU',SEK:'sv-SE',DKK:'da-DK',NOK:'nb-NO'};` +
+    `G.rule=function(cc){cc=String(cc||G.cc).toUpperCase();var r=G.rules[cc]||G.rules._;return {cc:G.rules[cc]?cc:'_',name:r[0],cur:r[1],fx:r[2],ship:r[3]};};` +
+    `G.local=function(ron,cc){var r=G.rule(cc);return r.cur==='RON'?Math.round(Number(ron||0)*100)/100:Math.ceil(Number(ron||0)*r.fx-1e-9);};` +
+    `G.money=function(n,cur){if(cur==='RON')return (Number.isInteger(n)?String(n):Number(n).toFixed(2).replace('.',','))+' RON';try{return new Intl.NumberFormat(L[cur]||'en-GB',{style:'currency',currency:cur,maximumFractionDigits:0,minimumFractionDigits:0}).format(n);}catch(e){return n+' '+cur;}};` +
+    `G.fmt=function(ron,cc){var r=G.rule(cc);return G.money(G.local(ron,cc),r.cur);};` +
+    `window.BYM_FMT=function(ron){return G.fmt(ron);};})(window.BYM_GEO);`;
+}
+__name(geoClientScript, "geoClientScript");
+async function geoInjectHtml(request, res) {
+  const ct = res.headers.get("content-type") || "";
+  if (res.status !== 200 || !/text\/html/i.test(ct) || typeof HTMLRewriter === "undefined") return res;
+  let js;
+  try { js = await geoClientScript(request); } catch { return res; }
+  const out = new HTMLRewriter().on("head", { element(el) { el.prepend(`<script>${js}</script>`, { html: true }); } }).transform(res);
+  const h = new Headers(out.headers);
+  h.delete("etag"); h.set("Cache-Control", "private, no-cache");
+  return new Response(out.body, { status: out.status, statusText: out.statusText, headers: h });
+}
+__name(geoInjectHtml, "geoInjectHtml");
+async function geoApi(request) {
+  const js = await geoClientScript(request);
+  return new Response(js, { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "private, no-cache" } });
+}
+__name(geoApi, "geoApi");
+
 // [[path]].js
 var ROUTES = {
   "assistant-chat": assistantChat,
@@ -1909,14 +2026,19 @@ var ROUTES = {
   "geocode": geocodeAddress,
   "order-submit": orderSubmit,
   "goatify-mail": goatifyMail,
-  "cron-charge-installments": cronChargeInstallments
+  "cron-charge-installments": cronChargeInstallments,
+  "geo": geoApi
 };
 async function onRequest(context) {
   const { request, env: env2 } = context;
   const url = new URL(request.url);
   CURRENT_ORIGIN = url.origin;
   const m = /^\/(?:\.netlify\/functions|api)\/([a-z0-9-]+)\/?$/.exec(url.pathname);
-  if (!m) return env2.ASSETS.fetch(request);
+  if (!m) {
+    setEnv(env2);
+    const res = await env2.ASSETS.fetch(request);
+    try { return await geoInjectHtml(request, res); } catch { return res; }
+  }
   const handler = ROUTES[m[1]];
   if (!handler) return json(404, { error: "Unknown function" });
   setEnv(env2);
