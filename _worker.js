@@ -1856,16 +1856,33 @@ async function forwardToGoatify(o, { pay, totals, sourceUrl, placedAt, notes } =
 // the parcel leaves / cash is collected. Adds the catalogue id (sku) and main photo to each line.
 async function goatifyItemCheck(rawItems) {
   const cat = await loadCatalog().catch(() => []);
+  const D = await loadCatalogData().catch(() => null);
+  const base = (env("BYMARCCC_SITE_URL", "") || CURRENT_ORIGIN || "https://bymarccc.com").replace(/\/$/, "");
+  // The bag sends the catalogue's own id ("shopify:white-baby-top:black:S-M:PARIS"); the server items are keyed by the
+  // catalogue key ("w-white-baby-top") — accept both, then fall back to the product title.
   const byId = new Map(cat.map((p) => [String(p.id), p]));
+  if (D && D.products) for (const [key, raw] of Object.entries(D.products)) if (raw && raw.id && byId.has(key)) byId.set(String(raw.id), byId.get(key));
+  const byTitle = new Map(cat.map((p) => [String(p.title || "").trim().toLowerCase(), p]));
+  const slug = (v) => String(v || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const find = (it, name) => { const parts = String(it.id || "").split(":"); return byId.get(parts[0]) || byId.get(parts.slice(0, 2).join(":")) || byTitle.get(name.toLowerCase()); };
+  // Photo of the chosen print/design (designImages: design → gallery index), else the main photo.
+  const photo = (p, it) => {
+    const imgs = p.images || [], di = p.designImages || {};
+    const cands = [...String(it.id || "").split(":").slice(1), ...String(it.variant || "").split("·")].reverse();
+    for (const c of cands) { const k = slug(c); if (k && Object.prototype.hasOwnProperty.call(di, k) && imgs[di[k]]) return imgs[di[k]]; }
+    return imgs[0];
+  };
+  const abs = (u) => typeof u === "string" && u ? (/^https:\/\//i.test(u) ? u : /^\/?assets\//.test(u) ? `${base}/${u.replace(/^\//, "")}` : "") : "";
   const extras = [], warn = [];
   for (const it of (Array.isArray(rawItems) ? rawItems : []).slice(0, 50)) {
     const name = String(it?.name ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, 160);
     if (!name) continue;   // same filter as cleanOrder(), so indexes line up
-    const p = byId.get(String(it.id || "").split(":")[0]);
+    const p = find(it, name);
     const price = Math.max(0, Math.round(Number(it.price || 0) * 100) / 100);
     const ok = p && (p.price === price || (p.variants || []).some((v) => v.price === price));
     if (!ok) warn.push(name + (p ? ` (catalogue ${p.price} RON, bag ${price} RON)` : " (not in catalogue)"));
-    extras.push({ ...(p ? { sku: String(p.id).slice(0, 64) } : {}), ...(p && p.images && p.images[0] ? { image: p.images[0] } : {}), ...(p && p.url ? { url: p.url } : {}) });
+    const image = (p && photo(p, it)) || abs(it.image);
+    extras.push({ ...(p ? { sku: String(p.id).slice(0, 64) } : {}), ...(image ? { image } : {}), ...(p && p.url ? { url: p.url } : {}) });
   }
   return { extras, notes: warn.length ? "⚠ Price not verified against the catalogue: " + warn.join("; ") : "" };
 }
