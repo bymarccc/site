@@ -1116,6 +1116,9 @@
   @media (min-width: 900px) { .shop__grid { grid-template-columns: repeat(5, 1fr); } }
   .shop__card { display: block; color: inherit; text-decoration: none; }
   .shop__img { position: relative; display: block; aspect-ratio: 1212 / 1816; background: #f2f2f0; overflow: hidden; touch-action: pan-y pinch-zoom; }
+  /* Diesel-style vertical label on the photo */
+  .shop__newtag { position: absolute; z-index: 2; top: 14px; left: 8px; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 11px; font-weight: 500; letter-spacing: .08em; line-height: 1; color: #111; pointer-events: none; white-space: nowrap; }
+  @media (min-width: 900px) { .shop__newtag { top: 18px; left: 12px; font-size: 12px; } }
   .shop__soldout { position: absolute; z-index: 2; top: 10px; left: 10px; background: #111; color: #fff; font-size: 10px; font-weight: 600; letter-spacing: .1em; padding: 5px 9px; border-radius: 3px; }
   .shop__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; opacity: 0; transition: opacity .35s cubic-bezier(.22,1,.36,1); }
   .shop__img img.is-on { opacity: 1; }
@@ -1196,7 +1199,7 @@
   .salebar__note { margin: 0 0 14px; padding: 0 clamp(16px, 4vw, 48px); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #111; text-align: center; }
   /* sale grid: same cards/ratio as the shop grid; one photo, so a thin ADD TO BAG sits on the photo instead of the dashes */
   .shop__grid > .salegrid__note { grid-column: 1 / -1; margin: 0; padding: 0; }
-  .salegrid__card { display: block; color: inherit; }
+  .salegrid__card { display: block; color: inherit; text-decoration: none; }
   .salegrid__card .shop__img img { opacity: 1; }
   .salegrid__add { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 30px; border: 0; border-radius: 6px; background: rgba(17,17,17,.9); color: #fff; font: inherit; font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: background-color .2s, transform .12s; }
   .salegrid__add:active { transform: scale(.98); }
@@ -1254,10 +1257,13 @@
   const fmt = (n, c) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',')) + ' ' + c;
   const hover = matchMedia('(hover: hover)').matches;
   const genderOf = p => p.genders || [p.gender || 'men'];
+  // products marked NEW COLLECTION on their homepage card (vertical label, Diesel-style)
+  const NEW_COLLECTION = new Set(['art-jeans', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag']);
+  const newTag = key => NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
   function card(key, p) {
     const imgs = (p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
     const a = document.createElement('a'); a.className = 'shop__card'; a.href = 'bymarccc-product.html?p=' + key;
-    a.innerHTML = `<span class="shop__img">${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
+    a.innerHTML = `<span class="shop__img">${newTag(key)}${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
       <span class="shop__meta"><span class="shop__name">${p.title}</span>${typeof p.price === 'number' ? (typeof p.salePrice === 'number' ? `<span class="shop__price"><span class="shop__price--old">${fmt(p.price, p.currency)}</span><span class="shop__price--sale">${fmt(p.salePrice, p.currency)}</span></span>` : `<span class="shop__price">${fmt(p.price, p.currency)}</span>`) : ''}</span>`;
     if (imgs.length > 1) {
       const pics = [...a.querySelectorAll('img')], bars = [...a.querySelectorAll('.shop__bars i')]; let i = 0;
@@ -1360,7 +1366,7 @@
     const words = p.title.split(' '); const name = words.length > 1 ? `${words.slice(0, -1).join(' ')}<br>${words[words.length - 1]}` : p.title;
     const card = document.createElement(link ? 'a' : 'article'); card.className = 'sales__card salegrid__card';
     if (link) card.href = 'bymarccc-product.html?p=' + key;   // MEN → DENIM rails: the card opens the product page (no quick add)
-    card.innerHTML = `<span class="shop__img"><img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on"><button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
+    card.innerHTML = `<span class="shop__img">${newTag(key)}<img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on"><button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
       <span class="salerail__meta"><span class="salerail__name">${name}</span>${typeof p.price === 'number' ? `<span class="salerail__price">${onSale ? `<s>${fmt(p.price, p.currency)}</s><b>${fmt(p.salePrice, p.currency)}</b>` : `<span class="salerail__price--plain">${fmt(p.price, p.currency)}</span>`}</span>` : ''}</span>`;
     const add = card.querySelector('.salegrid__add');
     if (link) { add.remove(); return card; }
