@@ -1978,9 +1978,9 @@ function geoCountryCode(v) {
 }
 __name(geoCountryCode, "geoCountryCode");
 // what the browser gets: visitor's country + every supported country's rule, and a tiny formatter
-async function geoClientScript(request) {
+async function geoClientScript(request, ccOverride) {
   const rates = await geoRates();
-  const visitor = String((request.cf && request.cf.country) || request.headers.get("cf-ipcountry") || "RO").toUpperCase();
+  const visitor = String(ccOverride || (request.cf && request.cf.country) || request.headers.get("cf-ipcountry") || "RO").toUpperCase();
   const rules = {};
   for (const k in GEO_COUNTRIES) { const g = geoRule(k, rates); rules[k] = [GEO_COUNTRIES[k][0], g.cur, +g.fx.toFixed(6), g.ship]; }
   const w = geoRule("ZZ", rates); rules._ = ["", w.cur, +w.fx.toFixed(6), w.ship];
@@ -1993,20 +1993,46 @@ async function geoClientScript(request) {
     `window.BYM_FMT=function(ron){return G.fmt(ron);};})(window.BYM_GEO);`;
 }
 __name(geoClientScript, "geoClientScript");
-async function geoInjectHtml(request, res) {
+async function geoInjectHtml(request, res, L) {
   const ct = res.headers.get("content-type") || "";
   if (res.status !== 200 || !/text\/html/i.test(ct) || typeof HTMLRewriter === "undefined") return res;
+  L = L || { lang: "en", prefixed: false, path: new URL(request.url).pathname };
+  const url = new URL(request.url);
   let js;
-  try { js = await geoClientScript(request); } catch { return res; }
+  try { js = await geoClientScript(request, L.prefixed ? I18N_PRICE_CC[L.lang] : null); } catch { return res; }
   let seo = "";
-  try { seo = await seoHeadFor(new URL(request.url)); } catch {}
+  try { seo = await seoHeadFor(url, L.lang, L.path, L.prefixed); } catch {}
   const titleM = /<script>window\.BYM_SEO_TITLE=(".*?");<\/script>/.exec(seo);
-  const seoTitle = titleM ? JSON.parse(titleM[1]) : "";
-  let rw = new HTMLRewriter().on("head", { element(el) { el.prepend(`<script>${js}</script>`, { html: true }); if (seo) el.append(seo, { html: true }); } });
+  let seoTitle = titleM ? JSON.parse(titleM[1]) : "";
+  const page = L.path.replace(/\.html$/, "");
+  const isHome = page === "/" || page === "/index";
+  const D = L.lang !== "en" ? await i18nData(L.lang) : null;
+  const v = I18N_VERSION;
+  let head = `<script>${js}</script><script>window.BYM_LANG=${JSON.stringify(D ? L.lang : "en")};${page === "/checkout" ? "window.BYM_I18N_CATALOG_ONLY=true;" : ""}</script>`;
+  if (D) head += `<script src="/assets/i18n-${L.lang}.js?v=${v}"></script>`;
+  head += `<script src="/assets/i18n.js?v=${v}"></script>`;
+  let rw = new HTMLRewriter()
+    .on("html", { element(el) { if (D) el.setAttribute("lang", L.lang); } })
+    .on("head", { element(el) { el.prepend(head, { html: true }); if (seo) el.append(seo, { html: true }); } });
+  if (isHome) {
+    const canon = i18nUrl(L.prefixed ? L.lang : "en", "/");
+    if (D && L.prefixed) {
+      seoTitle = (D.seo && D.seo.homeTitle) || seoTitle;
+      const desc = (D.seo && (D.seo.homeDesc || D.seo.ogDesc)) || "";
+      rw = rw.on('meta[name="description"]', { element(el) { if (desc) el.setAttribute("content", desc); } })
+        .on('meta[property="og:title"]', { element(el) { if (seoTitle) el.setAttribute("content", seoTitle); } })
+        .on('meta[property="og:description"]', { element(el) { if (desc) el.setAttribute("content", (D.seo && D.seo.ogDesc) || desc); } })
+        .on('meta[property="og:url"]', { element(el) { el.setAttribute("content", canon); } });
+    }
+    rw = rw.on('link[rel="canonical"]', { element(el) { el.setAttribute("href", canon); } });
+  }
   if (seoTitle) rw = rw.on("title", { element(el) { el.setInnerContent(seoTitle); } });
   const out = rw.transform(res);
   const h = new Headers(out.headers);
   h.delete("etag"); h.set("Cache-Control", "private, no-cache");
+  if (L.prefixed) h.append("Set-Cookie", `bym_lang=${L.lang}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`);
+  h.set("Content-Language", L.lang);
+  h.append("Vary", "Cookie");
   return new Response(out.body, { status: out.status, statusText: out.statusText, headers: h });
 }
 __name(geoInjectHtml, "geoInjectHtml");
@@ -2029,50 +2055,68 @@ function seoProductKeys(D) {
 }
 __name(seoProductKeys, "seoProductKeys");
 async function seoRobots() {
-  const body = ["User-agent: *", "Allow: /", "Disallow: /api/", "Disallow: /checkout", "Disallow: /members", "Disallow: /order", "", `Sitemap: ${SEO_BASE}/sitemap.xml`, ""].join("\n");
+  const body = ["User-agent: *", "Allow: /", "Disallow: /api/", "Disallow: /checkout", "Disallow: /members", "Disallow: /order", ...I18N_LANGS.flatMap((l) => [`Disallow: /${l}/api/`, `Disallow: /${l}/checkout`, `Disallow: /${l}/members`, `Disallow: /${l}/order`]), "", `Sitemap: ${SEO_BASE}/sitemap.xml`, ""].join("\n");
   return new Response(body, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
 }
 __name(seoRobots, "seoRobots");
 async function seoSitemap() {
   const D = await loadCatalogData();
   const today = new Date().toISOString().slice(0, 10);
-  const urls = [`<url><loc>${SEO_BASE}/</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`];
-  for (const k of seoProductKeys(D)) {
-    const p = D.products[k];
-    const imgs = p.gallery.slice(0, 10).map((g) => `<image:image><image:loc>${seoEsc(SEO_BASE + "/" + String(g.src).replace(/^\//, ""))}</image:loc><image:title>${seoEsc(p.title)}</image:title></image:image>`).join("");
-    urls.push(`<url><loc>${seoEsc(`${SEO_BASE}/bymarccc-product?p=${encodeURIComponent(k)}`)}</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>${imgs}</url>`);
+  const urls = [];
+  const alt = (pq) => ["en", ...I18N_LANGS].map((l) => `<xhtml:link rel="alternate" hreflang="${l}" href="${seoEsc(i18nUrl(l, pq))}"/>`).join("") + `<xhtml:link rel="alternate" hreflang="x-default" href="${seoEsc(i18nUrl("en", pq))}"/>`;
+  for (const l of ["en", ...I18N_LANGS]) {
+    urls.push(`<url><loc>${seoEsc(i18nUrl(l, "/"))}</loc>${alt("/")}<lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`);
+    const T = l !== "en" ? await i18nData(l) : null;
+    for (const k of seoProductKeys(D)) {
+      const p = D.products[k];
+      const pq = `/bymarccc-product?p=${encodeURIComponent(k)}`;
+      const ttl = i18nTr(T, p.title) || p.title;
+      const imgs = p.gallery.slice(0, 10).map((g) => `<image:image><image:loc>${seoEsc(SEO_BASE + "/" + String(g.src).replace(/^\//, ""))}</image:loc><image:title>${seoEsc(ttl)}</image:title></image:image>`).join("");
+      urls.push(`<url><loc>${seoEsc(i18nUrl(l, pq))}</loc>${alt(pq)}<lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>${imgs}</url>`);
+    }
   }
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls.join("\n")}\n</urlset>\n`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>\n`;
   return new Response(xml, { headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
 }
 __name(seoSitemap, "seoSitemap");
-function seoTitleCase(t) { return String(t || "").toLowerCase().replace(/(^|\s|-)([a-zà-ž])/g, (m, a, b) => a + b.toUpperCase()); }
+function seoTitleCase(t) { return String(t || "").toLowerCase().replace(/(^|\s|-)(\p{L})/gu, (m, a, b) => a + b.toUpperCase()); }
 __name(seoTitleCase, "seoTitleCase");
 // extra <head> HTML for one page (empty string = nothing to add)
-async function seoHeadFor(url) {
-  const path = url.pathname.replace(/\.html$/, "");   // Pages serves /x.html as /x
+async function seoHeadFor(url, lang = "en", rawPath = null, prefixed = false) {
+  const path = String(rawPath || url.pathname).replace(/\.html$/, "");   // Pages serves /x.html as /x
   if (SEO_NOINDEX.includes(path)) return `<meta name="robots" content="noindex, follow">`;
+  const L = prefixed ? lang : "en";
+  if (path === "/" || path === "/index") return i18nAlternates("/") + `<meta property="og:locale" content="${I18N_LOCALE[L] || "en_GB"}">`;
   if (path !== "/bymarccc-product") return "";
   const key = (url.searchParams.get("p") || "").toLowerCase();
   const D = await loadCatalogData();
   const p = D && D.products && D.products[key];
   if (!p || !p.title) return `<meta name="robots" content="noindex, follow">`;
-  const name = seoTitleCase(p.title);
-  const gender = p.gender === "women" ? "Women's" : p.gender === "men" ? "Men's" : "";
+  const T = L !== "en" ? await i18nData(L) : null;
+  const tr = (x) => i18nTr(T, x) || x;
+  const name = seoTitleCase(tr(p.title));
+  const gW = (T && T.seo && T.seo.womens) || "Women's", gM = (T && T.seo && T.seo.mens) || "Men's";
+  const gender = p.gender === "women" ? gW : p.gender === "men" ? gM : "";
   const title = `${name}${gender ? " — " + gender : ""} | bymarccc`;
-  const desc = String(p.description || [p.cut, ...(p.details || []).slice(0, 2)].filter(Boolean).join(". ")).replace(/\s+/g, " ").slice(0, 155);
-  const canon = `${SEO_BASE}/bymarccc-product?p=${encodeURIComponent(key)}`;
+  const rawDesc = p.description ? tr(p.description) : [p.cut, ...(p.details || []).slice(0, 2)].filter(Boolean).map(tr).join(". ");
+  const desc = String(rawDesc).replace(/\s+/g, " ").slice(0, 155);
+  const pq = `/bymarccc-product?p=${encodeURIComponent(key)}`;
+  const canon = i18nUrl(L, pq);
   const imgs = (p.gallery || []).slice(0, 6).map((g) => SEO_BASE + "/" + String(g.src).replace(/^\//, ""));
-  const price = typeof p.salePrice === "number" ? p.salePrice : p.price;
+  const ron = typeof p.salePrice === "number" ? p.salePrice : p.price;
+  let price = ron, cur = p.currency || "RON";
+  if (L !== "en" && typeof ron === "number") { const rule = geoRule(I18N_PRICE_CC[L], await geoRates()); price = geoPrice(ron, rule); cur = rule.cur; }
   const ld = {
     "@context": "https://schema.org", "@type": "Product", name, description: desc, image: imgs, sku: p.id || key,
     brand: { "@type": "Brand", name: "bymarccc" },
-    ...(typeof price === "number" ? { offers: { "@type": "Offer", url: canon, priceCurrency: p.currency || "RON", price: String(price), availability: p.soldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock", itemCondition: "https://schema.org/NewCondition", seller: { "@type": "Organization", name: "bymarccc" } } } : {})
+    ...(typeof price === "number" ? { offers: { "@type": "Offer", url: canon, priceCurrency: cur, price: String(price), availability: p.soldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock", itemCondition: "https://schema.org/NewCondition", seller: { "@type": "Organization", name: "bymarccc" } } } : {})
   };
   return [
     `<meta name="description" content="${seoEsc(desc)}">`,
     `<link rel="canonical" href="${seoEsc(canon)}">`,
+    i18nAlternates(pq),
     `<meta property="og:type" content="product">`, `<meta property="og:site_name" content="bymarccc">`,
+    `<meta property="og:locale" content="${I18N_LOCALE[L] || "en_GB"}">`,
     `<meta property="og:title" content="${seoEsc(title)}">`, `<meta property="og:description" content="${seoEsc(desc)}">`,
     `<meta property="og:url" content="${seoEsc(canon)}">`, imgs[0] ? `<meta property="og:image" content="${seoEsc(imgs[0])}">` : "",
     `<meta name="twitter:card" content="summary_large_image">`,
@@ -2081,6 +2125,94 @@ async function seoHeadFor(url) {
   ].filter(Boolean).join("");
 }
 __name(seoHeadFor, "seoHeadFor");
+
+// ---------------------------------------------------------------------------------------------
+// Languages — /hu/, /it/, /bg/ serve the same pages translated (assets/i18n-<lang>.js holds the
+// strings; assets/i18n.js swaps them in the browser). Unprefixed pages stay English, except for
+// visitors who picked a language (cookie bym_lang) or browse from Hungary / Italy / Bulgaria.
+// Prefixed pages price in that country's currency, so Google and Merchant Center see one price.
+// ---------------------------------------------------------------------------------------------
+var I18N_VERSION = "1";
+var I18N_LANGS = ["hu", "it", "bg"];
+var I18N_COUNTRY_LANG = { HU: "hu", IT: "it", SM: "it", VA: "it", BG: "bg" };
+var I18N_PRICE_CC = { hu: "HU", it: "IT", bg: "BG" };
+var I18N_LOCALE = { en: "en_GB", hu: "hu_HU", it: "it_IT", bg: "bg_BG" };
+var I18N_MEM = {};
+async function i18nData(lang) {
+  if (!I18N_LANGS.includes(lang)) return null;
+  const c = I18N_MEM[lang];
+  if (c && Date.now() - c.t < 5 * 6e4) return c.d;
+  try {
+    const r = await ENV.ASSETS.fetch(new Request(`${CURRENT_ORIGIN}/assets/i18n-${lang}.js`));
+    if (r.ok) {
+      const src = await r.text();
+      const a = src.indexOf("/*BEGIN-JSON*/"), b = src.indexOf("/*END-JSON*/");
+      const d = JSON.parse(src.slice(a + 14, b));
+      const map = Object.create(null), up = Object.create(null);
+      for (const k in d.map || {}) { const n = String(k).replace(/\s+/g, " ").trim(); map[n] = d.map[k]; up[n.toUpperCase()] = String(d.map[k]).toUpperCase(); }
+      d._map = map; d._up = up;
+      I18N_MEM[lang] = { t: Date.now(), d };
+      return d;
+    }
+  } catch {}
+  return c ? c.d : null;
+}
+__name(i18nData, "i18nData");
+function i18nTr(D, s) {
+  if (!D || s == null) return null;
+  const n = String(s).replace(/\s+/g, " ").trim();
+  return D._map[n] || D._up[n] || null;
+}
+__name(i18nTr, "i18nTr");
+function i18nUrl(lang, pq) { return SEO_BASE + (lang && lang !== "en" ? "/" + lang : "") + (pq === "/" && lang && lang !== "en" ? "/" : pq); }
+__name(i18nUrl, "i18nUrl");
+function i18nAlternates(pq) {
+  return ["en", ...I18N_LANGS].map((l) => `<link rel="alternate" hreflang="${l}" href="${seoEsc(i18nUrl(l, pq))}">`).join("") + `<link rel="alternate" hreflang="x-default" href="${seoEsc(i18nUrl("en", pq))}">`;
+}
+__name(i18nAlternates, "i18nAlternates");
+function i18nCookie(request) {
+  const m = /(?:^|;\s*)bym_lang=(en|hu|it|bg)\b/.exec(request.headers.get("cookie") || "");
+  return m ? m[1] : null;
+}
+__name(i18nCookie, "i18nCookie");
+
+// Google Merchant Center product feeds — /merchant/<country>.xml (hu, it, bg, gb): localized title,
+// description and link, price + shipping in that country's currency (same rules as the site).
+var MERCHANT_FEEDS = { hu: ["HU", "hu"], it: ["IT", "it"], bg: ["BG", "bg"], gb: ["GB", "en"] };
+async function merchantFeed(feed) {
+  const [cc, lang] = MERCHANT_FEEDS[feed];
+  const D = await loadCatalogData();
+  const T = lang !== "en" ? await i18nData(lang) : null;
+  const tr = (x) => i18nTr(T, x) || x;
+  const rule = geoRule(cc, await geoRates());
+  const money = (n) => `${Number(n).toFixed(2)} ${rule.cur}`;
+  const items = [];
+  for (const k of seoProductKeys(D)) {
+    const p = D.products[k];
+    if (typeof p.price !== "number") continue;
+    const imgs = p.gallery.map((g) => SEO_BASE + "/" + String(g.src).replace(/^\//, ""));
+    const desc = String(p.description ? tr(p.description) : [p.cut, ...(p.details || [])].filter(Boolean).map(tr).join(". ")).replace(/\s+/g, " ").slice(0, 4900);
+    const gender = p.gender === "women" ? "female" : p.gender === "men" ? "male" : "unisex";
+    const colour = Array.isArray(p.colours) && p.colours[0] && p.colours[0].name ? tr(p.colours[0].name) : "";
+    const sizes = Array.isArray(p.chart) && !p.noSize ? p.chart.join("/") : "One Size";
+    const sale = typeof p.salePrice === "number" && p.salePrice < p.price;
+    const f = [
+      ["g:id", k], ["g:title", seoTitleCase(tr(p.title)).slice(0, 150)], ["g:description", desc],
+      ["g:link", i18nUrl(lang, `/bymarccc-product?p=${encodeURIComponent(k)}`)],
+      ["g:image_link", imgs[0]], ...imgs.slice(1, 11).map((u) => ["g:additional_image_link", u]),
+      ["g:availability", p.soldOut ? "out_of_stock" : "in_stock"],
+      ["g:price", money(geoPrice(p.price, rule))], ...(sale ? [["g:sale_price", money(geoPrice(p.salePrice, rule))]] : []),
+      ["g:brand", "bymarccc"], ["g:condition", "new"], ["g:identifier_exists", "no"],
+      ["g:google_product_category", "166"], ["g:gender", gender], ["g:age_group", "adult"],
+      ...(colour ? [["g:color", colour]] : []), ["g:size", sizes]
+    ];
+    items.push(`<item>${f.map(([t, v]) => `<${t}>${seoEsc(v)}</${t}>`).join("")}<g:shipping><g:country>${cc}</g:country><g:price>${money(rule.ship)}</g:price></g:shipping></item>`);
+  }
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel><title>bymarccc ${cc}</title><link>${i18nUrl(lang, "/")}</link><description>bymarccc products for ${cc}</description>\n${items.join("\n")}\n</channel></rss>\n`;
+  return new Response(xml, { headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+}
+__name(merchantFeed, "merchantFeed");
+
 
 // [[path]].js
 var ROUTES = {
@@ -2105,13 +2237,34 @@ async function onRequest(context) {
   const { request, env: env2 } = context;
   const url = new URL(request.url);
   CURRENT_ORIGIN = url.origin;
-  const m = /^\/(?:\.netlify\/functions|api)\/([a-z0-9-]+)\/?$/.exec(url.pathname);
+  // /hu/…, /it/…, /bg/… → same files, translated
+  const lm = /^\/(hu|it|bg)(\/.*)?$/.exec(url.pathname);
+  if (lm && !lm[2]) return Response.redirect(`${url.origin}/${lm[1]}/${url.search}`, 301);
+  const path = lm ? lm[2] : url.pathname;
+  const m = /^\/(?:\.netlify\/functions|api)\/([a-z0-9-]+)\/?$/.exec(path);
   if (!m) {
     setEnv(env2);
-    if (url.pathname === "/robots.txt") return seoRobots();
-    if (url.pathname === "/sitemap.xml") return seoSitemap();
-    const res = await env2.ASSETS.fetch(request);
-    try { return await geoInjectHtml(request, res); } catch { return res; }
+    if (path === "/robots.txt") return seoRobots();
+    if (path === "/sitemap.xml") return seoSitemap();
+    const fm = /^\/merchant\/(hu|it|bg|gb)\.xml$/.exec(path);
+    if (fm) return merchantFeed(fm[1]);
+    let L = { lang: "en", prefixed: false, path };
+    if (lm) L = { lang: lm[1], prefixed: true, path };
+    else {
+      const ck = i18nCookie(request);
+      const cc = String((request.cf && request.cf.country) || request.headers.get("cf-ipcountry") || "").toUpperCase();
+      L.lang = ck || I18N_COUNTRY_LANG[cc] || "en";
+    }
+    const areq = lm ? new Request(new URL(path + url.search, url.origin).toString(), request) : request;
+    let res = await env2.ASSETS.fetch(areq);
+    if (lm && res.status >= 300 && res.status < 400 && res.headers.get("location")) {
+      const loc = new URL(res.headers.get("location"), url.origin);
+      if (loc.origin === url.origin && !/^\/(hu|it|bg)(\/|$)/.test(loc.pathname)) {
+        const h = new Headers(res.headers); h.set("location", `/${lm[1]}${loc.pathname}${loc.search}${loc.hash}`);
+        return new Response(res.body, { status: res.status, headers: h });
+      }
+    }
+    try { return await geoInjectHtml(request, res, L); } catch { return res; }
   }
   const handler = ROUTES[m[1]];
   if (!handler) return json(404, { error: "Unknown function" });

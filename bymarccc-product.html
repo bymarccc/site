@@ -875,7 +875,7 @@ body.is-custom-bag-page #gallery { display: none; }
   const sizeLabel = s => PRODUCT.noSize ? 'Made to measure' : SIZE_CHART.label(s);
   const hasPrice = typeof PRODUCT.price === 'number';
   // same title the server puts in <head> for Google (see seoHeadFor in _worker.js)
-  document.title = `${String(PRODUCT.title).toLowerCase().replace(/(^|\s|-)([a-zà-ž])/g, (m, x, y) => x + y.toUpperCase())}${PRODUCT.gender === 'women' ? " — Women's" : PRODUCT.gender === 'men' ? " — Men's" : ''} | bymarccc`;
+  document.title = (window.BYM_T && window.BYM_T.lang !== 'en') ? window.BYM_T.productTitle(PRODUCT.title, PRODUCT.gender) : `${String(PRODUCT.title).toLowerCase().replace(/(^|\s|-)([a-zà-ž])/g, (m, x, y) => x + y.toUpperCase())}${PRODUCT.gender === 'women' ? " — Women's" : PRODUCT.gender === 'men' ? " — Men's" : ''} | bymarccc`;
   window.BYMARCCC = Object.assign(window.BYMARCCC || {}, { product: PRODUCT, catalog: CATALOG });
   const SERVICE = {
     expressRomania: { enabled: true, text: 'Express Romania Shipping', body: 'We ship from Bucharest, so orders within Romania usually arrive faster.' },
