@@ -1446,10 +1446,20 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
         pipOwn = true; sndOn = false; snd.pause(); video.muted = userMuted;
         if (at !== null) { try { video.currentTime = at; } catch {} }
         if (video.paused) video.play().catch(() => {});
-        if (typeof video.webkitSetPresentationMode === 'function' && (!video.webkitSupportsPresentationMode || video.webkitSupportsPresentationMode('picture-in-picture'))) video.webkitSetPresentationMode('picture-in-picture');
-        else if (video.requestPictureInPicture) video.requestPictureInPicture().catch(undo);
       } catch { undo(); return; }
-      clearTimeout(pipT); pipT = setTimeout(undo, 2500);   // Safari refused (e.g. video not loaded yet) → stays the normal mini player, twin keeps the song
+      // Safari can only float a video once it knows its size (metadata) — wait for that (still inside the tap's grace time), then float it
+      const t0 = Date.now(); let tried = 0;
+      const go = () => {
+        if (inPiP()) return;
+        if (video.readyState < 1 && Date.now() - t0 < 5000) { clearTimeout(pipT); pipT = setTimeout(go, 40); return; }
+        tried++;
+        try {
+          if (tried === 1 && typeof video.webkitSetPresentationMode === 'function' && (!video.webkitSupportsPresentationMode || video.webkitSupportsPresentationMode('picture-in-picture'))) video.webkitSetPresentationMode('picture-in-picture');
+          else if (video.requestPictureInPicture) video.requestPictureInPicture().catch(() => {});
+        } catch {}
+        clearTimeout(pipT); pipT = setTimeout(() => { if (inPiP()) return; if (tried < 2 && video.requestPictureInPicture) go(); else undo(); }, tried < 2 ? 350 : 2500);   // refused → stays the normal mini player, twin keeps the song
+      };
+      go();
     };
     pipBtn.addEventListener('click', e => {
       e.stopPropagation();
@@ -1726,6 +1736,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     isOpen() { return !vp.hidden; },
     pause() { if (!video.paused) video.pause(); },
     pip() { if (AUTO_PIP) enterPiP(); },   // iPhone: called right inside the playlist tap
+    // iPhone: the finger touching a song row already starts loading that video, so it can float the moment the tap ends
+    prefetch(t) { if (!AUTO_PIP || !(vp.hidden || vp.dataset.mode !== 'video' || video.paused)) return; const i = list.findIndex(v => v.src === t.video); if (i < 0 || (idx === i && video.getAttribute('src'))) return; load(i); },
     close,
   };
 
