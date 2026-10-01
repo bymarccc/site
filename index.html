@@ -1259,7 +1259,7 @@
   const genderOf = p => p.genders || [p.gender || 'men'];
   // products marked NEW COLLECTION on their homepage card (vertical label, Diesel-style)
   // also the order of the NEW COLLECTION tab (men + women)
-  const NEW_LIST = ['art-jeans', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag'];
+  const NEW_LIST = ['m-burgundy-hoodie', 'art-jeans', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag'];
   const NEW_COLLECTION = new Set(NEW_LIST);
   const newTag = key => NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
   function card(key, p) {
