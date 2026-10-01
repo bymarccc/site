@@ -2405,10 +2405,10 @@ async function contentRender(request, url, L, route) {
 <link rel="icon" href="/assets/img/lockscreen-alien.jpg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 <style>${CONTENT_CSS}</style>${ld.map((x) => `<script type="application/ld+json">${JSON.stringify(x).replace(/</g, "\\u003c")}</script>`).join("")}
 <script>window.BYM_LANG=${JSON.stringify(lang)};</script><script src="/assets/i18n.js?v=${I18N_VERSION}" defer></script></head>
-<body><header class="bh"><a class="logo" href="${base}/">bymarccc</a><nav>${nav.map(([k, n]) => `<a href="${base}/shop/${k}">${esc(n)}</a>`).join("")}<a href="${base}/journal">${esc(U.journal || "Journal")}</a></nav></header>
+<body><!--email_off--><header class="bh"><a class="logo" href="${base}/">bymarccc</a><nav>${nav.map(([k, n]) => `<a href="${base}/shop/${k}">${esc(n)}</a>`).join("")}<a href="${base}/journal">${esc(U.journal || "Journal")}</a></nav></header>
 <main class="wrap${narrow ? " narrow" : ""}">${body}</main>
 <footer class="site-footer"><div class="cols"><a href="${base}/about-us">${esc(U.about || "About us")}</a><a href="${base}/faq">${esc(U.faq || "FAQ")}</a><a href="${base}/delivery-returns">${esc(U.delivery || "Delivery & Returns")}</a><a href="${base}/contact-us">${esc(U.contact || "Contact")}</a><a href="${base}/journal">${esc(U.journal || "Journal")}</a>${Object.keys(C.categories).map((k) => `<a href="${base}/shop/${k}">${esc(C.categories[k].h1)}</a>`).join("")}</div>
-<div class="site-footer__bottom"><p>© ${new Date().getUTCFullYear()} bymarccc. ${esc(U.rights || "All rights reserved.")}</p></div></footer></body></html>`;
+<div class="site-footer__bottom"><p>© ${new Date().getUTCFullYear()} bymarccc. ${esc(U.rights || "All rights reserved.")}</p></div></footer><!--/email_off--></body></html>`;
   const h = new Headers({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-cache", "Content-Language": lang, "Vary": "Cookie, Accept-Language" });
   if (L.prefixed) h.append("Set-Cookie", `bym_lang=${lang}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`);
   return new Response(html, { status: 200, headers: h });
