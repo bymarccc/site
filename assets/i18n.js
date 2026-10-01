@@ -4,7 +4,8 @@
    placeholder / aria-label / title / alt attributes are swapped by exact match; strings with numbers
    go through `patterns`. A MutationObserver catches everything the page renders later. */
 (function () {
-  var LANGS = [['en', 'EN'], ['hu', 'HU'], ['it', 'IT'], ['bg', 'BG']];
+  var LANGS = [['en', 'English'], ['fr', 'Français'], ['de', 'Deutsch'], ['it', 'Italiano'], ['es', 'Español'], ['nl', 'Nederlands'], ['pt', 'Português'], ['pl', 'Polski'], ['ro', 'Română'], ['hu', 'Magyar'], ['cs', 'Čeština'], ['bg', 'Български'], ['el', 'Ελληνικά'], ['sv', 'Svenska']];
+  var PREFIX = new RegExp('^/(' + LANGS.slice(1).map(function (l) { return l[0]; }).join('|') + ')(?=/|$)');
   var lang = String(window.BYM_LANG || 'en');
   var D = window.BYM_I18N && window.BYM_I18N.lang === lang ? window.BYM_I18N : null;
   var catalogOnly = !!window.BYM_I18N_CATALOG_ONLY;
@@ -30,6 +31,10 @@
     if (n in map) return map[n];
     if (n in upper) return upper[n];
     if (catalogOnly) return null;
+    if (/\n/.test(s)) {   // multi-line text (e.g. Delivery & Returns): translate line by line
+      var changed = false, lines = String(s).split('\n').map(function (l) { var x = l.trim() ? tr(l) : null; if (x != null) { changed = true; return x; } return l; });
+      if (changed) return lines.join('\n');
+    }
     for (var i = 0; i < pats.length; i++) {
       var m = pats[i].re.exec(n);
       if (m) { var o = pats[i].out, nm = pats[i].names; for (var j = 0; j < nm.length; j++) o = o.split('{' + nm[j] + '}').join(m[j + 1]); return o; }
@@ -52,7 +57,7 @@
     var p = node.parentNode;
     if (!p || SKIP[p.nodeName] || (p.closest && p.closest('[data-no-i18n]'))) return;
     var v = node.nodeValue, t = tr(v);
-    if (t != null && t !== norm(v)) { var lead = /^\s*/.exec(v)[0], tail = /\s*$/.exec(v)[0]; node.nodeValue = lead + t + tail; }
+    if (t != null && t !== norm(v) && t !== v) { if (/\n/.test(t)) node.nodeValue = t; else { var lead = /^\s*/.exec(v)[0], tail = /\s*$/.exec(v)[0]; node.nodeValue = lead + t + tail; } }
   }
   function doEl(el) {
     if (catalogOnly) return;
@@ -88,7 +93,7 @@
 
   // ---- language switcher (homepage footer) ----
   function langUrl(to) {
-    var path = location.pathname.replace(/^\/(hu|it|bg)(?=\/|$)/, '') || '/';
+    var path = location.pathname.replace(PREFIX, '') || '/';
     return (to === 'en' ? '' : '/' + to) + path + location.search;
   }
   T.go = function (to) {
@@ -98,18 +103,12 @@
   function mountSwitcher() {
     var host = document.querySelector('.site-footer__bottom');
     if (!host || host.querySelector('.bym-lang')) return;
-    var box = document.createElement('div');
-    box.className = 'bym-lang'; box.setAttribute('data-no-i18n', '');
-    box.setAttribute('style', 'display:flex;gap:10px;align-items:center;font:500 11px/1 inherit;letter-spacing:.14em');
-    LANGS.forEach(function (L) {
-      var a = document.createElement('a');
-      a.href = langUrl(L[0]); a.textContent = L[1]; a.setAttribute('hreflang', L[0]);
-      a.setAttribute('style', 'color:inherit;text-decoration:none;opacity:' + (L[0] === lang ? '1;font-weight:700' : '.55'));
-      if (L[0] === lang) a.setAttribute('aria-current', 'true');
-      a.addEventListener('click', function (e) { e.preventDefault(); T.go(L[0]); });
-      box.appendChild(a);
-    });
-    host.appendChild(box);
+    var sel = document.createElement('select');
+    sel.className = 'bym-lang'; sel.setAttribute('data-no-i18n', ''); sel.setAttribute('aria-label', 'Language');
+    sel.setAttribute('style', 'font:inherit;font-size:12px;letter-spacing:.06em;color:inherit;background:transparent;border:1px solid currentColor;border-radius:999px;padding:6px 12px;opacity:.8;cursor:pointer');
+    LANGS.forEach(function (L) { var o = document.createElement('option'); o.value = L[0]; o.textContent = L[1]; if (L[0] === lang) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener('change', function () { T.go(sel.value); });
+    host.appendChild(sel);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountSwitcher); else mountSwitcher();
 })();

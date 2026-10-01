@@ -1914,7 +1914,7 @@ __name(orderRecommendations, "orderRecommendations");
 //   Bulgaria (euro since 2026): EUR, +20%, €15 shipping
 // Exchange rates: ECB via frankfurter.dev, cached 6h; fallback below if the fetch fails.
 // ---------------------------------------------------------------------------------------------
-var GEO_FALLBACK_RATES = { RON: 1, EUR: 0.18944, USD: 0.21511, GBP: 0.1619, CHF: 0.17955, PLN: 0.82765, CZK: 4.6298, HUF: 69.372, SEK: 2.1465, DKK: 1.4161, NOK: 2.0651 };   // ECB 30 Sep 2026
+var GEO_FALLBACK_RATES = { RON: 1, EUR: 0.18944, USD: 0.21511, GBP: 0.1619, CHF: 0.17955, PLN: 0.82765, CZK: 4.6298, HUF: 69.372, SEK: 2.1465, DKK: 1.4161, NOK: 2.0651, CAD: 0.2989, AUD: 0.3268 };   // ECB 30 Sep 2026
 var GEO_COUNTRIES = {
   RO: ["Romania", "RON"], BG: ["Bulgaria", "EUR"],
   AT: ["Austria", "EUR"], BE: ["Belgium", "EUR"], HR: ["Croatia", "EUR"], CY: ["Cyprus", "EUR"], EE: ["Estonia", "EUR"], FI: ["Finland", "EUR"],
@@ -1925,7 +1925,7 @@ var GEO_COUNTRIES = {
   MD: ["Moldova", "EUR"], IS: ["Iceland", "EUR"],
   CH: ["Switzerland", "CHF"], LI: ["Liechtenstein", "CHF"], PL: ["Poland", "PLN"], CZ: ["Czechia", "CZK"], HU: ["Hungary", "HUF"],
   SE: ["Sweden", "SEK"], DK: ["Denmark", "DKK"], NO: ["Norway", "NOK"],
-  GB: ["United Kingdom", "GBP"], US: ["United States", "USD"]
+  GB: ["United Kingdom", "GBP"], US: ["United States", "USD"], CA: ["Canada", "CAD"], AU: ["Australia", "AUD"]
 };
 var GEO_RATES_MEM = null;
 async function geoRates() {
@@ -1937,7 +1937,7 @@ async function geoRates() {
     const cache = typeof caches !== "undefined" && caches.default;
     let hit = cache ? await cache.match(ck) : null;
     if (!hit) {
-      const res = await fetch("https://api.frankfurter.dev/v1/latest?base=RON&symbols=EUR,USD,GBP,CHF,PLN,CZK,HUF,SEK,DKK,NOK", { cf: { cacheTtl: 21600 } });
+      const res = await fetch("https://api.frankfurter.dev/v1/latest?base=RON&symbols=EUR,USD,GBP,CHF,PLN,CZK,HUF,SEK,DKK,NOK,CAD,AUD", { cf: { cacheTtl: 21600 } });
       if (res.ok) {
         const d = await res.json();
         if (d && d.rates && d.rates.EUR) {
@@ -1961,6 +1961,7 @@ function geoRule(cc, rates) {
   let cur, mk, ship;
   if (cc === "US" || !row) { cur = "USD"; mk = 1.4; ship = 30; }
   else if (cc === "GB") { cur = "GBP"; mk = 1.4; ship = 25; }
+  else if (cc === "CA" || cc === "AU") { cur = row[1]; mk = 1.4; ship = Math.ceil(30 * (r[cur] || 1) / (r.USD || 1)); }
   else if (cc === "BG") { cur = "EUR"; mk = 1.2; ship = 15; }
   else { cur = row[1]; mk = 1.3; ship = cur === "EUR" ? 15 : Math.ceil(15 * r[cur] / r.EUR); }
   return { cc: row ? cc : "US", cur, fx: (r[cur] || 1) * mk, ship };
@@ -1985,7 +1986,7 @@ async function geoClientScript(request, ccOverride) {
   for (const k in GEO_COUNTRIES) { const g = geoRule(k, rates); rules[k] = [GEO_COUNTRIES[k][0], g.cur, +g.fx.toFixed(6), g.ship]; }
   const w = geoRule("ZZ", rates); rules._ = ["", w.cur, +w.fx.toFixed(6), w.ship];
   const data = { cc: visitor, rules };
-  return `window.BYM_GEO=${JSON.stringify(data)};(function(G){var L={RON:'ro-RO',EUR:'de-DE',USD:'en-US',GBP:'en-GB',CHF:'de-CH',PLN:'pl-PL',CZK:'cs-CZ',HUF:'hu-HU',SEK:'sv-SE',DKK:'da-DK',NOK:'nb-NO'};` +
+  return `window.BYM_GEO=${JSON.stringify(data)};(function(G){var L={RON:'ro-RO',EUR:'de-DE',USD:'en-US',GBP:'en-GB',CHF:'de-CH',PLN:'pl-PL',CZK:'cs-CZ',HUF:'hu-HU',SEK:'sv-SE',DKK:'da-DK',NOK:'nb-NO',CAD:'en-US',AUD:'en-US'};` +
     `G.rule=function(cc){cc=String(cc||G.cc).toUpperCase();var r=G.rules[cc]||G.rules._;return {cc:G.rules[cc]?cc:'_',name:r[0],cur:r[1],fx:r[2],ship:r[3]};};` +
     `G.local=function(ron,cc){var r=G.rule(cc);return r.cur==='RON'?Math.round(Number(ron||0)*100)/100:Math.ceil(Number(ron||0)*r.fx-1e-9);};` +
     `G.money=function(n,cur){if(cur==='RON')return (Number.isInteger(n)?String(n):Number(n).toFixed(2).replace('.',','))+' RON';try{return new Intl.NumberFormat(L[cur]||'en-GB',{style:'currency',currency:cur,maximumFractionDigits:0,minimumFractionDigits:0}).format(n);}catch(e){return n+' '+cur;}};` +
@@ -1999,9 +2000,9 @@ async function geoInjectHtml(request, res, L) {
   L = L || { lang: "en", prefixed: false, path: new URL(request.url).pathname };
   const url = new URL(request.url);
   let js;
-  try { js = await geoClientScript(request, L.prefixed ? I18N_PRICE_CC[L.lang] : null); } catch { return res; }
+  try { js = await geoClientScript(request, L.cc || null); } catch { return res; }
   let seo = "";
-  try { seo = await seoHeadFor(url, L.lang, L.path, L.prefixed); } catch {}
+  try { seo = await seoHeadFor(url, L.lang, L.path, L.prefixed, L.cc); } catch {}
   const titleM = /<script>window\.BYM_SEO_TITLE=(".*?");<\/script>/.exec(seo);
   let seoTitle = titleM ? JSON.parse(titleM[1]) : "";
   const page = L.path.replace(/\.html$/, "");
@@ -2055,7 +2056,7 @@ function seoProductKeys(D) {
 }
 __name(seoProductKeys, "seoProductKeys");
 async function seoRobots() {
-  const body = ["User-agent: *", "Allow: /", "Disallow: /api/", "Disallow: /checkout", "Disallow: /members", "Disallow: /order", ...I18N_LANGS.flatMap((l) => [`Disallow: /${l}/api/`, `Disallow: /${l}/checkout`, `Disallow: /${l}/members`, `Disallow: /${l}/order`]), "", `Sitemap: ${SEO_BASE}/sitemap.xml`, ""].join("\n");
+  const body = ["User-agent: *", "Allow: /", "Disallow: /api/", "Disallow: /checkout", "Disallow: /members", "Disallow: /order", "Disallow: /*/api/", "Disallow: /*/checkout", "Disallow: /*/members", "Disallow: /*/order", "", `Sitemap: ${SEO_BASE}/sitemap.xml`, ""].join("\n");
   return new Response(body, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
 }
 __name(seoRobots, "seoRobots");
@@ -2066,6 +2067,7 @@ async function seoSitemap() {
   const alt = (pq) => ["en", ...I18N_LANGS].map((l) => `<xhtml:link rel="alternate" hreflang="${l}" href="${seoEsc(i18nUrl(l, pq))}"/>`).join("") + `<xhtml:link rel="alternate" hreflang="x-default" href="${seoEsc(i18nUrl("en", pq))}"/>`;
   for (const l of ["en", ...I18N_LANGS]) {
     urls.push(`<url><loc>${seoEsc(i18nUrl(l, "/"))}</loc>${alt("/")}<lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`);
+    for (const cp of await contentSitemapEntries()) urls.push(`<url><loc>${seoEsc(i18nUrl(l, cp))}</loc>${alt(cp)}<lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`);
     const T = l !== "en" ? await i18nData(l) : null;
     for (const k of seoProductKeys(D)) {
       const p = D.products[k];
@@ -2082,7 +2084,7 @@ __name(seoSitemap, "seoSitemap");
 function seoTitleCase(t) { return String(t || "").toLowerCase().replace(/(^|\s|-)(\p{L})/gu, (m, a, b) => a + b.toUpperCase()); }
 __name(seoTitleCase, "seoTitleCase");
 // extra <head> HTML for one page (empty string = nothing to add)
-async function seoHeadFor(url, lang = "en", rawPath = null, prefixed = false) {
+async function seoHeadFor(url, lang = "en", rawPath = null, prefixed = false, cc = null) {
   const path = String(rawPath || url.pathname).replace(/\.html$/, "");   // Pages serves /x.html as /x
   if (SEO_NOINDEX.includes(path)) return `<meta name="robots" content="noindex, follow">`;
   const L = prefixed ? lang : "en";
@@ -2105,7 +2107,7 @@ async function seoHeadFor(url, lang = "en", rawPath = null, prefixed = false) {
   const imgs = (p.gallery || []).slice(0, 6).map((g) => SEO_BASE + "/" + String(g.src).replace(/^\//, ""));
   const ron = typeof p.salePrice === "number" ? p.salePrice : p.price;
   let price = ron, cur = p.currency || "RON";
-  if (L !== "en" && typeof ron === "number") { const rule = geoRule(I18N_PRICE_CC[L], await geoRates()); price = geoPrice(ron, rule); cur = rule.cur; }
+  if (cc && typeof ron === "number") { const rule = geoRule(cc, await geoRates()); price = geoPrice(ron, rule); cur = rule.cur; }
   const ld = {
     "@context": "https://schema.org", "@type": "Product", name, description: desc, image: imgs, sku: p.id || key,
     brand: { "@type": "Brand", name: "bymarccc" },
@@ -2132,11 +2134,19 @@ __name(seoHeadFor, "seoHeadFor");
 // visitors who picked a language (cookie bym_lang) or browse from Hungary / Italy / Bulgaria.
 // Prefixed pages price in that country's currency, so Google and Merchant Center see one price.
 // ---------------------------------------------------------------------------------------------
-var I18N_VERSION = "2";
-var I18N_LANGS = ["hu", "it", "bg"];
-var I18N_COUNTRY_LANG = { HU: "hu", IT: "it", SM: "it", VA: "it", BG: "bg" };
-var I18N_PRICE_CC = { hu: "HU", it: "IT", bg: "BG" };
-var I18N_LOCALE = { en: "en_GB", hu: "hu_HU", it: "it_IT", bg: "bg_BG" };
+var I18N_VERSION = "3";
+var I18N_LANGS = ["fr", "de", "it", "es", "nl", "pt", "pl", "ro", "hu", "cs", "bg", "el", "sv"];
+var I18N_AUTO = ["fr", "de", "it", "es", "nl", "pt", "pl", "hu", "cs", "bg", "el", "sv"];   // picked automatically from the browser language (Romanian visitors keep English unless they choose RO)
+var I18N_RE = new RegExp("^/(" + I18N_LANGS.join("|") + ")(/.*)?$");
+var I18N_PRICE_CC = { fr: "FR", de: "DE", it: "IT", es: "ES", nl: "NL", pt: "PT", pl: "PL", ro: "RO", hu: "HU", cs: "CZ", bg: "BG", el: "GR", sv: "SE" };
+var I18N_LOCALE = { en: "en_GB", fr: "fr_FR", de: "de_DE", it: "it_IT", es: "es_ES", nl: "nl_NL", pt: "pt_PT", pl: "pl_PL", ro: "ro_RO", hu: "hu_HU", cs: "cs_CZ", bg: "bg_BG", el: "el_GR", sv: "sv_SE" };
+// country → feed / landing-page language (others get English)
+var I18N_COUNTRY_LANG = { FR: "fr", MC: "fr", BE: "fr", LU: "fr", DE: "de", AT: "de", CH: "de", LI: "de", IT: "it", SM: "it", ES: "es", AD: "es", NL: "nl", PT: "pt", PL: "pl", RO: "ro", MD: "ro", HU: "hu", CZ: "cs", BG: "bg", GR: "el", CY: "el", SE: "sv" };
+function i18nAcceptLang(request) {
+  const first = String(request.headers.get("accept-language") || "").split(",")[0].trim().slice(0, 2).toLowerCase();
+  return I18N_AUTO.includes(first) ? first : null;
+}
+__name(i18nAcceptLang, "i18nAcceptLang");
 var I18N_MEM = {};
 async function i18nData(lang) {
   if (!I18N_LANGS.includes(lang)) return null;
@@ -2171,16 +2181,16 @@ function i18nAlternates(pq) {
 }
 __name(i18nAlternates, "i18nAlternates");
 function i18nCookie(request) {
-  const m = /(?:^|;\s*)bym_lang=(en|hu|it|bg)\b/.exec(request.headers.get("cookie") || "");
-  return m ? m[1] : null;
+  const m = /(?:^|;\s*)bym_lang=([a-z]{2})\b/.exec(request.headers.get("cookie") || "");
+  return m && (m[1] === "en" || I18N_LANGS.includes(m[1])) ? m[1] : null;
 }
 __name(i18nCookie, "i18nCookie");
 
-// Google Merchant Center product feeds — /merchant/<country>.xml (hu, it, bg, gb): localized title,
-// description and link, price + shipping in that country's currency (same rules as the site).
-var MERCHANT_FEEDS = { hu: ["HU", "hu"], it: ["IT", "it"], bg: ["BG", "bg"], gb: ["GB", "en"] };
-async function merchantFeed(feed) {
-  const [cc, lang] = MERCHANT_FEEDS[feed];
+// Google Merchant Center product feeds — /merchant/<country>.xml for every country we ship to (de, fr, gb,
+// us, ca, au…): description and link in the country's language (English where we have none), price +
+// shipping in its currency (same rules as the site); the landing page link carries ?cc= so it shows that price.
+async function merchantFeed(cc) {
+  const lang = I18N_COUNTRY_LANG[cc] || "en";
   const D = await loadCatalogData();
   const T = lang !== "en" ? await i18nData(lang) : null;
   const tr = (x) => i18nTr(T, x) || x;
@@ -2197,8 +2207,8 @@ async function merchantFeed(feed) {
     const sizes = Array.isArray(p.chart) && !p.noSize ? p.chart.join("/") : "One Size";
     const sale = typeof p.salePrice === "number" && p.salePrice < p.price;
     const f = [
-      ["g:id", k], ["g:title", seoTitleCase(tr(p.title)).slice(0, 150)], ["g:description", desc],
-      ["g:link", i18nUrl(lang, `/bymarccc-product?p=${encodeURIComponent(k)}`)],
+      ["g:id", k], ["g:title", seoTitleCase(p.title).slice(0, 150)], ["g:description", desc],
+      ["g:link", i18nUrl(lang, `/bymarccc-product?p=${encodeURIComponent(k)}&cc=${cc}`)],
       ["g:image_link", imgs[0]], ...imgs.slice(1, 11).map((u) => ["g:additional_image_link", u]),
       ["g:availability", p.soldOut ? "out_of_stock" : "in_stock"],
       ["g:price", money(geoPrice(p.price, rule))], ...(sale ? [["g:sale_price", money(geoPrice(p.salePrice, rule))]] : []),
@@ -2213,6 +2223,168 @@ async function merchantFeed(feed) {
 }
 __name(merchantFeed, "merchantFeed");
 
+
+// ---------------------------------------------------------------------------------------------
+// Content pages, rendered on the server in every language (assets/content/<lang>.json):
+//   /about-us  /delivery-returns  /contact-us  /faq  /journal  /journal/<slug>  /shop/<category>
+// Same black / white / Jost look as the shop; prices in the visitor's (or the page country's) currency.
+// ---------------------------------------------------------------------------------------------
+var CONTENT_PAGES = ["about-us", "delivery-returns", "contact-us", "faq"];
+var CONTENT_MEM = {};
+async function contentData(lang) {
+  const c = CONTENT_MEM[lang];
+  if (c && Date.now() - c.t < 5 * 6e4) return c.d;
+  try {
+    const r = await ENV.ASSETS.fetch(new Request(`${CURRENT_ORIGIN}/assets/content/${lang}.json`));
+    if (r.ok) { const d = await r.json(); CONTENT_MEM[lang] = { t: Date.now(), d }; return d; }
+  } catch {}
+  if (c) return c.d;
+  return lang === "en" ? null : contentData("en");
+}
+__name(contentData, "contentData");
+function contentRoute(path) {
+  const p = String(path).replace(/\.html$/, "").replace(/\/+$/, "") || "/";
+  if (CONTENT_PAGES.includes(p.slice(1))) return { kind: "page", id: p.slice(1), path: p };
+  if (p === "/journal") return { kind: "journal", path: p };
+  let m = /^\/journal\/([a-z0-9-]+)$/.exec(p);
+  if (m) return { kind: "post", id: m[1], path: p };
+  m = /^\/shop\/([a-z0-9-]+)$/.exec(p);
+  if (m) return { kind: "cat", id: m[1], path: p };
+  return null;
+}
+__name(contentRoute, "contentRoute");
+function contentProducts(D, filter) {
+  const keys = seoProductKeys(D);
+  if (filter.keys) return filter.keys.filter((k) => keys.includes(k));
+  return keys.filter((k) => {
+    const p = D.products[k];
+    const g = p.gender || (Array.isArray(p.genders) ? p.genders.slice().sort().join("+") : "") || "?";
+    const gOk = (filter.g || ["*"]).some((x) => x === "*" || x === g || (g === "men+women" && (x === "men" || x === "women")));
+    const cOk = !filter.c || (p.collections || []).some((c) => filter.c.includes(c));
+    return gOk && cOk;
+  });
+}
+__name(contentProducts, "contentProducts");
+var CONTENT_MONEY_LOCALE = { RON: "ro-RO", EUR: "de-DE", USD: "en-US", GBP: "en-GB", CHF: "de-CH", PLN: "pl-PL", CZK: "cs-CZ", HUF: "hu-HU", SEK: "sv-SE", DKK: "da-DK", NOK: "nb-NO", CAD: "en-US", AUD: "en-US" };
+function contentMoney(n, cur) {
+  if (cur === "RON") return `${Number.isInteger(n) ? n : Number(n).toFixed(2).replace(".", ",")} RON`;
+  try { return new Intl.NumberFormat(CONTENT_MONEY_LOCALE[cur] || "en-GB", { style: "currency", currency: cur, maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(n); } catch { return `${n} ${cur}`; }
+}
+__name(contentMoney, "contentMoney");
+var CONTENT_CSS = `*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;background:#fff;color:#111;font-family:"Jost","Helvetica Neue",Helvetica,Arial,sans-serif;font-size:16px;line-height:1.65}
+a{color:inherit}img{max-width:100%;display:block}
+.bh{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px}
+.bh .logo{font-weight:600;letter-spacing:.08em;text-decoration:none;font-size:18px}
+.bh nav{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;letter-spacing:.14em;text-transform:uppercase}.bh nav a{text-decoration:none;opacity:.75}.bh nav a:hover{opacity:1}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 24px 64px}.narrow{max-width:760px}
+.crumbs{font-size:12px;letter-spacing:.06em;color:#777;margin-bottom:18px}.crumbs a{text-decoration:none}
+h1{font-weight:500;font-size:clamp(28px,4vw,42px);line-height:1.15;letter-spacing:-.01em;margin:0 0 18px}
+h2{font-weight:500;font-size:22px;margin:36px 0 10px}h3{font-weight:500;font-size:18px;margin:24px 0 6px}
+.lead{font-size:19px;color:#333}.muted{color:#777;font-size:13px}
+.tbl{width:100%;border-collapse:collapse;margin:12px 0 4px;font-size:15px}.tbl th,.tbl td{border-bottom:1px solid #eee;padding:10px 8px;text-align:left}.tbl th{font-weight:500;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#777}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 16px;margin-top:26px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:600px){.grid{grid-template-columns:repeat(2,1fr);gap:18px 10px}.bh{padding:12px 16px;flex-wrap:wrap;gap:8px}.bh nav{width:100%;flex-wrap:nowrap;overflow-x:auto;gap:16px;white-space:nowrap;scrollbar-width:none}.wrap{padding:22px 16px 48px}}
+.card{text-decoration:none}.card .im{aspect-ratio:2/3;background:#f5f4f1;overflow:hidden}.card img{width:100%;height:100%;object-fit:cover}
+.card .t{font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-top:8px}.card .p{font-size:14px;color:#555}.card s{color:#aaa;margin-right:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:30px 0 0}.chips a{border:1px solid #ddd;border-radius:999px;padding:7px 14px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none}
+.posts{display:grid;gap:28px;margin-top:20px}.post{display:grid;grid-template-columns:200px 1fr;gap:20px;text-decoration:none}.post .im{aspect-ratio:4/5;background:#f5f4f1;overflow:hidden}.post img{width:100%;height:100%;object-fit:cover}
+.post h2{margin:4px 0 8px;font-size:22px}@media(max-width:600px){.post{grid-template-columns:110px 1fr;gap:14px}.post h2{font-size:18px}}
+.hero{aspect-ratio:4/3;overflow:hidden;background:#f5f4f1;margin:8px 0 24px}.hero img{width:100%;height:100%;object-fit:cover;object-position:center 20%}
+details{border-bottom:1px solid #eee;padding:14px 0}summary{cursor:pointer;font-weight:500;font-size:17px;list-style:none}summary::-webkit-details-marker{display:none}summary:after{content:"+";float:right;font-weight:400}details[open] summary:after{content:"–"}details p{margin:10px 0 0;color:#333}
+.btn{display:inline-block;background:#111;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin-top:12px}
+.site-footer{background:#f5f4f1;padding:40px 24px 26px;font-size:14px}.site-footer .cols{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px 22px}.site-footer .cols a{text-decoration:none;opacity:.8}
+.site-footer__bottom{max-width:1100px;margin:22px auto 0;padding-top:16px;border-top:1px solid #e2e0da;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:#777;font-size:12px}`;
+async function contentRender(request, url, L, route) {
+  const lang = L.lang || "en";
+  const C = await contentData(lang), E = await contentData("en");
+  if (!C) return null;
+  const U = Object.assign({}, E && E.ui, C.ui);
+  const base = L.prefixed ? `/${lang}` : "";
+  const canonLang = L.prefixed ? lang : "en";
+  const D = await loadCatalogData();
+  const rates = await geoRates();
+  const cc = L.cc || String((request.cf && request.cf.country) || request.headers.get("cf-ipcountry") || "RO").toUpperCase();
+  const rule = geoRule(cc, rates);
+  const T = lang !== "en" ? await i18nData(lang) : null;
+  const tr = (x) => i18nTr(T, x) || x;
+  const esc = seoEsc;
+  const fix = (html) => String(html || "").replace(/href="\/(?!\/)/g, `href="${base}/`);
+  const img = (p) => p && p.gallery && p.gallery[0] ? "/" + String(p.gallery[0].src).replace(/^\//, "") : "";
+  const card = (k) => {
+    const p = D.products[k]; if (!p) return "";
+    const sale = typeof p.salePrice === "number" && p.salePrice < p.price;
+    const price = (sale ? `<s>${esc(contentMoney(geoPrice(p.price, rule), rule.cur))}</s>` : "") + esc(contentMoney(geoPrice(sale ? p.salePrice : p.price, rule), rule.cur));
+    return `<a class="card" href="${base}/bymarccc-product?p=${encodeURIComponent(k)}"><div class="im"><img loading="lazy" src="${esc(img(p))}" alt="${esc(p.title)}"></div><div class="t">${esc(p.title)}</div><div class="p">${price}</div></a>`;
+  };
+  const dateFmt = (d) => { try { return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : lang, { day: "numeric", month: "long", year: "numeric" }).format(new Date(d + "T12:00:00Z")); } catch { return d; } };
+  const crumb = (items) => `<nav class="crumbs" aria-label="Breadcrumb">${items.map(([n, h]) => h ? `<a href="${h}">${esc(n)}</a>` : esc(n)).join(" / ")}</nav>`;
+  const crumbLd = (items) => ({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: items.map(([n, h], i) => ({ "@type": "ListItem", position: i + 1, name: n, ...(h ? { item: SEO_BASE + h } : {}) })) });
+  let title, desc, body, ld = [], ogImage = SEO_BASE + "/assets/img/lockscreen-alien.jpg", ogType = "website", narrow = true;
+  const home = [U.home || "Home", `${base}/`];
+  if (route.kind === "page") {
+    const pg = C.pages[route.id] || (E && E.pages[route.id]); if (!pg) return null;
+    title = pg.title; desc = pg.description;
+    const items = [home, [pg.h1, null]];
+    let faq = "";
+    if (Array.isArray(pg.faqs) && pg.faqs.length) {
+      faq = pg.faqs.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("");
+      ld.push({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: pg.faqs.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) });
+    }
+    if (route.id === "about-us") ld.push({ "@context": "https://schema.org", "@type": "Organization", name: "bymarccc", url: SEO_BASE + "/", logo: SEO_BASE + "/assets/img/lockscreen-alien.jpg", email: "contact@bymarccc.com", telephone: "+40750257490", address: { "@type": "PostalAddress", addressLocality: "Bucharest", addressCountry: "RO" }, sameAs: ["https://www.instagram.com/bymarccc", "https://www.tiktok.com/@bymarccc", "https://x.com/bymarccc_"] });
+    ld.push(crumbLd(items.map(([n, h]) => [n, h])));
+    body = `${crumb(items)}<h1>${esc(pg.h1)}</h1>${fix(pg.html)}${faq}`;
+  } else if (route.kind === "journal") {
+    const posts = (C.posts || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    title = `${U.journal || "Journal"} — bymarccc`; desc = (U.footerTag || "") + " " + posts.slice(0, 3).map((p) => p.title).join(" · ");
+    desc = desc.slice(0, 158);
+    const items = [home, [U.journal || "Journal", null]];
+    ld.push(crumbLd(items), { "@context": "https://schema.org", "@type": "Blog", name: "bymarccc " + (U.journal || "Journal"), url: i18nUrl(canonLang, "/journal"), blogPost: posts.map((p) => ({ "@type": "BlogPosting", headline: p.title, url: i18nUrl(canonLang, "/journal/" + p.slug), datePublished: p.date })) });
+    body = `${crumb(items)}<h1>${esc(U.journal || "Journal")}</h1><div class="posts">${posts.map((p) => `<a class="post" href="${base}/journal/${p.slug}"><div class="im"><img loading="lazy" src="${esc(img(D.products[(p.products || [])[0]]))}" alt=""></div><div><span class="muted">${esc(dateFmt(p.date))}</span><h2>${esc(p.title)}</h2><p>${esc(p.description)}</p><span class="btn">${esc(U.readMore || "Read the article")}</span></div></a>`).join("")}</div>`;
+  } else if (route.kind === "post") {
+    const p = (C.posts || []).find((x) => x.slug === route.id) || (E && (E.posts || []).find((x) => x.slug === route.id)); if (!p) return null;
+    title = `${p.title} | bymarccc`; desc = p.description; ogType = "article";
+    const hero = img(D.products[(p.products || [])[0]]);
+    if (hero) ogImage = SEO_BASE + hero;
+    const items = [home, [U.journal || "Journal", `${base}/journal`], [p.title, null]];
+    ld.push(crumbLd(items), { "@context": "https://schema.org", "@type": "BlogPosting", headline: p.title, description: p.description, datePublished: p.date, dateModified: p.date, inLanguage: lang, image: hero ? [SEO_BASE + hero] : undefined, author: { "@type": "Organization", name: "bymarccc" }, publisher: { "@type": "Organization", name: "bymarccc", logo: { "@type": "ImageObject", url: SEO_BASE + "/assets/img/lockscreen-alien.jpg" } }, mainEntityOfPage: i18nUrl(canonLang, "/journal/" + p.slug) });
+    const more = (C.posts || []).filter((x) => x.slug !== p.slug).slice(0, 3);
+    body = `${crumb(items)}<span class="muted">${esc(dateFmt(p.date))}</span><h1>${esc(p.title)}</h1>${hero ? `<div class="hero"><img src="${esc(hero)}" alt="${esc(p.title)}"></div>` : ""}${fix(p.html)}` +
+      ((p.products || []).length ? `<h2>${esc(U.shopThePieces || "Shop the pieces")}</h2><div class="grid">${p.products.map(card).join("")}</div>` : "") +
+      (more.length ? `<h2>${esc(U.latestArticles || "From the journal")}</h2><ul>${more.map((x) => `<li><a href="${base}/journal/${x.slug}">${esc(x.title)}</a></li>`).join("")}</ul>` : "");
+  } else if (route.kind === "cat") {
+    const c = C.categories[route.id] || (E && E.categories[route.id]); if (!c) return null;
+    const keys = contentProducts(D, (E && E.categories[route.id] && E.categories[route.id].filter) || c.filter || {});
+    title = `${c.title} | bymarccc`; desc = c.description; narrow = false;
+    if (keys[0]) ogImage = SEO_BASE + img(D.products[keys[0]]);
+    const items = [home, [U.shop || "Shop", null], [c.h1, null]];
+    ld.push(crumbLd(items), { "@context": "https://schema.org", "@type": "CollectionPage", name: c.title, description: c.description, url: i18nUrl(canonLang, route.path), mainEntity: { "@type": "ItemList", numberOfItems: keys.length, itemListElement: keys.map((k, i) => ({ "@type": "ListItem", position: i + 1, url: i18nUrl(canonLang, `/bymarccc-product?p=${encodeURIComponent(k)}`), name: D.products[k].title })) } });
+    const others = Object.keys(C.categories).filter((k) => k !== route.id);
+    body = `${crumb(items)}<h1>${esc(c.h1)}</h1><p class="lead">${esc(c.intro)}</p><div class="grid">${keys.map(card).join("")}</div>` +
+      `<div class="chips">${others.map((k) => `<a href="${base}/shop/${k}">${esc(C.categories[k].h1)}</a>`).join("")}</div>`;
+  }
+  const canon = i18nUrl(canonLang, route.path);
+  const nav = [["women-tops", U.women || "Women"], ["men-jeans", U.men || "Men"], ["custom-bags", U.customize || "Customize"], ["sale", U.sale || "Sale"]];
+  const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)}</title><meta name="description" content="${esc(desc)}"><link rel="canonical" href="${esc(canon)}">${i18nAlternates(route.path)}
+<meta property="og:type" content="${ogType}"><meta property="og:site_name" content="bymarccc"><meta property="og:locale" content="${I18N_LOCALE[canonLang] || "en_GB"}"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(desc)}"><meta property="og:url" content="${esc(canon)}"><meta property="og:image" content="${esc(ogImage)}"><meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/img/lockscreen-alien.jpg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<style>${CONTENT_CSS}</style>${ld.map((x) => `<script type="application/ld+json">${JSON.stringify(x).replace(/</g, "\\u003c")}</script>`).join("")}
+<script>window.BYM_LANG=${JSON.stringify(lang)};</script><script src="/assets/i18n.js?v=${I18N_VERSION}" defer></script></head>
+<body><header class="bh"><a class="logo" href="${base}/">bymarccc</a><nav>${nav.map(([k, n]) => `<a href="${base}/shop/${k}">${esc(n)}</a>`).join("")}<a href="${base}/journal">${esc(U.journal || "Journal")}</a></nav></header>
+<main class="wrap${narrow ? " narrow" : ""}">${body}</main>
+<footer class="site-footer"><div class="cols"><a href="${base}/about-us">${esc(U.about || "About us")}</a><a href="${base}/faq">${esc(U.faq || "FAQ")}</a><a href="${base}/delivery-returns">${esc(U.delivery || "Delivery & Returns")}</a><a href="${base}/contact-us">${esc(U.contact || "Contact")}</a><a href="${base}/journal">${esc(U.journal || "Journal")}</a>${Object.keys(C.categories).map((k) => `<a href="${base}/shop/${k}">${esc(C.categories[k].h1)}</a>`).join("")}</div>
+<div class="site-footer__bottom"><p>© ${new Date().getUTCFullYear()} bymarccc. ${esc(U.rights || "All rights reserved.")}</p></div></footer></body></html>`;
+  const h = new Headers({ "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-cache", "Content-Language": lang, "Vary": "Cookie, Accept-Language" });
+  if (L.prefixed) h.append("Set-Cookie", `bym_lang=${lang}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`);
+  return new Response(html, { status: 200, headers: h });
+}
+__name(contentRender, "contentRender");
+async function contentSitemapEntries() {
+  const E = await contentData("en");
+  if (!E) return [];
+  return [...CONTENT_PAGES.map((p) => "/" + p), "/journal", ...(E.posts || []).map((p) => "/journal/" + p.slug), ...Object.keys(E.categories || {}).map((k) => "/shop/" + k)];
+}
+__name(contentSitemapEntries, "contentSitemapEntries");
 
 // [[path]].js
 var ROUTES = {
@@ -2237,8 +2409,8 @@ async function onRequest(context) {
   const { request, env: env2 } = context;
   const url = new URL(request.url);
   CURRENT_ORIGIN = url.origin;
-  // /hu/…, /it/…, /bg/… → same files, translated
-  const lm = /^\/(hu|it|bg)(\/.*)?$/.exec(url.pathname);
+  // /fr/…, /de/…, /hu/… → same files, translated
+  const lm = I18N_RE.exec(url.pathname);
   if (lm && !lm[2]) return Response.redirect(`${url.origin}/${lm[1]}/${url.search}`, 301);
   const path = lm ? lm[2] : url.pathname;
   const m = /^\/(?:\.netlify\/functions|api)\/([a-z0-9-]+)\/?$/.exec(path);
@@ -2246,20 +2418,19 @@ async function onRequest(context) {
     setEnv(env2);
     if (path === "/robots.txt") return seoRobots();
     if (path === "/sitemap.xml") return seoSitemap();
-    const fm = /^\/merchant\/(hu|it|bg|gb)\.xml$/.exec(path);
-    if (fm) return merchantFeed(fm[1]);
-    let L = { lang: "en", prefixed: false, path };
-    if (lm) L = { lang: lm[1], prefixed: true, path };
-    else {
-      const ck = i18nCookie(request);
-      const cc = String((request.cf && request.cf.country) || request.headers.get("cf-ipcountry") || "").toUpperCase();
-      L.lang = ck || I18N_COUNTRY_LANG[cc] || "en";
-    }
+    const fm = /^\/merchant\/([a-z]{2})\.xml$/.exec(path);
+    if (fm && GEO_COUNTRIES[fm[1].toUpperCase()]) return merchantFeed(fm[1].toUpperCase());
+    const qcc = String(url.searchParams.get("cc") || "").toUpperCase();
+    let L = { lang: "en", prefixed: false, path, cc: GEO_COUNTRIES[qcc] ? qcc : null };
+    if (lm) { L.lang = lm[1]; L.prefixed = true; L.cc = L.cc || I18N_PRICE_CC[lm[1]]; }
+    else L.lang = i18nCookie(request) || i18nAcceptLang(request) || "en";
+    const route = request.method === "GET" || request.method === "HEAD" ? contentRoute(path) : null;
+    if (route) { try { const r = await contentRender(request, url, L, route); if (r) return r; } catch (e) { stylistLog && stylistLog("content-render-failed", { path, error: String(e && e.message || e).slice(0, 300) }); } }
     const areq = lm ? new Request(new URL(path + url.search, url.origin).toString(), request) : request;
     let res = await env2.ASSETS.fetch(areq);
     if (lm && res.status >= 300 && res.status < 400 && res.headers.get("location")) {
       const loc = new URL(res.headers.get("location"), url.origin);
-      if (loc.origin === url.origin && !/^\/(hu|it|bg)(\/|$)/.test(loc.pathname)) {
+      if (loc.origin === url.origin && !I18N_RE.test(loc.pathname)) {
         const h = new Headers(res.headers); h.set("location", `/${lm[1]}${loc.pathname}${loc.search}${loc.hash}`);
         return new Response(res.body, { status: res.status, headers: h });
       }
