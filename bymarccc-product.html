@@ -2315,7 +2315,8 @@ body.pdp .ai-launch{--ai-offset:92px}
   }
   /* draggable launcher — long hold or move drags it; tap opens; position remembered */
   (() => {
-    const KEY = 'bym.aiLaunchPos2';   // v2: stored from the BOTTOM edge, so it stays low when the browser bars hide/show let d = null, moved = false;
+    const KEY = 'bym.aiLaunchPos2';   // v2: stored from the BOTTOM edge, so it stays low when the browser bars hide/show
+    let d = null, moved = false;
     const clamp = (x, y) => [Math.max(8, Math.min(innerWidth - 68, x)), Math.max(8, Math.min(innerHeight - 68, y))];
     const apply = (x, y) => { btn.style.left = x + 'px'; btn.style.bottom = Math.max(0, innerHeight - y - 60) + 'px'; btn.style.top = 'auto'; btn.style.right = 'auto'; };
     try { const p = JSON.parse(localStorage.getItem(KEY) || 'null'); if (p && p.b != null) apply(...clamp(p.x, innerHeight - p.b - 60)); } catch {}

@@ -3008,7 +3008,10 @@
 <script>
 (() => {   // the assistant launcher appears only from the second section on
   const play = document.getElementById('play'); if (!play || !('IntersectionObserver' in window)) return;
-  new IntersectionObserver(([e]) => document.body.classList.toggle('play-in-view', e.isIntersecting && e.intersectionRatio > 0.15), { threshold: [0, 0.15, 0.3] }).observe(play);
+  // shows as soon as section 2 starts coming up (section 1's bottom above the middle of the screen)
+  let raf = 0; const chk = () => { raf = 0; document.body.classList.toggle('play-in-view', play.getBoundingClientRect().bottom > innerHeight * 0.55); };
+  const tick = () => { if (!raf) raf = requestAnimationFrame(chk); };
+  addEventListener('scroll', tick, { passive: true }); addEventListener('resize', tick); chk();
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -3162,7 +3165,8 @@ body.pdp .ai-launch{--ai-offset:92px}
   }
   /* draggable launcher — long hold or move drags it; tap opens; position remembered */
   (() => {
-    const KEY = 'bym.aiLaunchPos2';   // v2: stored from the BOTTOM edge, so it stays low when the browser bars hide/show let d = null, moved = false;
+    const KEY = 'bym.aiLaunchPos2';   // v2: stored from the BOTTOM edge, so it stays low when the browser bars hide/show
+    let d = null, moved = false;
     const clamp = (x, y) => [Math.max(8, Math.min(innerWidth - 68, x)), Math.max(8, Math.min(innerHeight - 68, y))];
     const apply = (x, y) => { btn.style.left = x + 'px'; btn.style.bottom = Math.max(0, innerHeight - y - 60) + 'px'; btn.style.top = 'auto'; btn.style.right = 'auto'; };
     try { const p = JSON.parse(localStorage.getItem(KEY) || 'null'); if (p && p.b != null) apply(...clamp(p.x, innerHeight - p.b - 60)); } catch {}
