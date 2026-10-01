@@ -868,9 +868,9 @@ body.is-custom-bag-page #gallery { display: none; }
   const PRODUCT = Object.assign({ model: MODEL, reviews: REVIEWS, unavailable: [], details: [], collections: [], description: '' }, CATALOG[KEY] || CATALOG.skinny);
   // "Complete the Look" (hanger icon) is only offered on the Zebra Patch pieces that are
   // actually designed to be matched by colour; every other product hides the hanger entirely.
-  const CTL_ALLOWED_KEYS = ['zebra-jacket', 'skinny', 'relaxed', 'w-sporty-top', 'w-sporty-top-ecru', 'w-logo-vest', 'w-white-shoulder-bag'];
+  const CTL_ALLOWED_KEYS = ['zebra-jacket', 'skinny', 'relaxed', 'w-sporty-top', 'w-sporty-top-ecru', 'w-logo-vest', 'w-white-shoulder-bag', 'w-logo-flare-leggings'];
   // Complete the Look for the women's set pieces: the matching leggings
-  const CTL_LOOKS = { 'w-sporty-top': ['w-logo-bag', 'w-logo-flare-leggings', 'w-logo-leggings'], 'w-sporty-top-ecru': ['w-logo-flare-jeans', 'w-white-shoulder-bag'], 'w-logo-vest': ['w-logo-bag', 'w-logo-leggings'], 'w-white-shoulder-bag': ['w-sporty-top-ecru', 'w-logo-flare-jeans'] };
+  const CTL_LOOKS = { 'w-sporty-top': ['w-logo-bag', 'w-logo-flare-leggings', 'w-logo-leggings'], 'w-sporty-top-ecru': ['w-logo-flare-jeans', 'w-white-shoulder-bag'], 'w-logo-vest': ['w-logo-bag', 'w-logo-leggings'], 'w-white-shoulder-bag': ['w-sporty-top-ecru', 'w-logo-flare-jeans'], 'w-logo-flare-leggings': ['w-white-logo-windbreaker'] };
   const COLOURS = PRODUCT.colours && PRODUCT.colours.length ? PRODUCT.colours : [{ id: 'default', name: '', hex: '#111111' }], SIZE_CHART = PRODUCT.chart || ONE_SIZE, GALLERY = PRODUCT.gallery || [];
   const sizeLabel = s => PRODUCT.noSize ? 'Made to measure' : SIZE_CHART.label(s);
   const hasPrice = typeof PRODUCT.price === 'number';
@@ -1173,7 +1173,7 @@ body.is-custom-bag-page #gallery { display: none; }
   }
   state.listeners.add(renderSelection); renderSelection();
   if (PRODUCT.noSize) { sizesEl.hidden = true; sizesEl.previousElementSibling.hidden = true; $('openGuide').hidden = true; }
-  if (SIZE_CHART === ONE_SIZE && COLOURS.length > 1) { sizesEl.hidden = true; sizesEl.previousElementSibling.hidden = true; $('openGuide').hidden = true; }   // colour is the real choice here — no redundant "One size" pill
+  if (SIZE_CHART === ONE_SIZE || SIZE_CHART.category === 'one-size') { sizesEl.hidden = true; sizesEl.previousElementSibling.hidden = true; $('openGuide').hidden = true; }   // colour is the real choice here — no redundant "One size" pill
   if (COLOURS.length > 1) { swatches.hidden = false; swatches.previousElementSibling.hidden = false; }   // real colour choice — show the swatches (was never unhidden before)
   if (PRODUCT.imageColours) { swatches.previousElementSibling.hidden = true; }   // no "COLOUR / name" row — the swatch is the image
   if (COLOURS.length === 1 && COLOURS[0].id === 'default') { swatches.hidden = true; swatches.previousElementSibling.hidden = true; }   // no colour choice to make
