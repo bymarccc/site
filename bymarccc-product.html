@@ -848,7 +848,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=4bd6df2fb4"></script>
+<script src="/assets/catalog.js?v=8be7aab2e6"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -870,7 +870,7 @@ body.is-custom-bag-page #gallery { display: none; }
   // actually designed to be matched by colour; every other product hides the hanger entirely.
   const CTL_ALLOWED_KEYS = ['zebra-jacket', 'skinny', 'relaxed', 'w-sporty-top', 'w-sporty-top-ecru', 'w-logo-vest'];
   // Complete the Look for the women's set pieces: the matching leggings
-  const CTL_LOOKS = { 'w-sporty-top': ['w-logo-flare-leggings', 'w-logo-leggings'], 'w-sporty-top-ecru': ['w-logo-flare-leggings', 'w-logo-leggings'], 'w-logo-vest': ['w-logo-leggings', 'w-logo-flare-leggings'] };
+  const CTL_LOOKS = { 'w-sporty-top': ['w-logo-flare-leggings', 'w-logo-leggings'], 'w-sporty-top-ecru': ['w-logo-flare-jeans', 'w-white-shoulder-bag'], 'w-logo-vest': ['w-logo-leggings', 'w-logo-flare-leggings'] };
   const COLOURS = PRODUCT.colours && PRODUCT.colours.length ? PRODUCT.colours : [{ id: 'default', name: '', hex: '#111111' }], SIZE_CHART = PRODUCT.chart || ONE_SIZE, GALLERY = PRODUCT.gallery || [];
   const sizeLabel = s => PRODUCT.noSize ? 'Made to measure' : SIZE_CHART.label(s);
   const hasPrice = typeof PRODUCT.price === 'number';

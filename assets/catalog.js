@@ -36,7 +36,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
   "collections": [{"key":"denim","label":"DENIM"},{"key":"tops","label":"TOPS"},{"key":"jackets","label":"JACKETS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"},{"key":"new","label":"NEW COLLECTION"}],
   "womenCollections": [{"key":"tops","label":"TOPS"},{"key":"bottoms","label":"BOTTOMS"},{"key":"jackets","label":"JACKETS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"},{"key":"new","label":"NEW COLLECTION"}],
   "customizeCollections": [{"key":"bags","label":"BAGS"}],
-  "womenFeatured": {"tops":["w-sporty-top-ecru","w-sporty-top","w-burgundy-long-sleeve","w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-flare-leggings","w-logo-leggings"],"jackets":["w-white-logo-windbreaker","w-black-logo-windbreaker"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
+  "womenFeatured": {"tops":["w-sporty-top-ecru","w-sporty-top","w-burgundy-long-sleeve","w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-flare-jeans","w-logo-flare-leggings","w-logo-leggings"],"jackets":["w-white-logo-windbreaker","w-black-logo-windbreaker"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
   "tryOnGarments": {"black-baby-top":{"type":"womens_baby_top","label":"women's black baby top: short, fitted, short-sleeve black cotton top with a fine rib, round neck; the hem sits slightly above the belly button","category":"tops","colour":"black","views":{"front":"assets/try-on/black-baby-top/garment.png"},"fitReference":"assets/try-on/black-baby-top/fit-reference.jpg","print":{"placement":"centred on the chest, a little below the neckline","width":0.3}}},
   "products": {
     "skinny": {
@@ -1266,6 +1266,21 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "colours": [{"id":"ecru","name":"Ecru","hex":"#efe9dc"}],
       "chart": ["S","M","L"],
       "gallery": [{"src":"assets/img/gallery/w-sporty-top-ecru-11-a77dd443.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-12-ae91d27a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-13-d1847dc6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-14-21aeb101.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-15-5c0457fb.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-16-118f8abe.webp","w":1024,"h":1534}]
+    },
+    "w-logo-flare-jeans": {
+      "gender": "women",
+      "id": "bymarccc:logo-flare-jeans",
+      "title": "LOGO FLARE JEANS",
+      "price": 250,
+      "currency": "RON",
+      "cut": "Flared",
+      "collections": ["bottoms"],
+      "details": ["Close-fitting flared trousers in soft stretch fabric","Front pintuck seams down each leg","Wide, comfortable waistband","Black alien logo on the front hip","Ecru","All clothing is custom made."],
+      "description": "Ecru flared trousers with front pintuck seams, a wide waistband and a black alien logo on the hip.",
+      "unavailable": [],
+      "colours": [{"id":"ecru","name":"Ecru","hex":"#efe9dc"}],
+      "chart": ["S","M","L"],
+      "gallery": [{"src":"assets/img/gallery/w-logo-flare-jeans-1-452bb0b9.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-logo-flare-jeans-2-d1847dc6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-logo-flare-jeans-3-ae91d27a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-logo-flare-jeans-4-5c0457fb.webp","w":1024,"h":1534}]
     },
     "w-purple-sweatpants": {
       "gender": "women",
