@@ -1249,7 +1249,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=f871bbb598"></script>
+<script src="/assets/catalog.js?v=e78b07399a"></script>
 <script>
 (() => {
   'use strict';
@@ -1258,7 +1258,9 @@
   const hover = matchMedia('(hover: hover)').matches;
   const genderOf = p => p.genders || [p.gender || 'men'];
   // products marked NEW COLLECTION on their homepage card (vertical label, Diesel-style)
-  const NEW_COLLECTION = new Set(['art-jeans', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag']);
+  // also the order of the NEW COLLECTION tab (men + women)
+  const NEW_LIST = ['art-jeans', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag'];
+  const NEW_COLLECTION = new Set(NEW_LIST);
   const newTag = key => NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
   function card(key, p) {
     const imgs = (p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
@@ -1503,6 +1505,8 @@
       grid.innerHTML = '';
       grid.classList.remove('shop__grid--sales');
       let items = Object.entries(CATALOG).filter(([, p]) => genderOf(p).includes(gender) && (p.collections || []).includes(active));
+      if (active === 'new') items = NEW_LIST.filter(k => CATALOG[k] && genderOf(CATALOG[k]).includes(gender)).map(k => [k, CATALOG[k]]);   // NEW COLLECTION tab: every piece with the NEW COLLECTION label
+      if (active === 'jackets' && gender === 'women') items = (WOMEN_FEATURED.jackets || []).map(k => items.find(([x]) => x === k)).filter(Boolean);   // women JACKETS: only the Logo Windbreakers
       if (active === 'sales' && gender === 'women') {
         // Women > Sale shows only these 5 products, in this order, regardless of what else
         // (e.g. unisex accessories also tagged 'sales') would otherwise match the generic filter.
