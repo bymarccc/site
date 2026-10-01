@@ -2060,26 +2060,35 @@ async function seoRobots() {
   return new Response(body, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
 }
 __name(seoRobots, "seoRobots");
+// /sitemap.xml = index of one sitemap per language (small, fast); /sitemap-<lang>.xml = that language's pages
 async function seoSitemap() {
-  const D = await loadCatalogData();
   const today = new Date().toISOString().slice(0, 10);
-  const urls = [];
-  const alt = (pq) => ["en", ...I18N_LANGS].map((l) => `<xhtml:link rel="alternate" hreflang="${l}" href="${seoEsc(i18nUrl(l, pq))}"/>`).join("") + `<xhtml:link rel="alternate" hreflang="x-default" href="${seoEsc(i18nUrl("en", pq))}"/>`;
-  for (const l of ["en", ...I18N_LANGS]) {
-    urls.push(`<url><loc>${seoEsc(i18nUrl(l, "/"))}</loc>${alt("/")}<lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`);
-    for (const cp of await contentSitemapEntries()) urls.push(`<url><loc>${seoEsc(i18nUrl(l, cp))}</loc>${alt(cp)}<lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`);
-    const T = l !== "en" ? await i18nData(l) : null;
-    for (const k of seoProductKeys(D)) {
-      const p = D.products[k];
-      const pq = `/bymarccc-product?p=${encodeURIComponent(k)}`;
-      const ttl = i18nTr(T, p.title) || p.title;
-      const imgs = p.gallery.slice(0, 10).map((g) => `<image:image><image:loc>${seoEsc(SEO_BASE + "/" + String(g.src).replace(/^\//, ""))}</image:loc><image:title>${seoEsc(ttl)}</image:title></image:image>`).join("");
-      urls.push(`<url><loc>${seoEsc(i18nUrl(l, pq))}</loc>${alt(pq)}<lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>${imgs}</url>`);
-    }
-  }
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>\n`;
+  const items = ["en", ...I18N_LANGS].map((l) => `<sitemap><loc>${SEO_BASE}/sitemap-${l}.xml</loc><lastmod>${today}</lastmod></sitemap>`).join("\n");
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${items}\n</sitemapindex>\n`;
   return new Response(xml, { headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
 }
+async function seoSitemapLang(l, request) {
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const ckey = new Request(`${SEO_BASE}/__sitemap-cache/${l}-${I18N_VERSION}`);
+  if (cache) { try { const hit = await cache.match(ckey); if (hit) return hit; } catch {} }
+  const D = await loadCatalogData();
+  const today = new Date().toISOString().slice(0, 10);
+  const langs = ["en", ...I18N_LANGS];
+  const alt = (pq) => langs.map((x) => `<xhtml:link rel="alternate" hreflang="${x}" href="${seoEsc(i18nUrl(x, pq))}"/>`).join("") + `<xhtml:link rel="alternate" hreflang="x-default" href="${seoEsc(i18nUrl("en", pq))}"/>`;
+  const urls = [`<url><loc>${seoEsc(i18nUrl(l, "/"))}</loc>${alt("/")}<lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`];
+  for (const cp of await contentSitemapEntries()) urls.push(`<url><loc>${seoEsc(i18nUrl(l, cp))}</loc>${alt(cp)}<lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`);
+  for (const k of seoProductKeys(D)) {
+    const p = D.products[k];
+    const pq = `/bymarccc-product?p=${encodeURIComponent(k)}`;
+    const imgs = l === "en" ? p.gallery.slice(0, 5).map((g) => `<image:image><image:loc>${seoEsc(SEO_BASE + "/" + String(g.src).replace(/^\//, ""))}</image:loc></image:image>`).join("") : "";
+    urls.push(`<url><loc>${seoEsc(i18nUrl(l, pq))}</loc>${alt(pq)}<lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>${imgs}</url>`);
+  }
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>\n`;
+  const res = new Response(xml, { headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+  if (cache) { try { await cache.put(ckey, res.clone()); } catch {} }
+  return res;
+}
+__name(seoSitemapLang, "seoSitemapLang");
 __name(seoSitemap, "seoSitemap");
 function seoTitleCase(t) { return String(t || "").toLowerCase().replace(/(^|\s|-)(\p{L})/gu, (m, a, b) => a + b.toUpperCase()); }
 __name(seoTitleCase, "seoTitleCase");
@@ -2418,6 +2427,8 @@ async function onRequest(context) {
     setEnv(env2);
     if (path === "/robots.txt") return seoRobots();
     if (path === "/sitemap.xml") return seoSitemap();
+    const sml = /^\/sitemap-([a-z]{2})\.xml$/.exec(path);
+    if (sml && (sml[1] === "en" || I18N_LANGS.includes(sml[1]))) return seoSitemapLang(sml[1], request);
     const fm = /^\/merchant\/([a-z]{2})\.xml$/.exec(path);
     if (fm && GEO_COUNTRIES[fm[1].toUpperCase()]) return merchantFeed(fm[1].toUpperCase());
     const qcc = String(url.searchParams.get("cc") || "").toUpperCase();
