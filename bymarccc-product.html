@@ -961,7 +961,8 @@ body.is-custom-bag-page #gallery { display: none; }
      design is looked up by its own slug, e.g. "NOT FROM PARIS" -> "not-from-paris". */
   const slugifyDesign = s => String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const designImageIndex = dname => { const m = PRODUCT.designImages; const idx = m && m[slugifyDesign(dname)]; return typeof idx === 'number' ? idx : null; };
-  const state = { colour: COLOURS[0].id, size: PRODUCT.noSize ? 'Made to measure' : SIZE_CHART.sizes.length === 1 ? SIZE_CHART.sizes[0].size : null, design: null, listeners: new Set() };
+  const URL_COLOUR = (new URLSearchParams(location.search).get('c') || '').toLowerCase();
+  const state = { colour: (COLOURS.find(c => c.id === URL_COLOUR) || COLOURS[0]).id, size: PRODUCT.noSize ? 'Made to measure' : SIZE_CHART.sizes.length === 1 ? SIZE_CHART.sizes[0].size : null, design: null, listeners: new Set() };
   const emit = () => state.listeners.forEach(f => f(state));
   const setColour = id => { if (state.colour === id) return; state.colour = id; emit(); };
   const setSize = s => { if (state.size === s) return; state.size = s; emit(); };
@@ -1149,6 +1150,7 @@ body.is-custom-bag-page #gallery { display: none; }
     b.addEventListener('click', () => { setColour(c.id); if (PRODUCT.imageColours) goTo(COLOURS.indexOf(c)); });
     swatches.appendChild(b);
   });
+  if (PRODUCT.imageColours && URL_COLOUR && COLOURS.some(c => c.id === URL_COLOUR)) setTimeout(() => goTo(COLOURS.findIndex(c => c.id === URL_COLOUR)), 0);
   SIZE_CHART.sizes.forEach(s => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-size'; b.setAttribute('role', 'radio'); b.dataset.s = s.size; b.textContent = s.size;
     b.addEventListener('click', () => { if (!b.disabled) setSize(s.size); });
@@ -1844,26 +1846,31 @@ body.is-custom-bag-page #gallery { display: none; }
     let looks;
     if (CTL_LOOKS[KEY]) looks = CTL_LOOKS[KEY].filter(k => CATALOG[k]).map(k => ({ key: k, title: CATALOG[k].title, price: CATALOG[k].price, currency: CATALOG[k].currency, image: ((CATALOG[k].gallery || [])[0] || {}).src || '' }));
     else {
-      const jacket = CATALOG['zebra-jacket'], jean = CATALOG['skinny'];
-      if (!jacket || !jean) return;
-      const colourId = state.colour || (jacket.colours[0] && jacket.colours[0].id);
-      looks = [
-        { key: 'zebra-jacket', title: jacket.title, price: jacket.price, currency: jacket.currency, image: ctlImageFor(jacket, colourId) },
-        { key: 'skinny', title: jean.title, price: jean.price, currency: jean.currency, image: ctlImageFor(jean, colourId) },
-      ];
+      // Zebra Patch: jean (cut-out on #f0f0f0) + the jacket in the same colour, with prices.
+      //   Skinny page → green + white pairs · Relaxed page → pink pair · Jacket page → skinny jean in the selected colour
+      const jacket = CATALOG['zebra-jacket'];
+      if (!jacket) return;
+      const cname = id => { const c = (jacket.colours || []).find(x => x.id === id); return c ? c.name : ''; };
+      const jeanRow = (k, id) => { const j = CATALOG[k]; return j && { key: k, colour: id, title: `${cname(id)} ${k === 'relaxed' ? 'Relaxed ' : ''}Zebra Patch Jeans`, price: j.price, currency: j.currency, image: `assets/img/zebra-${k}-${id}-f0.webp` }; };
+      const jacketRow = id => ({ key: 'zebra-jacket', colour: id, title: `${cname(id)} Zebra Patch Jacket`, price: jacket.price, currency: jacket.currency, image: ctlImageFor(jacket, id) });
+      const pairs = KEY === 'skinny' ? [['skinny', 'green'], ['skinny', 'white']] : KEY === 'relaxed' ? [['relaxed', 'pink']] : [['skinny', state.colour || 'green']];
+      looks = [];
+      pairs.forEach(([k, id]) => { const j = jeanRow(k, id); if (KEY === 'zebra-jacket') looks.push(j); else looks.push(j, jacketRow(id)); });
+      looks = looks.filter(Boolean);
     }
     looks.forEach(p => {
+      const href = 'bymarccc-product.html?p=' + p.key + (p.colour ? '&c=' + p.colour : '');
       const row = document.createElement('article'); row.className = 'ctl';
       row.innerHTML = `
-        <a class="ctl__img" href="bymarccc-product.html?p=${p.key}"><img src="${p.image}" alt="${p.title}" loading="lazy" width="600" height="800"></a>
+        <a class="ctl__img" href="${href}"><img src="${p.image}" alt="${p.title}" loading="lazy" width="600" height="800"></a>
         <div class="ctl__body">
-          <a class="ctl__title" href="bymarccc-product.html?p=${p.key}">${p.title}</a>
+          <a class="ctl__title" href="${href}">${p.title}</a>
           <p class="ctl__price">${fmt(p.price, p.currency)}</p>
           <button class="pdp-btn ctl__add" type="button">VIEW PRODUCT</button>
         </div>`;
       row.querySelector('.ctl__add').addEventListener('click', () => {
-        if (window.BYM_NAV) window.BYM_NAV.navigate('bymarccc-product.html?p=' + p.key);
-        else location.href = 'bymarccc-product.html?p=' + p.key;
+        if (window.BYM_NAV) window.BYM_NAV.navigate(href);
+        else location.href = href;
       });
       ctlList.appendChild(row);
     });
