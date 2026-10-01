@@ -2132,7 +2132,7 @@ __name(seoHeadFor, "seoHeadFor");
 // visitors who picked a language (cookie bym_lang) or browse from Hungary / Italy / Bulgaria.
 // Prefixed pages price in that country's currency, so Google and Merchant Center see one price.
 // ---------------------------------------------------------------------------------------------
-var I18N_VERSION = "1";
+var I18N_VERSION = "2";
 var I18N_LANGS = ["hu", "it", "bg"];
 var I18N_COUNTRY_LANG = { HU: "hu", IT: "it", SM: "it", VA: "it", BG: "bg" };
 var I18N_PRICE_CC = { hu: "HU", it: "IT", bg: "BG" };
