@@ -2441,7 +2441,7 @@
       pl.innerHTML = '<svg class="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
       b.append(img, meta, du, pl);
       b.addEventListener('click', () => {
-        if (tab === 'video') { if (t.video && window.BYMARCCC_VP) { audio.pause(); window.BYMARCCC_VP.play(t); markCurrent(); } return; }   // MUSIC VIDEO → floating mini player; the playlist stays open behind it
+        if (tab === 'video') { if (t.video && window.BYMARCCC_VP) { audio.pause(); window.BYMARCCC_VP.play(t); window.BYMARCCC_VP.pip?.(); markCurrent(); } return; }   // MUSIC VIDEO → floating mini player; the playlist stays open behind it
         // MUSIC → this row is the player: first tap plays, next taps pause / resume
         if (t.src && typeof miniItem !== 'undefined' && miniItem && miniItem.id === t.id) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
         window.BYMARCCC_VP?.pause();   // a music track replaces a playing music video
@@ -3420,6 +3420,7 @@ body.pdp .ai-launch{--ai-offset:92px}
 .vp.is-snapping { transition: transform .45s cubic-bezier(.22,1,.36,1), opacity .3s var(--ease, ease); }
 html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }
 .vp.is-docked { pointer-events: none; }
+.vp.is-pip { opacity: 0 !important; pointer-events: none !important; }   /* the system PiP window is the player now */
 .vp-tab.is-dock { width: 26px; height: 64px; top: var(--ty, 58%); border-radius: 0 10px 10px 0; background: rgba(20,20,20,.92); }
 .vp-tab.is-dock svg { width: 16px; height: 16px; }
 .vp-tab.is-right { left: auto; right: 0; border-radius: 10px 0 0 10px; }
@@ -3677,23 +3678,21 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const snd = new Audio(); snd.preload = 'auto'; snd.setAttribute('playsinline', ''); snd.setAttribute('webkit-playsinline', '');
   let sndOn = false, sndBroken = false, bgPlay = false, userMuted = false, lastSndSaveT = 0;
   const sndUrl = v => { const u = (v && (v.raw || v.src)) || ''; const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/[^?#]+)\.(?:mp4|mov|webm)(?:[?#].*)?$/i.exec(u); return m ? m[1] + m[2] + '.m4a' : ''; };
-  // iPhone/iPad: while you watch, the video carries its own sound (the twin runs silently in sync) — that is what lets Safari
-  // float it in Picture-in-Picture by itself when you go Home / to another app, no PiP tap needed
+  // iPhone/iPad: Safari floats an inline video only from a tap (never by itself), so on iPhone a music video starts
+  // straight in the system Picture-in-Picture window — that window then follows you Home and into other apps
   const AUTO_PIP = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const applySound = () => { if (pipOwn) { video.muted = userMuted; return; } if (sndOn && AUTO_PIP && !bgPlay) { video.muted = userMuted; snd.muted = true; return; } if (sndOn) { video.muted = true; snd.muted = userMuted; } else { video.muted = userMuted; } };
+  const applySound = () => { if (sndOn && !pipOwn) { video.muted = true; snd.muted = userMuted; } else { video.muted = userMuted; } };
   const sndSync = () => { if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.3) { try { snd.currentTime = video.currentTime || 0; } catch {} } };
   /* while the twin plays, the SOUND is the clock: a lagging picture is moved to the song (throttled), the song is never
      re-seeked to the picture — re-seeking it made the music stop/start every half second after coming back to the site */
   let picSeek = false, lastPicSync = 0;
-  const picSync = force => { if (AUTO_PIP && !bgPlay) { const now = Date.now(); if (!force && now - lastPicSync < 2000) return; if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.6) { lastPicSync = now; try { snd.currentTime = video.currentTime || 0; } catch {} } return; }   // silent twin follows the picture
-    const now = Date.now(); if (!force && now - lastPicSync < 2000) return; if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.5) { lastPicSync = now; picSeek = true; try { video.currentTime = snd.currentTime || 0; } catch { picSeek = false; } } };
+  const picSync = force => { const now = Date.now(); if (!force && now - lastPicSync < 2000) return; if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.5) { lastPicSync = now; picSeek = true; try { video.currentTime = snd.currentTime || 0; } catch { picSeek = false; } } };
   function sndLoad(v) { sndOn = false; sndBroken = false; snd.pause(); const u = sndUrl(v); if (u) snd.src = u; else { snd.removeAttribute('src'); sndBroken = true; } applySound(); }
   let pipOwn = false;   // true while the video plays its own sound in the Picture-in-Picture window
   function sndPlay() {
     if (sndBroken || !snd.getAttribute('src') || bgPlay || pipOwn) return;
     if (!snd.paused) { if (sndOn) picSync(); else sndSync(); return; }
     try { snd.currentTime = video.currentTime || 0; } catch {}
-    if (AUTO_PIP) snd.muted = true;
     const p = snd.play(); if (p) p.catch(() => {});
   }
   snd.addEventListener('playing', () => { if (bgPlay) return; if (video.paused) { snd.pause(); return; } picSync(true); sndOn = true; applySound(); });
@@ -3795,7 +3794,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   let vIntent = false;
   { const nativePause = video.pause.bind(video); video.pause = () => { vIntent = true; nativePause(); }; }
   const inPiP = () => document.pictureInPictureElement === video || video.webkitPresentationMode === 'picture-in-picture';
-  const goBg = () => { if (bgPlay || sndBroken || snd.paused) return false; if (AUTO_PIP) { try { if (Math.abs(snd.currentTime - video.currentTime) > 0.3) snd.currentTime = video.currentTime || 0; } catch {} } bgPlay = true; sndOn = true; snd.muted = userMuted; return true; };
+  const goBg = () => { if (bgPlay || sndBroken || snd.paused) return false; bgPlay = true; sndOn = true; snd.muted = userMuted; return true; };
   video.addEventListener('pause', () => {
     const intended = vIntent; vIntent = false;
     if (bgPlay) return;
@@ -3868,28 +3867,39 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   /* Picture-in-Picture: a tap puts the video in the floating system window, which follows you to other apps and the
      home screen (iPhone Safari only allows this from a tap, never automatically). While it is in PiP, leaving the site
      keeps picture + song going; pausing from the PiP window pauses the song too. */
+  let enterPiP = () => {};
   { const pipBtn = $('vpPipOv'), canPip = document.pictureInPictureEnabled || typeof video.webkitSetPresentationMode === 'function';
     if (!canPip) pipBtn.hidden = true;
-    pipBtn.addEventListener('click', e => {
-      e.stopPropagation();
+    // the PiP window carries its own sound: hand the song from the audio twin back to the video itself
+    // (iPhone won't keep a muted video floating over other apps). Must run inside a tap.
+    let pipT = 0;
+    enterPiP = () => {
+      if (!canPip || inPiP()) return;
+      const undo = () => { if (inPiP()) return; pipOwn = false; vp.classList.remove('is-pip'); applySound(); if (!video.paused) sndPlay(); };
       try {
-        if (inPiP()) { if (document.pictureInPictureElement && document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {}); else video.webkitSetPresentationMode?.('inline'); return; }
-        // the PiP window carries its own sound: hand the song from the audio twin back to the video itself
-        // (iPhone won't keep a muted video floating over other apps)
-        const at = sndOn && !snd.paused && !AUTO_PIP ? snd.currentTime : null;
+        const at = sndOn && !snd.paused ? snd.currentTime : null;
         pipOwn = true; sndOn = false; snd.pause(); video.muted = userMuted;
         if (at !== null) { try { video.currentTime = at; } catch {} }
         if (video.paused) video.play().catch(() => {});
         if (typeof video.webkitSetPresentationMode === 'function' && (!video.webkitSupportsPresentationMode || video.webkitSupportsPresentationMode('picture-in-picture'))) video.webkitSetPresentationMode('picture-in-picture');
-        else if (video.requestPictureInPicture) video.requestPictureInPicture().catch(() => { pipOwn = false; applySound(); sndPlay(); });
-      } catch { pipOwn = false; applySound(); }
+        else if (video.requestPictureInPicture) video.requestPictureInPicture().catch(undo);
+      } catch { undo(); return; }
+      clearTimeout(pipT); pipT = setTimeout(undo, 2500);   // Safari refused (e.g. video not loaded yet) → stays the normal mini player, twin keeps the song
+    };
+    pipBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (inPiP()) { if (document.pictureInPictureElement && document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {}); else video.webkitSetPresentationMode?.('inline'); return; }
+      enterPiP();
     });
+    // in PiP the site's own mini player hides (no second "This video is playing in picture-in-picture" box)
+    const pipMark = () => { const on = inPiP(); vp.classList.toggle('is-pip', on); if (on) clearTimeout(pipT); };
+    video.addEventListener('webkitpresentationmodechanged', pipMark);
+    video.addEventListener('enterpictureinpicture', pipMark);
+    video.addEventListener('leavepictureinpicture', pipMark);
     // back from PiP: the audio twin takes the song over again, from where the video is
     const pipLeft = () => { if (!pipOwn || inPiP()) return; pipOwn = false; applySound(); if (!video.paused) sndPlay(); };
     video.addEventListener('webkitpresentationmodechanged', () => setTimeout(pipLeft, 50));
     video.addEventListener('leavepictureinpicture', () => setTimeout(pipLeft, 50));
-    // Safari floated the video by itself after the twin had already taken the song → the PiP window gets the sound back
-    video.addEventListener('webkitpresentationmodechanged', () => { if (AUTO_PIP && inPiP() && bgPlay) { bgPlay = false; applySound(); if (video.paused) video.play().catch(() => {}); } });
   }
   tab.addEventListener('click', () => { if (!docked) open(); });   // docked: handled by the drag/tap logic above
 
@@ -4114,11 +4124,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const cur = list[idx] && (window.BYMARCCC_PLAYLIST || []).find(t => t.video === list[idx].src);
     if (document.hidden) {
       // the twin is already playing the song → just let the picture stop; the song carries on
-      if (!video.paused && !video.ended && inPiP()) return;
-      if (AUTO_PIP && !video.paused && !video.ended && !snd.paused) {   // give Safari a moment to float the video by itself; if it doesn't, the song carries on from the twin
-        setTimeout(() => { if (!document.hidden || inPiP() || bgPlay) return; if (!video.paused) { goBg(); applySound(); video.pause(); } }, 700);
-        return;
-      }   // Picture-in-Picture: picture and song both keep going
+      if (!video.paused && !video.ended && inPiP()) return;   // Picture-in-Picture: picture and song both keep going
       if (!video.paused && !video.ended && goBg()) { video.pause(); return; }   // the twin is playing the song → only the picture stops
       if (bgPlay) return;   // Safari already stopped the picture and the song carried on
       if (!video.paused && !video.ended && cur && cur.src && window.BYMARCCC?.audioTrack) { const at = video.currentTime; video.pause(); if (window.BYMARCCC.audioTrack.play(cur, at)) handedOff = cur; }
@@ -4154,6 +4160,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     current() { const v = list[idx]; return v && (window.BYMARCCC_PLAYLIST || []).find(t => t.video === v.src) || null; },
     isOpen() { return !vp.hidden; },
     pause() { if (!video.paused) video.pause(); },
+    pip() { if (AUTO_PIP) enterPiP(); },   // iPhone: called right inside the playlist tap
     close,
   };
 
