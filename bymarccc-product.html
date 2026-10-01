@@ -848,7 +848,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=ec6cea1d6d"></script>
+<script src="/assets/catalog.js?v=ab577df10e"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -897,7 +897,7 @@ body.is-custom-bag-page #gallery { display: none; }
       variants: [{ id: 58614061990236, title: 'Delulu', available: true }, { id: 58614062088540, title: 'PARIS', available: true }, { id: 58614062121308, title: 'Hot Girls', available: true }, { id: 58614062055772, title: 'Muse', available: true }] },
     { handle: 'signature-baby-top-1', title: 'Signature Baby Top', price: 200, currency: 'RON', option: 'Size',
       image: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/9D8FD2F4-0AFD-4661-B339-AF0FDD5EFF31.jpg?v=1782762756&width=600',
-      variants: [{ id: 58274048704860, title: 'S-M', available: true }, { id: 58274048737628, title: 'L-XL', available: true }] },
+      variants: [{ id: 58274048704860, title: 'XS-S', available: true }, { id: 58274048737628, title: 'M-L', available: true }] },
     { handle: 'signature-cap', title: 'Signature Cap', price: 125, currency: 'RON', option: null,
       image: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/BB74A44A-FF46-4A4B-B5F3-30618061A0B0.jpg?v=1783803621&width=600',
       variants: [{ id: 58254658634076, title: 'ONE SIZE', available: true }] },
@@ -915,13 +915,15 @@ body.is-custom-bag-page #gallery { display: none; }
     load() { try { this.items = JSON.parse(sessionStorage.getItem('bym.bag') || '[]'); } catch { this.items = []; } },
     save() { try { sessionStorage.setItem('bym.bag', JSON.stringify(this.items)); } catch {} },
     emit() { this.save(); this.listeners.forEach(f => f(this.items)); },
-    add(line) { return new Promise(res => { const ex = this.items.find(i => i.id === line.id); if (ex) ex.quantity += line.quantity || 1; else this.items.push({ ...line, quantity: line.quantity || 1, addedAt: Date.now() }); this.emit(); setTimeout(() => res(line), 300); }); },
-    setQty(id, q) { const it = this.items.find(i => i.id === id); if (!it) return; if (q <= 0) this.items = this.items.filter(i => i.id !== id); else it.quantity = q; this.emit(); },
+    add(line) { return new Promise(res => { const one = this.oneOff(line.id); const ex = this.items.find(i => i.id === line.id); if (ex) ex.quantity = one ? 1 : ex.quantity + (line.quantity || 1); else this.items.push({ ...line, quantity: one ? 1 : line.quantity || 1, addedAt: Date.now() }); this.emit(); setTimeout(() => res(line), 300); }); },
+    // SALES pieces are one-offs (1 piece each): the same line can never go above 1
+    oneOff(id) { try { const C = (window.BYMARCCC_CATALOG || {}).CATALOG || {}; const pid = String(id || '').split(':').slice(0, 2).join(':'); return Object.values(C).some(p => p && p.id === pid && (p.collections || []).includes('sales')); } catch { return false; } },
+    setQty(id, q) { const it = this.items.find(i => i.id === id); if (!it) return; if (q <= 0) this.items = this.items.filter(i => i.id !== id); else it.quantity = this.oneOff(id) ? 1 : q; this.emit(); },
     remove(id) { this.setQty(id, 0); },
     count() { return this.items.reduce((a, b) => a + b.quantity, 0); },
     subtotalMinor() { return this.items.reduce((a, b) => a + (typeof b.price === 'number' ? toMinor(b.price) * b.quantity : 0), 0); },
   };
-  BAG.load();
+  BAG.load(); BAG.items.forEach(i => { if (BAG.oneOff(i.id)) i.quantity = 1; });
   window.BYMARCCC = Object.assign(window.BYMARCCC || {}, { bag: BAG });
   const bagCount = $('pdpBagCount');
   const renderBag = () => { const n = BAG.count(); bagCount.textContent = n; bagCount.hidden = n === 0; };
@@ -1029,7 +1031,7 @@ body.is-custom-bag-page #gallery { display: none; }
       ? `Model is ${own.height} cm and ${own.weight} kg, wearing size ${own.size}`
       : own && own.size && !own.height ? `Model is wearing size ${own.size}`
       : PRODUCT.gender === 'women'
-        ? 'Model is 177 cm and 53 kg, wearing size S-M'
+        ? 'Model is 177 cm and 53 kg, wearing size XS-S'
         : 'Model is 184 cm and 74 kg, wearing size M';
   }
   function layout(dx = 0, anim = true) {
@@ -1908,7 +1910,7 @@ body.is-custom-bag-page #gallery { display: none; }
   const POPULAR = [
     { handle: 'cap-2', title: 'Cap', price: 175, option: 'Design', image: COMPLETE_THE_LOOK[0].image, variants: COMPLETE_THE_LOOK[0].variants },
     { handle: 'signature-baby-top-1', title: 'Signature Baby Top', price: 200, option: 'Size', image: COMPLETE_THE_LOOK[1].image, variants: COMPLETE_THE_LOOK[1].variants },
-    { handle: 'sporty-dress', title: 'Sporty Dress', price: 250, option: 'Size', image: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/27F69E61-4EAF-485B-B6B1-22755E29FD35.jpg?v=1783796264&width=600', variants: [{ id: 58254328136028, title: 'S-M', available: true }, { id: 58254328168796, title: 'L-XL', available: true }] },
+    { handle: 'sporty-dress', title: 'Sporty Dress', price: 250, option: 'Size', image: 'https://cdn.shopify.com/s/files/1/0955/7835/8108/files/27F69E61-4EAF-485B-B6B1-22755E29FD35.jpg?v=1783796264&width=600', variants: [{ id: 58254328136028, title: 'XS-S', available: true }, { id: 58254328168796, title: 'M-L', available: true }] },
     { handle: 'signature-cap', title: 'Signature Cap', price: 125, option: null, image: COMPLETE_THE_LOOK[2].image, variants: COMPLETE_THE_LOOK[2].variants },
   ];
   function renderCart() {

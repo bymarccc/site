@@ -200,7 +200,7 @@
   @media (max-width:899px){ #coThankYou{ padding-bottom:96px; } }
   .co-ty__continue{ display:inline-flex; align-items:center; justify-content:center; height:48px; padding:0 28px; margin-top:28px; border-radius:999px; background:var(--ink); color:#fff; text-decoration:none; font:600 11px/1 inherit; letter-spacing:.2em; text-transform:uppercase; }
 </style>
-<script src="/assets/catalog.js?v=ec6cea1d6d" defer></script>
+<script src="/assets/catalog.js?v=ab577df10e" defer></script>
 </head>
 <body>
 
@@ -472,13 +472,16 @@
   var BAG = {
     items: [],
     load(){ try { this.items = JSON.parse(sessionStorage.getItem('bym.bag') || '[]'); } catch(e){ this.items = []; } if (!Array.isArray(this.items)) this.items = []; },
+    oneOff(id){ try { var C = (window.BYMARCCC_CATALOG || {}).CATALOG || {}, pid = String(id || '').split(':').slice(0, 2).join(':'); return Object.keys(C).some(function(k){ var p = C[k]; return p && p.id === pid && (p.collections || []).indexOf('sales') >= 0; }); } catch(e){ return false; } },   // SALES = one piece each
     save(){ try { sessionStorage.setItem('bym.bag', JSON.stringify(this.items)); } catch(e){} },
-    setQty(id, q){ var it = this.items.find(function(i){ return i.id === id; }); if (!it) return; if (q <= 0) this.items = this.items.filter(function(i){ return i.id !== id; }); else it.quantity = q; this.save(); renderBag(); },
+    setQty(id, q){ var it = this.items.find(function(i){ return i.id === id; }); if (!it) return; if (q <= 0) this.items = this.items.filter(function(i){ return i.id !== id; }); else it.quantity = this.oneOff(id) ? 1 : q; this.save(); renderBag(); },
     count(){ return this.items.reduce(function(a,b){ return a + (b.quantity || 1); }, 0); },
     subtotal(){ return this.items.reduce(function(a,b){ return a + (typeof b.price === 'number' ? lp(b.price) * (b.quantity || 1) : 0); }, 0); },   // in the delivery country's currency (geo pricing)
     clear(){ this.items = []; this.save(); }
   };
   BAG.load();
+  (function(){ var fix = function(){ var ch = false; BAG.items.forEach(function(i){ if ((i.quantity || 1) > 1 && BAG.oneOff(i.id)) { i.quantity = 1; ch = true; } }); if (ch) { BAG.save(); try { renderBag(); } catch(e){} } };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fix); else fix(); })();   // SALES pieces: 1 each
   /* ---------- "Add to order" (link from the confirmation e-mail): same parcel, no extra shipping. The server
      checks the signature; the browser only decides what to show. ---------- */
   var ADD_TO = (function(){ try {

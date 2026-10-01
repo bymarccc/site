@@ -2517,7 +2517,10 @@ async function acctTrustedRon(items) {
     const id = String(it.id || "").split(":").slice(0, 2).join(":"), p = byId.get(id) || byId.get(String(it.id || "").split(":")[0]);
     const floor = p ? (typeof p.salePrice === "number" ? p.salePrice : p.price) : 0;
     const price = Number(it.price || 0);
-    return { ...it, price: typeof floor === "number" && floor > price ? floor : price };
+    const out = { ...it, price: typeof floor === "number" && floor > price ? floor : price };
+    // SALES pieces are one-offs: never more than 1 of the same line
+    if (p && Array.isArray(p.collections) && p.collections.includes("sales")) { if ("quantity" in out || !("qty" in out)) out.quantity = 1; if ("qty" in out) out.qty = 1; }
+    return out;
   });
 }
 __name(acctTrustedRon, "acctTrustedRon");

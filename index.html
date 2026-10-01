@@ -1270,7 +1270,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=ec6cea1d6d"></script>
+<script src="/assets/catalog.js?v=ab577df10e"></script>
 <script>
 (() => {
   'use strict';
@@ -1286,7 +1286,7 @@
   // men SALES: the piece's only size, written vertically in the photo's top-left corner (same type as NEW COLLECTION)
   // trial: on these 3 the size is written horizontally (Ksubi-style), so Mark can compare with the vertical one
   const SIZE_FLAT = new Set(['sale-embroidered-crosses-jeans', 'sale-striped-jeans', 'van-gogh-jacket']);
-  const sizeTag = (size, key) => !size ? '' : SIZE_FLAT.has(key) ? `<span class="shop__sizeflat">SIZE: ${size}</span>` : `<span class="shop__newtag shop__sizetag">SIZE: ${size}</span>`;
+  const sizeTag = (size, key) => !size || /one.?size/i.test(size) ? '' : SIZE_FLAT.has(key) ? `<span class="shop__sizeflat">SIZE: ${size}</span>` : `<span class="shop__newtag shop__sizetag">SIZE: ${size}</span>`;
   function card(key, p) {
     const imgs = (p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
     const a = document.createElement('a'); a.className = 'shop__card'; a.href = 'bymarccc-product.html?p=' + key;
@@ -1574,7 +1574,7 @@
       }
       if (active === 'sales' && gender !== 'women') {
         const rail = items.filter(([, p]) => p.saleRail);   // a dedicated sale bar (men): only the sale-rail pieces, all one size
-        const standalone = items.filter(([, p]) => p.saleStandalone).sort((a, b) => (a[1].saleOrder || 99) - (b[1].saleOrder || 99));   // one-off pieces, 2 per row like the shop grid, size on the photo   // pinned product card(s) shown above the slider, normal shop-card styling
+        const standalone = items.filter(([, p]) => p.saleStandalone).sort((a, b) => (a[1].saleOrder ?? 99) - (b[1].saleOrder ?? 99));   // one-off pieces, 2 per row like the shop grid, size on the photo   // pinned product card(s) shown above the slider, normal shop-card styling
         const duo = items.filter(([, p]) => p.saleDuo);   // a small shared swipeable row for a fixed group of items (e.g. Black Leather Jacket + Embroidered Cross Turtleneck)
         if (rail.length || duo.length) {
           const section = document.createElement('div'); section.className = 'sales__section sales__section--men'; grid.appendChild(section);
@@ -1699,14 +1699,16 @@
     load() { try { this.items = JSON.parse(sessionStorage.getItem('bym.bag') || '[]'); } catch { this.items = []; } },
     save() { try { sessionStorage.setItem('bym.bag', JSON.stringify(this.items)); } catch {} },
     emit() { this.save(); this.listeners.forEach(f => f(this.items)); },
-    add(line, properties) { return new Promise(res => { if (line && line.name === undefined && line.id) line = { id: line.id, name: line.name, price: line.price, currency: line.currency }; const l = { ...line, quantity: line.quantity || 1, addedAt: Date.now() }; if (properties) l.attributes = { ...properties }; const ex = this.items.find(i => i.id === l.id); if (ex) ex.quantity += l.quantity; else this.items.push(l); this.emit(); setTimeout(() => res(l), 300); }); },
-    setQty(id, q) { const it = this.items.find(i => i.id === id); if (!it) return; if (q <= 0) this.items = this.items.filter(i => i.id !== id); else it.quantity = q; this.emit(); },
+    add(line, properties) { return new Promise(res => { if (line && line.name === undefined && line.id) line = { id: line.id, name: line.name, price: line.price, currency: line.currency }; const l = { ...line, quantity: line.quantity || 1, addedAt: Date.now() }; if (properties) l.attributes = { ...properties }; const one = this.oneOff(l.id); if (one) l.quantity = 1; const ex = this.items.find(i => i.id === l.id); if (ex) ex.quantity = one ? 1 : ex.quantity + l.quantity; else this.items.push(l); this.emit(); setTimeout(() => res(l), 300); }); },
+    // SALES pieces are one-offs (1 piece each): the same line can never go above 1
+    oneOff(id) { try { const C = (window.BYMARCCC_CATALOG || {}).CATALOG || {}; const pid = String(id || '').split(':').slice(0, 2).join(':'); return Object.values(C).some(p => p && p.id === pid && (p.collections || []).includes('sales')); } catch { return false; } },
+    setQty(id, q) { const it = this.items.find(i => i.id === id); if (!it) return; if (q <= 0) this.items = this.items.filter(i => i.id !== id); else it.quantity = this.oneOff(id) ? 1 : q; this.emit(); },
     remove(id) { this.setQty(id, 0); },
     count() { return this.items.reduce((a, b) => a + b.quantity, 0); },
     subtotalMinor() { return this.items.reduce((a, b) => a + (typeof b.price === 'number' ? Math.round(b.price * 100) * b.quantity : 0), 0); },
     onChange(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); },
   };
-  BAG.load();
+  BAG.load(); BAG.items.forEach(i => { if (BAG.oneOff(i.id)) i.quantity = 1; });
   window.BYMARCCC = Object.assign(window.BYMARCCC || {}, { bag: BAG, products: PRODUCTS });
 
   /* ------------------------------------------------------------------
@@ -4255,12 +4257,12 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
      BAG PILL → checkout.html (shows only when the bag has items)
      ===================================================================== -->
 <style>
-.bagpill{ position:fixed; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top,0px) + 12px); z-index:1100; display:inline-flex; align-items:center; gap:10px; height:48px; padding:0 18px 0 16px; border-radius:999px; background:#0b0b0b; color:#fff; text-decoration:none; font:600 11px/1 "Jost","Helvetica Neue",Helvetica,Arial,sans-serif; letter-spacing:.2em; box-shadow:0 16px 40px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.06); transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .3s; }
+.bagpill{ position:fixed; right:88px; bottom:calc(var(--ai-offset,10px) + env(safe-area-inset-bottom,0px) + 6px); z-index:1100; display:inline-flex; align-items:center; gap:10px; height:48px; padding:0 18px 0 16px; border-radius:999px; background:#0b0b0b; color:#fff; text-decoration:none; font:600 11px/1 "Jost","Helvetica Neue",Helvetica,Arial,sans-serif; letter-spacing:.2em; box-shadow:0 16px 40px rgba(0,0,0,.3), 0 0 0 1px rgba(255,255,255,.06); transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .3s; }
 .bagpill[hidden]{ display:none; }
 .bagpill svg{ width:16px; height:16px; }
 .bagpill__n{ min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#fff; color:#111; display:grid; place-items:center; font-size:11px; letter-spacing:0; }
-.bagpill:hover{ transform:translateX(-50%) translateY(-2px); }
-@media (max-width:640px){ .bagpill{ height:40px; padding:0 14px 0 14px; top:calc(env(safe-area-inset-top,0px) + 10px); } }
+.bagpill:hover{ transform:translateY(-2px); }
+@media (max-width:640px){ .bagpill{ height:40px; padding:0 14px 0 14px; bottom:calc(var(--ai-offset,10px) + env(safe-area-inset-bottom,0px) + 10px); } }   /* bottom-right corner, next to the AI launcher (60px) */
 </style>
 <a class="bagpill" id="bagPill" href="checkout.html" hidden aria-label="Open bag and checkout">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 13H5L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
