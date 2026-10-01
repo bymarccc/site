@@ -120,12 +120,11 @@ body.is-custom-bag-page .pdp-header.is-solid { background: transparent; box-shad
 .pdp-wish { display: none !important; }
 .pdp-hanger { left: auto; right: 16px; }
 .pdp-hanger[hidden] { display: none !important; }   /* only the Zebra Patch pieces have Complete the Look */
-.pdp-modelbar { left: 16px; right: 16px; }
+.pdp-modelbar { left: 52px; right: 16px; }   /* one row: 1/9 · bar · hanger */
 .pdp-gallery:has(#hangerBtn:not([hidden])) .pdp-modelbar { right: 60px; }
-/* image counter, bottom-left of the photo — like ourlegacy (2/10) */
-.pdp-gcount { position: absolute; left: 16px; bottom: 14px; z-index: 3; pointer-events: none; font-size: 11px; letter-spacing: .04em; color: #111; font-variant-numeric: tabular-nums; }
+/* image counter, bottom-left of the photo — like ourlegacy (2/10), on the same line as the bar */
+.pdp-gcount { position: absolute; left: 16px; bottom: 24px; z-index: 3; pointer-events: none; font-size: 11px; line-height: 12px; letter-spacing: .04em; color: #111; font-variant-numeric: tabular-nums; }
 .pdp-gcount[hidden] { display: none; }
-.pdp-gallery:has(#modelText:not([hidden]), #hwToggle:not([hidden]), #hwForm:not([hidden])) .pdp-gcount { bottom: 58px; }
 
 /* ---------- Product info ---------- */
 .pdp-info { padding: 22px 16px 0; max-width: 640px; margin: 0 auto; }
@@ -251,6 +250,14 @@ body.is-custom-bag-page #gallery { display: none; }
 .ctl__msg { font-size: 12px; color: var(--err); }
 .ctl__msg.is-ok { color: var(--ok); }
 .ctl__msg:empty { display: none; }
+/* Complete the Look — quieter, premium: black / grey text only, small button */
+.ctl__title { color: #111; text-decoration: none; font-size: 13px; font-weight: 500; letter-spacing: .02em; text-transform: uppercase; }
+.ctl__title:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ctl__price { font-size: 13px; color: #8a8a86; }
+.pdp .ctl .pdp-btn.ctl__add { height: 34px; padding: 0 18px; font-size: 10.5px; font-weight: 500; letter-spacing: .16em; align-self: flex-start; width: auto; border-width: 1px; border-radius: 3px; }
+#ctlTitle { font-size: 15px; font-weight: 500; letter-spacing: .14em; }
+/* no gallery arrows on product pages — swipe / thumbnails instead */
+.pdp-gallery__arrow { display: none !important; }
 
 /* ---------- Cart drawer ---------- */
 .cart {
@@ -416,8 +423,7 @@ body.is-custom-bag-page #gallery { display: none; }
   .pdp-modelbar { bottom: 24px; left: 72px; right: 72px; max-width: 560px; }
   .pdp-gallery:has(#hangerBtn:not([hidden])) .pdp-modelbar { right: 72px; }
   .pdp-hanger { bottom: 24px; left: auto; right: 24px; }
-  .pdp-gcount { left: 24px; bottom: 26px; }
-  .pdp-gallery:has(#modelText:not([hidden]), #hwToggle:not([hidden]), #hwForm:not([hidden])) .pdp-gcount { bottom: 70px; }
+  .pdp-gcount { left: 24px; bottom: 36px; }
   .pdp-wish { bottom: 24px; right: 24px; }
   .pdp-info { padding: calc(var(--header-h) + 40px) 40px 60px; max-width: none; margin: 0; }
   .pdp-bar { position: static; border: 0; padding: 22px 0 0; transition: none; }
@@ -603,11 +609,10 @@ body.is-custom-bag-page #gallery { display: none; }
   body:not(.is-custom-bag-page) .pdp-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
   body:not(.is-custom-bag-page) .pdp-gallery { grid-column: 3; grid-row: 1; width: min(calc(var(--gh) * 2 / 3), 44vw); height: auto; aspect-ratio: 2 / 3; position: sticky; top: calc(var(--header-h) + 28px); }
   body:not(.is-custom-bag-page) .pdp-gallery__slide img { height: 100%; }
-  body:not(.is-custom-bag-page) .pdp-modelbar { left: 12px; right: 12px; bottom: 12px; max-width: none; }
-  body:not(.is-custom-bag-page) .pdp-hanger { bottom: 60px; left: auto; right: 12px; }
-  body:not(.is-custom-bag-page) .pdp-gallery:has(#hangerBtn) .pdp-modelbar { right: 12px; }
-  body:not(.is-custom-bag-page) .pdp-gcount { left: 12px; bottom: 14px; }
-  body:not(.is-custom-bag-page) .pdp-gallery:has(#modelText:not([hidden]), #hwToggle:not([hidden]), #hwForm:not([hidden])) .pdp-gcount { bottom: 60px; }
+  body:not(.is-custom-bag-page) .pdp-modelbar { left: 48px; right: 12px; bottom: 12px; max-width: none; }
+  body:not(.is-custom-bag-page) .pdp-hanger { bottom: 12px; left: auto; right: 12px; }
+  body:not(.is-custom-bag-page) .pdp-gallery:has(#hangerBtn:not([hidden])) .pdp-modelbar { right: 56px; }
+  body:not(.is-custom-bag-page) .pdp-gcount { left: 12px; bottom: 24px; }
   body:not(.is-custom-bag-page) .pdp-wish { bottom: 60px; right: 12px; }
   body:not(.is-custom-bag-page) .pdp-info { grid-column: 4; grid-row: 1; align-self: center; width: min(100%, 400px); padding: 0 0 0 48px; }
   body:not(.is-custom-bag-page) .pdp-info .pdp-summary__row { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 26px; }
@@ -843,7 +848,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=e78b07399a"></script>
+<script src="/assets/catalog.js?v=895a8b07ca"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -863,7 +868,9 @@ body.is-custom-bag-page #gallery { display: none; }
   const PRODUCT = Object.assign({ model: MODEL, reviews: REVIEWS, unavailable: [], details: [], collections: [], description: '' }, CATALOG[KEY] || CATALOG.skinny);
   // "Complete the Look" (hanger icon) is only offered on the Zebra Patch pieces that are
   // actually designed to be matched by colour; every other product hides the hanger entirely.
-  const CTL_ALLOWED_KEYS = ['zebra-jacket', 'skinny', 'relaxed'];
+  const CTL_ALLOWED_KEYS = ['zebra-jacket', 'skinny', 'relaxed', 'w-sporty-top', 'w-sporty-top-ecru', 'w-logo-vest'];
+  // Complete the Look for the women's set pieces: the matching leggings
+  const CTL_LOOKS = { 'w-sporty-top': ['w-logo-flare-leggings', 'w-logo-leggings'], 'w-sporty-top-ecru': ['w-logo-flare-leggings', 'w-logo-leggings'], 'w-logo-vest': ['w-logo-leggings', 'w-logo-flare-leggings'] };
   const COLOURS = PRODUCT.colours && PRODUCT.colours.length ? PRODUCT.colours : [{ id: 'default', name: '', hex: '#111111' }], SIZE_CHART = PRODUCT.chart || ONE_SIZE, GALLERY = PRODUCT.gallery || [];
   const sizeLabel = s => PRODUCT.noSize ? 'Made to measure' : SIZE_CHART.label(s);
   const hasPrice = typeof PRODUCT.price === 'number';
@@ -1831,13 +1838,18 @@ body.is-custom-bag-page #gallery { display: none; }
   function renderCompleteTheLook() {
     ctlList.innerHTML = '';
     if (!CTL_ALLOWED_KEYS.includes(KEY)) return;
-    const jacket = CATALOG['zebra-jacket'], jean = CATALOG['skinny'];
-    if (!jacket || !jean) return;
-    const colourId = state.colour || (jacket.colours[0] && jacket.colours[0].id);
-    [
-      { key: 'zebra-jacket', title: jacket.title, price: jacket.price, currency: jacket.currency, image: ctlImageFor(jacket, colourId) },
-      { key: 'skinny', title: jean.title, price: jean.price, currency: jean.currency, image: ctlImageFor(jean, colourId) },
-    ].forEach(p => {
+    let looks;
+    if (CTL_LOOKS[KEY]) looks = CTL_LOOKS[KEY].filter(k => CATALOG[k]).map(k => ({ key: k, title: CATALOG[k].title, price: CATALOG[k].price, currency: CATALOG[k].currency, image: ((CATALOG[k].gallery || [])[0] || {}).src || '' }));
+    else {
+      const jacket = CATALOG['zebra-jacket'], jean = CATALOG['skinny'];
+      if (!jacket || !jean) return;
+      const colourId = state.colour || (jacket.colours[0] && jacket.colours[0].id);
+      looks = [
+        { key: 'zebra-jacket', title: jacket.title, price: jacket.price, currency: jacket.currency, image: ctlImageFor(jacket, colourId) },
+        { key: 'skinny', title: jean.title, price: jean.price, currency: jean.currency, image: ctlImageFor(jean, colourId) },
+      ];
+    }
+    looks.forEach(p => {
       const row = document.createElement('article'); row.className = 'ctl';
       row.innerHTML = `
         <a class="ctl__img" href="bymarccc-product.html?p=${p.key}"><img src="${p.image}" alt="${p.title}" loading="lazy" width="600" height="800"></a>

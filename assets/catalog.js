@@ -36,7 +36,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
   "collections": [{"key":"denim","label":"DENIM"},{"key":"tops","label":"TOPS"},{"key":"jackets","label":"JACKETS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"},{"key":"new","label":"NEW COLLECTION"}],
   "womenCollections": [{"key":"tops","label":"TOPS"},{"key":"bottoms","label":"BOTTOMS"},{"key":"jackets","label":"JACKETS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"},{"key":"new","label":"NEW COLLECTION"}],
   "customizeCollections": [{"key":"bags","label":"BAGS"}],
-  "womenFeatured": {"tops":["w-sporty-top","w-burgundy-long-sleeve","w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-flare-leggings","w-logo-leggings"],"jackets":["w-white-logo-windbreaker","w-black-logo-windbreaker"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
+  "womenFeatured": {"tops":["w-sporty-top-ecru","w-sporty-top","w-burgundy-long-sleeve","w-logo-vest","w-burgundy-baby-top","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-flare-leggings","w-logo-leggings"],"jackets":["w-white-logo-windbreaker","w-black-logo-windbreaker"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag","w-logo-bag"]},
   "tryOnGarments": {"black-baby-top":{"type":"womens_baby_top","label":"women's black baby top: short, fitted, short-sleeve black cotton top with a fine rib, round neck; the hem sits slightly above the belly button","category":"tops","colour":"black","views":{"front":"assets/try-on/black-baby-top/garment.png"},"fitReference":"assets/try-on/black-baby-top/fit-reference.jpg","print":{"placement":"centred on the chest, a little below the neckline","width":0.3}}},
   "products": {
     "skinny": {
@@ -1252,6 +1252,22 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
       "chart": ["S","M","L"],
       "gallery": [{"src":"assets/img/gallery/w-sporty-top-1-af68c16e.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-sporty-top-2-23cb31b2.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-3-25dfe42d.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-4-74d73432.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-5-22dffa33.webp","w":1024,"h":1534}]
+    },
+    "w-sporty-top-ecru": {
+      "gender": "women",
+      "id": "bymarccc:sporty-top-ecru",
+      "title": "SPORTY TOP",
+      "price": 250,
+      "currency": "RON",
+      "cut": "Fitted zip-up top",
+      "collections": ["tops"],
+      "hideModelText": true,
+      "details": ["Cropped, close-fitting zip-up top with a high stand collar","Two-way front zip and two zipped pockets at the waist","Contoured seams for a sculpted fit","Black alien logo on the sleeve","Ecru","53% polyester, 42% viscose, 5% elastane","Machine wash max 30°C (delicate) · Do not bleach · Iron max 110°C · Do not dry clean · Do not tumble dry","All clothing is custom made."],
+      "description": "A cropped ecru zip-up top with a high collar, sculpting seams, zipped waist pockets and a black alien logo on the sleeve.",
+      "unavailable": [],
+      "colours": [{"id":"ecru","name":"Ecru","hex":"#efe9dc"}],
+      "chart": ["S","M","L"],
+      "gallery": [{"src":"assets/img/gallery/w-sporty-top-ecru-1-bb0fab32.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-2-ac34d425.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-3-23565e67.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-4-be35a535.webp","w":1024,"h":1534}]
     },
     "w-purple-sweatpants": {
       "gender": "women",
