@@ -503,22 +503,22 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "gallery": [{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/B359AF59-8D1C-483E-9213-7D96ACD9C9D5.jpg?v=1760810273&width=1400","w":2535,"h":3601},{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/7067F61D-A4F3-4E3F-8ED3-3AA67381D33E.jpg?v=1760810275&width=1400","w":2535,"h":3601},{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/9CFC9537-4F72-4595-93C1-6AA7226EB931.jpg?v=1760810274&width=1400","w":2535,"h":3601}]
     },
     "w-black-hoodie": {
-      "designs": ["Blank","Logo","Lady on the street","Hot Girls","Muse","Delulu","PARIS","Barbie","Happy Hoes","Boys Lie","Yacht","Art"],
-      "designImages": {"blank":4,"logo":1,"lady-on-the-street":5,"muse":3,"paris":2,"boys-lie":0},
+      "designs": ["Muse","PARIS","Happy Hoes","Boys Lie","Delulu","Logo","Hot Girls","Yacht","Art"],
+      "designImages": {"logo":0,"boys-lie":1,"paris":2,"muse":3,"happy-hoes":4,"delulu":5,"yacht":6},
       "gender": "women",
       "model": {"height":177,"weight":53,"size":"S-M","modelMedia":[0],"text":"Model is 177 cm and 53 kg and wears size S-M"},
       "id": "shopify:black-hoodie",
-      "title": "Black Hoodie",
+      "title": "OVERSIZED HOODIE",
       "price": 450,
       "currency": "RON",
       "cut": "Womenswear",
       "collections": ["tops"],
-      "details": ["Several embroidery/printed designs available (Blank, Logo, Muse, Delulu, NOT FROM PARIS…)","All clothing is custom made.","100% Organic Cotton"],
-      "description": "Black hoodie from the bymarccc womenswear collection, available in several embroidery/printed designs.",
+      "details": ["Oversized hoodie with dropped shoulders and a ribbed hem and cuffs","Several embroidery/printed designs available (Muse, NOT FROM PARIS, Happy Hoes, Boys Lie, Delulu, Logo, Hot Girls, Yacht, Art)","Black","All clothing is custom made.","100% Organic Cotton"],
+      "description": "An oversized black hoodie from the bymarccc womenswear collection, available in several embroidery/printed designs.",
       "unavailable": [],
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
       "chart": ["S-M","L-XL"],
-      "gallery": [{"src":"assets/img/gallery/w-black-hoodie-1-79ed5264.webp","w":900,"h":1279},{"src":"assets/img/gallery/w-black-hoodie-2-07f8224e.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-black-hoodie-4-803e0893.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-black-hoodie-6-4940133f.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-black-hoodie-3-6ccc2549.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-black-hoodie-5-878d3ccb.webp","w":900,"h":1304}]
+      "gallery": [{"src":"assets/img/gallery/w-black-hoodie-logo-666227e4.webp","w":1414,"h":2049},{"src":"assets/img/gallery/w-black-hoodie-1-79ed5264.webp","w":900,"h":1279},{"src":"assets/img/gallery/w-black-hoodie-4-803e0893.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-black-hoodie-6-4940133f.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-black-hoodie-happy-hoes-402414ea.webp","w":1414,"h":2049},{"src":"assets/img/gallery/w-black-hoodie-delulu-c1c8796d.webp","w":1414,"h":2049},{"src":"assets/img/gallery/w-black-hoodie-yacht-a74e4f9e.webp","w":1414,"h":2049}]
     },
     "w-black-long-sleeve": {
       "designs": ["Delulu","Boys Lie","Muse","PARIS","Hot Girls","Happy Hoes","Art"],
@@ -717,22 +717,22 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "gallery": [{"src":"assets/img/gallery/w-white-baby-top-1-1-39987655.webp","w":900,"h":1303},{"src":"assets/img/gallery/w-white-baby-top-1-2-9fbfc62f.webp","w":900,"h":1303},{"src":"assets/img/gallery/w-white-baby-top-1-3-e0e03044.webp","w":900,"h":1303},{"src":"assets/img/gallery/w-white-baby-top-1-4-888d7589.webp","w":900,"h":1303},{"src":"assets/img/gallery/w-white-baby-top-1-5-884accf8.webp","w":900,"h":1303},{"src":"assets/img/gallery/w-white-baby-top-1-6-978ba1b6.webp","w":900,"h":1303},{"src":"assets/img/gallery/w-white-baby-top-1-7-1316c0e3.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-white-baby-top-1-8-77062b8b.webp","w":900,"h":1353},{"src":"assets/img/gallery/w-white-baby-top-1-9-66084668.webp","w":900,"h":1349}]
     },
     "w-white-hoodie": {
-      "designs": ["Blank","Logo","Lady on the street","Hot Girls","Muse","Delulu","PARIS","Barbie","Happy Hoes","Boys Lie","Yacht","Art"],
-      "designImages": {"blank":4,"logo":2,"hot-girls":1,"barbie":3,"yacht":0},
+      "designs": ["Muse","PARIS","Happy Hoes","Boys Lie","Delulu","Logo","Hot Girls","Yacht","Art"],
+      "designImages": {"logo":0,"hot-girls":1,"happy-hoes":2,"boys-lie":3,"paris":4,"muse":5,"delulu":6,"yacht":7},
       "gender": "women",
       "model": {"height":177,"weight":53,"size":"S-M","modelMedia":[0],"text":"Model is 177 cm and 53 kg and wears size S-M"},
       "id": "shopify:white-hoodie",
-      "title": "White Hoodie",
+      "title": "OVERSIZED HOODIE",
       "price": 450,
       "currency": "RON",
       "cut": "Womenswear",
       "collections": ["tops"],
-      "details": ["All clothing is custom made.","100% Organic Cotton"],
-      "description": "White hoodie from the bymarccc womenswear collection.",
+      "details": ["Oversized hoodie with dropped shoulders and a ribbed hem and cuffs","Several embroidery/printed designs available (Muse, NOT FROM PARIS, Happy Hoes, Boys Lie, Delulu, Logo, Hot Girls, Yacht, Art)","White","All clothing is custom made.","100% Organic Cotton"],
+      "description": "An oversized white hoodie from the bymarccc womenswear collection, available in several embroidery/printed designs.",
       "unavailable": [],
       "colours": [{"id":"white","name":"White","hex":"#f2f2f2"}],
       "chart": ["S-M","L-XL"],
-      "gallery": [{"src":"assets/img/gallery/w-white-hoodie-1-e0f69f37.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-white-hoodie-2-6c38f1e9.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-white-hoodie-4-91bf56fe.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-white-hoodie-5-4216d244.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-white-hoodie-6-ca96dd3e.webp","w":900,"h":1304}]
+      "gallery": [{"src":"assets/img/gallery/w-white-hoodie-logo-0887f864.webp","w":1414,"h":2049},{"src":"assets/img/gallery/w-white-hoodie-2-6c38f1e9.webp","w":900,"h":1304},{"src":"assets/img/gallery/w-white-hoodie-happy-hoes-81d18cb2.webp","w":1414,"h":2049},{"src":"assets/img/gallery/w-white-hoodie-boys-lie-50e5d0ec.webp","w":1414,"h":2049},{"src":"assets/img/gallery/w-white-hoodie-paris-a5d47232.webp","w":1414,"h":2049},{"src":"assets/img/gallery/w-white-hoodie-muse-fe18d1b2.webp","w":1414,"h":2049},{"src":"assets/img/gallery/w-white-hoodie-delulu-7fe157a1.webp","w":1414,"h":2049},{"src":"assets/img/gallery/w-white-hoodie-yacht-759ef903.webp","w":1414,"h":2049}]
     },
     "w-white-tee": {
       "designs": ["Blank","Logo","Lady on the street","Hot Girls","Muse","Delulu","PARIS","Barbie","Happy Hoes","Boys Lie","Art"],
@@ -1245,7 +1245,6 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "currency": "RON",
       "cut": "Fitted zip-up top",
       "collections": ["tops"],
-      "hideModelText": true,
       "details": ["Cropped, close-fitting zip-up top with a high stand collar","Two-way front zip and two zipped pockets at the waist","Contoured seams for a sculpted fit","White alien logo on the sleeve","Black","53% polyester, 42% viscose, 5% elastane","Machine wash max 30°C (delicate) · Do not bleach · Iron max 110°C · Do not dry clean · Do not tumble dry","All clothing is custom made."],
       "description": "A cropped black zip-up top with a high collar, sculpting seams, zipped waist pockets and a white alien logo on the sleeve.",
       "unavailable": [],
@@ -1261,7 +1260,6 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "currency": "RON",
       "cut": "Fitted zip-up top",
       "collections": ["tops"],
-      "hideModelText": true,
       "details": ["Cropped, close-fitting zip-up top with a high stand collar","Two-way front zip and two zipped pockets at the waist","Contoured seams for a sculpted fit","Black alien logo on the sleeve","Ecru","53% polyester, 42% viscose, 5% elastane","Machine wash max 30°C (delicate) · Do not bleach · Iron max 110°C · Do not dry clean · Do not tumble dry","All clothing is custom made."],
       "description": "A cropped ecru zip-up top with a high collar, sculpting seams, zipped waist pockets and a black alien logo on the sleeve.",
       "unavailable": [],
