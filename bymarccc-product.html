@@ -635,7 +635,7 @@ body.is-custom-bag-page #gallery { display: none; }
   const post = m => { try { parent.postMessage(m, location.origin); } catch (e) {} };
   const go = u => {
     let d; try { d = new URL(u, location.href); } catch (e) { return; }
-    if (d.origin === location.origin && /bymarccc-product\.html$/.test(d.pathname) && d.searchParams.get('p')) { d.searchParams.set('qv', '1'); location.href = d.pathname + d.search + d.hash; return; }
+    if (d.origin === location.origin && /bymarccc-product(\.html)?$/.test(d.pathname) && d.searchParams.get('p')) { d.searchParams.set('qv', '1'); location.href = d.pathname + d.search + d.hash; return; }
     post({ bymQv: 'nav', url: d.href });
   };
   document.addEventListener('click', e => {
