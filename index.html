@@ -1307,12 +1307,12 @@
   const NEW_COLLECTION = new Set(NEW_LIST);
   const newTag = key => NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
   // Pinterest-style rainbow "scan" over the model (mask = the person cut out of the first photo)
-  const SCAN_MASKS = { 'w-sporty-top': '/assets/img/home/scanmask-sporty-top.png', 'w-sporty-top-ecru': '/assets/img/home/scanmask-w-sporty-top-ecru.png', 'w-burgundy-long-sleeve': '/assets/img/home/scanmask-w-burgundy-long-sleeve.png', 'w-black-hoodie': '/assets/img/home/scanmask-w-black-hoodie.png', 'w-logo-leggings': '/assets/img/home/scanmask-w-logo-leggings.png', 'w-walking-art-blue-jeans': '/assets/img/home/scanmask-w-walking-art-blue-jeans.png', 'w-black-logo-windbreaker': '/assets/img/home/scanmask-w-black-logo-windbreaker.png', 'art-dept-bag': '/assets/img/home/scanmask-art-dept-bag.png', 'relaxed': '/assets/img/home/scanmask-relaxed.png', 'bandana-jeans': '/assets/img/home/scanmask-bandana-jeans.png', 'art-jeans': '/assets/img/home/scanmask-art-jeans.png' };
+  const SCAN_MASKS = { 'w-sporty-top': '/assets/img/home/scanmask-sporty-top.png', 'w-burgundy-long-sleeve': '/assets/img/home/scanmask-w-burgundy-long-sleeve.png', 'w-black-hoodie': '/assets/img/home/scanmask-w-black-hoodie.png', 'w-logo-leggings': '/assets/img/home/scanmask-w-logo-leggings.png', 'w-walking-art-blue-jeans': '/assets/img/home/scanmask-w-walking-art-blue-jeans.png', 'w-black-logo-windbreaker': '/assets/img/home/scanmask-w-black-logo-windbreaker.png', 'art-dept-bag': '/assets/img/home/scanmask-art-dept-bag.png', 'relaxed': '/assets/img/home/scanmask-relaxed.png', 'bandana-jeans': '/assets/img/home/scanmask-bandana-jeans.png', 'art-jeans': '/assets/img/home/scanmask-art-jeans.png' };
   const SCAN_SCROLL = new Set(['relaxed']);   // these follow the page scroll instead of looping (down = top→bottom, up = bottom→top)
   const scanFx = key => SCAN_MASKS[key] ? `<span class="scanfx${SCAN_SCROLL.has(key) ? ' scanfx--scroll' : ''}" style="--m:url(${SCAN_MASKS[key]});--fit:contain" aria-hidden="true"></span>` : '';
   // men SALES: the piece's only size, written vertically in the photo's top-left corner (same type as NEW COLLECTION)
   // trial: on these 3 the size is written horizontally (Ksubi-style), so Mark can compare with the vertical one
-  const SIZE_FLAT = new Set(['sale-embroidered-crosses-jeans', 'sale-striped-jeans', 'van-gogh-jacket']);
+  const SIZE_FLAT = new Set();   // trial over: every SALES size is the small vertical tag
   const sizeTag = (size, key) => !size || /one.?size/i.test(size) ? '' : SIZE_FLAT.has(key) ? `<span class="shop__sizeflat">SIZE: ${size}</span>` : `<span class="shop__newtag shop__sizetag">SIZE: ${size}</span>`;
   function card(key, p) {
     const imgs = (p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
@@ -4713,11 +4713,18 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 (() => {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const run = el => { el.classList.remove('is-run'); void el.offsetWidth; el.classList.add('is-run'); };
-  const timers = new WeakMap();
-  const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => {
-    const el = e.target; clearInterval(timers.get(el));
-    if (e.isIntersecting) { setTimeout(() => run(el), 350); timers.set(el, setInterval(() => run(el), 4400)); /* 1.9 s sweep + ~2.5 s pause */ }
-  }), { threshold: 0.55 }) : null;
+  // one at a time: the pieces on screen take turns (e.g. black Sporty Top, then Long Sleeve Top), never two together;
+  // 1.9 s sweep each, then ~2.5 s pause before the round starts again
+  const SWEEP = 1950, PAUSE = 2500, shown = new Set(); let looping = false;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const loop = async () => { if (looping) return; looping = true; await sleep(350);
+    while (shown.size) {
+      const order = [...shown].filter(el => el.isConnected).sort((a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+      for (const el of order) { if (!shown.has(el)) continue; run(el); await sleep(SWEEP); }
+      await sleep(PAUSE);
+    }
+    looping = false; };
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { es.forEach(e => e.isIntersecting ? shown.add(e.target) : shown.delete(e.target)); if (shown.size) loop(); }, { threshold: 0.55 }) : null;
   const scrollEls = new Set(); let sq = 0;
   const paint = () => { sq = 0; const vh = innerHeight, a = vh * 0.70, b = vh * 0.15;   // band enters when the card's top is ~70% down the screen, leaves at ~15%
     scrollEls.forEach(el => { if (!el.isConnected) { scrollEls.delete(el); return; }
