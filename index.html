@@ -566,7 +566,7 @@
 .track {
   display: flex; align-items: center; gap: 8px;
   width: 100%;
-  padding: 6px;
+  padding: 5px 8px 5px 3px;
   margin-bottom: 4px;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -579,11 +579,17 @@
 .track:focus-visible { outline: 2px solid var(--play-blue); outline-offset: -2px; }
 .track[aria-current="true"] { background: rgba(91,149,195,.16); border-color: rgba(91,149,195,.45); }
 .track__thumb {
-  width: 32px; height: 32px; flex: 0 0 auto;
-  border-radius: 7px; object-fit: cover; object-position: center top; background: #222;
+  width: 26px; height: 26px; flex: 0 0 auto;
+  border-radius: 6px; object-fit: cover; object-position: center top; background: #222;
 }
 .track__meta { flex: 1 1 auto; min-width: 0; }
-.track__title { display: block; font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track__title { display: block; font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the row you stop on: its title scrolls right → left in a loop inside its own box */
+.track__title.is-marq { text-overflow: clip; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6px, #000 calc(100% - 12px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 6px, #000 calc(100% - 12px), transparent); }
+.track__title .mq { display: inline-block; animation: trkMarq var(--mqd, 8s) linear infinite; animation-delay: .6s; }
+.track__title .mq span { padding-right: 28px; }
+@keyframes trkMarq { from { transform: translateX(0); } to { transform: translateX(calc(-1 * var(--mqw, 0px))); } }
+@media (prefers-reduced-motion: reduce) { .track__title .mq { animation: none; } }
 .track__artist { display: block; font-size: 11px; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .track__dur { font-size: 10.5px; color: rgba(255,255,255,.55); flex: 0 0 auto; font-variant-numeric: tabular-nums; }
 .track[aria-current="true"] .track__dur { color: var(--play-blue); }
@@ -769,7 +775,7 @@
 /* The audio controls now live INSIDE the GOOD VIBES ONLY card (moved there on init) as a compact
    bar — the large fixed bottom panel is gone. */
 .music .mini { display: none !important; }   /* no separate audio panel: play / pause lives on each song row */
-.track__play { width: 26px; height: 26px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.1); color: #fff; }
+.track__play { display: none !important; width: 26px; height: 26px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: rgba(255,255,255,.1); color: #fff; }
 .track__play svg { width: 11px; height: 11px; }
 .track__play .i-pause { display: none; }
 .track[aria-current="true"] .track__play { background: #fff; color: #111; }
@@ -2524,7 +2530,7 @@
       if (!t.duration) resolveDuration(t);   // permanent rule: read the real media duration and fill it in automatically
       const pl = document.createElement('span'); pl.className = 'track__play'; pl.setAttribute('aria-hidden', 'true');
       pl.innerHTML = '<svg class="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
-      b.append(img, meta, du, pl);
+      b.append(img, meta, du);   // no play/pause circle — the row itself plays / pauses
       b.addEventListener('pointerdown', () => { if (tab === 'video' && t.video) window.BYMARCCC_VP?.prefetch?.(t); }, { passive: true });
       b.addEventListener('click', () => {
         if (tab === 'video') { if (t.video && window.BYMARCCC_VP) { audio.pause(); window.BYMARCCC_VP.play(t); window.BYMARCCC_VP.pip?.(); markCurrent(); } return; }   // MUSIC VIDEO → floating mini player; the playlist stays open behind it
@@ -2537,7 +2543,27 @@
     });
     list.appendChild(frag);
     markCurrent();
+    clearTimeout(marqT); marqT = setTimeout(marqueeNow, 700);
   }
+  /* Marquee: when the list stops scrolling, the row nearest the middle scrolls its (too long) title right → left, on a loop */
+  var marqT = 0, marqEl = null;
+  function stopMarquee() { if (!marqEl) return; const t = marqEl; marqEl = null; t.classList.remove('is-marq'); t.textContent = t.dataset.full || t.textContent; }
+  function marqueeNow() {
+    const lr = list.getBoundingClientRect(); if (!lr.height) return;
+    const mid = lr.top + lr.height / 2; let best = null, bd = 1e9;
+    list.querySelectorAll('.track__title').forEach(t => { const r = t.getBoundingClientRect(); if (r.bottom < lr.top || r.top > lr.bottom) return; const d = Math.abs((r.top + r.bottom) / 2 - mid); if (d < bd) { bd = d; best = t; } });
+    if (!best || best === marqEl) return;
+    stopMarquee();
+    const full = best.textContent; if (best.scrollWidth <= best.clientWidth + 1) return;   // fits: nothing to scroll
+    best.dataset.full = full; best.classList.add('is-marq');
+    const mq = document.createElement('span'); mq.className = 'mq';
+    const a = document.createElement('span'); a.textContent = full; const b2 = a.cloneNode(true); b2.setAttribute('aria-hidden', 'true');
+    mq.append(a, b2); best.textContent = ''; best.appendChild(mq);
+    const w = a.getBoundingClientRect().width;   // one copy incl. its gap
+    mq.style.setProperty('--mqw', w + 'px'); mq.style.setProperty('--mqd', Math.max(5, w / 28).toFixed(2) + 's');
+    marqEl = best;
+  }
+  list.addEventListener('scroll', () => { stopMarquee(); clearTimeout(marqT); marqT = setTimeout(marqueeNow, 450); }, { passive: true });
   function markCurrent() {
     const vidCur = tab === 'video' && window.BYMARCCC_VP ? window.BYMARCCC_VP.current() : null;
     list.querySelectorAll('.track').forEach(b => {
