@@ -944,6 +944,7 @@
         <div class="card__face card__front" id="cardFront">
           <button class="clickme" id="clickMe" type="button" aria-label="Open bymarccc music player" aria-expanded="false" aria-controls="cardBack">Click me!</button>
           <img src="/assets/img/home/8792861034.webp" width="858" height="900" alt="bymarccc alien wearing headphones" decoding="async">
+          <span class="scanfx scanfx--card" style="--m:url(/assets/img/home/scanmask-alien.png);--fit:cover" aria-hidden="true"></span>
         </div>
 
         <div class="card__face card__back" id="cardBack" aria-hidden="true">
@@ -1134,6 +1135,20 @@
   .shop__soldout { position: absolute; z-index: 2; top: 10px; left: 10px; background: #111; color: #fff; font-size: 10px; font-weight: 600; letter-spacing: .1em; padding: 5px 9px; border-radius: 3px; }
   .shop__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; opacity: 0; transition: opacity .35s cubic-bezier(.22,1,.36,1); }
   .shop__img img.is-on { opacity: 1; }
+
+  /* ---- rainbow scan (Pinterest-style): a soft colour sweep over the masked subject only ---- */
+  .scanfx { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; opacity: 0;
+    -webkit-mask: var(--m) center / var(--fit, cover) no-repeat; mask: var(--m) center / var(--fit, cover) no-repeat; }
+  .scanfx--card { inset: 12px; border-radius: 16px; }
+  .scanfx::before { content: ""; position: absolute; left: -15%; right: -15%; top: -75%; height: 75%;
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #b79bff 18%, #ff8ad8 36%, #ffd27a 56%, #9df0b4 76%, rgba(255,255,255,0) 100%);
+    filter: blur(14px); }
+  .scanfx.is-run { animation: scanFade 2.3s ease forwards; }
+  .scanfx.is-run::before { animation: scanMove 2.3s cubic-bezier(.45,.05,.35,1) forwards; }
+  @keyframes scanMove { from { transform: translateY(0); } to { transform: translateY(240%); } }
+  @keyframes scanFade { 0% { opacity: 0; } 10% { opacity: .72; } 80% { opacity: .72; } 100% { opacity: 0; } }
+  .shop__img:has(img.is-on:not(:first-of-type)) .scanfx { display: none; }
+  @media (prefers-reduced-motion: reduce) { .scanfx { display: none; } }
   .shop__bars { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 4px; }
   .shop__bars i { display: block; flex: 1 1 0; max-width: 18px; min-width: 4px; height: 2px; background: rgba(17,17,17,.28); border-radius: 1px; transition: background .25s; }
   .shop__bars i.is-on { background: #111; }
@@ -1284,6 +1299,9 @@
   const NEW_LIST = ['m-burgundy-hoodie', 'art-jeans', 'w-sporty-top-ecru', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-jeans', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag'];
   const NEW_COLLECTION = new Set(NEW_LIST);
   const newTag = key => NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
+  // Pinterest-style rainbow "scan" over the model (mask = the person cut out of the first photo)
+  const SCAN_MASKS = { 'w-sporty-top': '/assets/img/home/scanmask-sporty-top.png' };
+  const scanFx = key => SCAN_MASKS[key] ? `<span class="scanfx" style="--m:url(${SCAN_MASKS[key]});--fit:contain" aria-hidden="true"></span>` : '';
   // men SALES: the piece's only size, written vertically in the photo's top-left corner (same type as NEW COLLECTION)
   // trial: on these 3 the size is written horizontally (Ksubi-style), so Mark can compare with the vertical one
   const SIZE_FLAT = new Set(['sale-embroidered-crosses-jeans', 'sale-striped-jeans', 'van-gogh-jacket']);
@@ -1291,7 +1309,7 @@
   function card(key, p) {
     const imgs = (p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
     const a = document.createElement('a'); a.className = 'shop__card'; a.href = 'bymarccc-product.html?p=' + key;
-    a.innerHTML = `<span class="shop__img">${newTag(key)}${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
+    a.innerHTML = `<span class="shop__img">${newTag(key)}${scanFx(key)}${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
       <span class="shop__meta"><span class="shop__name">${p.title}</span>${typeof p.price === 'number' ? (typeof p.salePrice === 'number' ? `<span class="shop__price"><span class="shop__price--old">${fmt(p.price, p.currency)}</span><span class="shop__price--sale">${fmt(p.salePrice, p.currency)}</span></span>` : `<span class="shop__price">${fmt(p.price, p.currency)}</span>`) : ''}</span>`;
     if (imgs.length > 1) {
       const pics = [...a.querySelectorAll('img')], bars = [...a.querySelectorAll('.shop__bars i')]; let i = 0;
@@ -4682,5 +4700,21 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 })();
 </script>
 <script src="/assets/gv.js" defer></script>
+<script>
+/* rainbow scan: runs when the piece comes into view (then every few seconds while visible) and on hover / tap */
+(() => {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const run = el => { el.classList.remove('is-run'); void el.offsetWidth; el.classList.add('is-run'); };
+  const timers = new WeakMap();
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => {
+    const el = e.target; clearInterval(timers.get(el));
+    if (e.isIntersecting) { setTimeout(() => run(el), 350); timers.set(el, setInterval(() => run(el), 6500)); }
+  }), { threshold: 0.55 }) : null;
+  const wire = el => { if (el.dataset.scanWired) return; el.dataset.scanWired = '1'; io && io.observe(el);
+    const host = el.parentElement; ['pointerenter', 'touchstart'].forEach(ev => host.addEventListener(ev, () => run(el), { passive: true })); };
+  const scan = () => document.querySelectorAll('.scanfx').forEach(wire);
+  let q = 0; scan(); new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; scan(); }); }).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
 </body>
 </html>
