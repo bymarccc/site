@@ -2198,7 +2198,7 @@ __name(seoHeadFor, "seoHeadFor");
 // visitors who picked a language (cookie bym_lang) or browse from Hungary / Italy / Bulgaria.
 // Prefixed pages price in that country's currency, so Google and Merchant Center see one price.
 // ---------------------------------------------------------------------------------------------
-var I18N_VERSION = "5";
+var I18N_VERSION = "6";
 var I18N_LANGS = ["fr", "de", "it", "es", "nl", "pt", "pl", "ro", "hu", "cs", "bg", "el", "sv"];
 var I18N_AUTO = ["fr", "de", "it", "es", "nl", "pt", "pl", "hu", "cs", "bg", "el", "sv"];   // picked automatically from the browser language (Romanian visitors keep English unless they choose RO)
 var I18N_RE = new RegExp("^/(" + I18N_LANGS.join("|") + ")(/.*)?$");
@@ -2423,7 +2423,11 @@ async function contentRender(request, url, L, route) {
     const items = [home, [U.shop || "Shop", null], [c.h1, null]];
     ld.push(crumbLd(items), { "@context": "https://schema.org", "@type": "CollectionPage", name: c.title, description: c.description, url: i18nUrl(canonLang, route.path), mainEntity: { "@type": "ItemList", numberOfItems: keys.length, itemListElement: keys.map((k, i) => ({ "@type": "ListItem", position: i + 1, url: i18nUrl(canonLang, `/bymarccc-product?p=${encodeURIComponent(k)}`), name: D.products[k].title })) } });
     const others = Object.keys(C.categories).filter((k) => k !== route.id);
+    const cfaqs = Array.isArray(c.faqs) ? c.faqs : [];
+    if (cfaqs.length) ld.push({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: cfaqs.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) });
     body = `${crumb(items)}<h1>${esc(c.h1)}</h1><p class="lead">${esc(c.intro)}</p><div class="grid">${keys.map(card).join("")}</div>` +
+      (c.body ? `<div class="catbody">${fix(c.body)}</div>` : "") +
+      (cfaqs.length ? `<h2>${esc(U.faq || "FAQ")}</h2>${cfaqs.map(([q, a]) => `<details class="faq"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}` : "") +
       `<div class="chips">${others.map((k) => `<a href="${base}/shop/${k}">${esc(C.categories[k].h1)}</a>`).join("")}</div>`;
   }
   const canon = i18nUrl(canonLang, route.path);
