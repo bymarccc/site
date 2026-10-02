@@ -2071,6 +2071,8 @@ async function geoInjectHtml(request, res, L) {
     rw = rw.on('link[rel="canonical"]', { element(el) { el.setAttribute("href", canon); } });
   }
   if (seoTitle) rw = rw.on("title", { element(el) { el.setInnerContent(seoTitle); } });
+  // product page: the real product name in the <h1> server-side (it was a fixed placeholder until JS ran)
+  if (seoTitle && /^\/bymarccc-product$/.test(page)) { const h1 = seoTitle.split(" | ")[0].split(" — ")[0]; rw = rw.on("h1#pTitle", { element(el) { el.setInnerContent(h1); } }); }
   const out = rw.transform(res);
   const h = new Headers(out.headers);
   h.delete("etag"); h.set("Cache-Control", "private, no-cache");
@@ -2159,11 +2161,21 @@ async function seoHeadFor(url, lang = "en", rawPath = null, prefixed = false, cc
   const imgs = (p.gallery || []).slice(0, 6).map((g) => SEO_BASE + "/" + String(g.src).replace(/^\//, ""));
   const ron = typeof p.salePrice === "number" ? p.salePrice : p.price;
   let price = ron, cur = p.currency || "RON";
-  if (cc && typeof ron === "number") { const rule = geoRule(cc, await geoRates()); price = geoPrice(ron, rule); cur = rule.cur; }
+  const srule = geoRule(cc || "RO", cc ? await geoRates() : undefined);
+  if (cc && typeof ron === "number") { price = geoPrice(ron, srule); cur = srule.cur; }
+  // Merchant-listing extras (Google free listings / rich results): shipping + returns for the page's country
+  const shipCC = srule.cc, roShip = shipCC === "RO";
+  const transit = roShip ? [3, 5] : ["GB", "US", "CA", "AU"].includes(shipCC) ? [7, 12] : [5, 7];
+  const offerExtras = {
+    priceValidUntil: `${new Date().getUTCFullYear() + 1}-12-31`,
+    shippingDetails: { "@type": "OfferShippingDetails", shippingRate: { "@type": "MonetaryAmount", value: String(srule.ship), currency: srule.cur }, shippingDestination: { "@type": "DefinedRegion", addressCountry: shipCC },
+      deliveryTime: { "@type": "ShippingDeliveryTime", handlingTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 5, unitCode: "DAY" }, transitTime: { "@type": "QuantitativeValue", minValue: transit[0], maxValue: transit[1], unitCode: "DAY" } } },
+    hasMerchantReturnPolicy: { "@type": "MerchantReturnPolicy", applicableCountry: shipCC, returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow", merchantReturnDays: 14, returnMethod: "https://schema.org/ReturnByMail", returnFees: roShip ? "https://schema.org/FreeReturn" : "https://schema.org/ReturnShippingFees" }
+  };
   const ld = {
     "@context": "https://schema.org", "@type": "Product", name, description: desc, image: imgs, sku: p.id || key,
     brand: { "@type": "Brand", name: "bymarccc" },
-    ...(typeof price === "number" ? { offers: { "@type": "Offer", url: canon, priceCurrency: cur, price: String(price), availability: p.soldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock", itemCondition: "https://schema.org/NewCondition", seller: { "@type": "Organization", name: "bymarccc" } } } : {})
+    ...(typeof price === "number" ? { offers: { "@type": "Offer", url: canon, priceCurrency: cur, price: String(price), availability: p.soldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock", itemCondition: "https://schema.org/NewCondition", seller: { "@type": "Organization", name: "bymarccc" }, ...offerExtras } } : {})
   };
   return [
     `<meta name="description" content="${seoEsc(desc)}">`,
