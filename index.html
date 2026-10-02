@@ -1151,6 +1151,9 @@
   /* alien card: only the black alien outline glows (under the headphones), a bit stronger since the line is thin */
   .scanfx--card.is-run { animation-name: scanFadeCard; }
   @keyframes scanFadeCard { 0% { opacity: 0; } 8% { opacity: .95; } 88% { opacity: .95; } 100% { opacity: 0; } }
+  /* scroll-driven variant: the band position follows the scroll (JS sets --sp 0→1 and --so) */
+  .scanfx--scroll { opacity: var(--so, 0); }
+  .scanfx--scroll::before { transform: translateY(calc(var(--sp, 0) * 560%)); will-change: transform; }
   .shop__img:has(img.is-on:not(:first-of-type)) .scanfx { display: none; }
   @media (prefers-reduced-motion: reduce) { .scanfx { display: none; } }
   .shop__bars { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 4px; }
@@ -1305,7 +1308,8 @@
   const newTag = key => NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
   // Pinterest-style rainbow "scan" over the model (mask = the person cut out of the first photo)
   const SCAN_MASKS = { 'w-sporty-top': '/assets/img/home/scanmask-sporty-top.png', 'w-sporty-top-ecru': '/assets/img/home/scanmask-w-sporty-top-ecru.png', 'w-burgundy-long-sleeve': '/assets/img/home/scanmask-w-burgundy-long-sleeve.png', 'w-black-hoodie': '/assets/img/home/scanmask-w-black-hoodie.png', 'w-logo-leggings': '/assets/img/home/scanmask-w-logo-leggings.png', 'w-walking-art-blue-jeans': '/assets/img/home/scanmask-w-walking-art-blue-jeans.png', 'w-black-logo-windbreaker': '/assets/img/home/scanmask-w-black-logo-windbreaker.png', 'art-dept-bag': '/assets/img/home/scanmask-art-dept-bag.png', 'relaxed': '/assets/img/home/scanmask-relaxed.png', 'bandana-jeans': '/assets/img/home/scanmask-bandana-jeans.png', 'art-jeans': '/assets/img/home/scanmask-art-jeans.png' };
-  const scanFx = key => SCAN_MASKS[key] ? `<span class="scanfx" style="--m:url(${SCAN_MASKS[key]});--fit:contain" aria-hidden="true"></span>` : '';
+  const SCAN_SCROLL = new Set(['relaxed']);   // these follow the page scroll instead of looping (down = top→bottom, up = bottom→top)
+  const scanFx = key => SCAN_MASKS[key] ? `<span class="scanfx${SCAN_SCROLL.has(key) ? ' scanfx--scroll' : ''}" style="--m:url(${SCAN_MASKS[key]});--fit:contain" aria-hidden="true"></span>` : '';
   // men SALES: the piece's only size, written vertically in the photo's top-left corner (same type as NEW COLLECTION)
   // trial: on these 3 the size is written horizontally (Ksubi-style), so Mark can compare with the vertical one
   const SIZE_FLAT = new Set(['sale-embroidered-crosses-jeans', 'sale-striped-jeans', 'van-gogh-jacket']);
@@ -4714,7 +4718,16 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const el = e.target; clearInterval(timers.get(el));
     if (e.isIntersecting) { setTimeout(() => run(el), 350); timers.set(el, setInterval(() => run(el), 4400)); /* 1.9 s sweep + ~2.5 s pause */ }
   }), { threshold: 0.55 }) : null;
-  const wire = el => { if (el.dataset.scanWired) return; el.dataset.scanWired = '1'; io && io.observe(el);
+  const scrollEls = new Set(); let sq = 0;
+  const paint = () => { sq = 0; const vh = innerHeight, a = vh * 0.70, b = vh * 0.15;   // band enters when the card's top is ~70% down the screen, leaves at ~15%
+    scrollEls.forEach(el => { if (!el.isConnected) { scrollEls.delete(el); return; }
+      const t = el.parentElement.getBoundingClientRect().top, p = Math.max(0, Math.min(1, (a - t) / (a - b)));
+      el.style.setProperty('--sp', p.toFixed(4)); el.style.setProperty('--so', (p <= 0 || p >= 1 ? 0 : Math.min(1, p / 0.1, (1 - p) / 0.12) * 0.74).toFixed(3)); }); };
+  const onScroll = () => { if (!sq) sq = requestAnimationFrame(paint); };
+  addEventListener('scroll', onScroll, { passive: true }); addEventListener('resize', onScroll, { passive: true });
+  const wire = el => { if (el.dataset.scanWired) return; el.dataset.scanWired = '1';
+    if (el.classList.contains('scanfx--scroll')) { scrollEls.add(el); onScroll(); return; }
+    io && io.observe(el);
     const host = el.parentElement; ['pointerenter', 'touchstart'].forEach(ev => host.addEventListener(ev, () => run(el), { passive: true })); };
   const scan = () => document.querySelectorAll('.scanfx').forEach(wire);
   let q = 0; scan(); new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; scan(); }); }).observe(document.body, { childList: true, subtree: true });
