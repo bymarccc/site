@@ -4313,6 +4313,21 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .bagpill__n{ min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#fff; color:#111; display:grid; place-items:center; font-size:11px; letter-spacing:0; }
 .bagpill:hover{ transform:translateY(-2px); }
 @media (max-width:640px){ .bagpill{ height:40px; padding:0 14px 0 14px; bottom:calc(var(--ai-offset,10px) + env(safe-area-inset-bottom,0px) + 10px); } }   /* bottom-right corner, next to the AI launcher (60px) */
+/* phone: styled like Safari's own address pill and parked just above it — small when Safari's bar is compact (scrolling down),
+   larger when the bar expands (scrolling back up). The viewport bottom moves with Safari's bar, so one offset fits both states. */
+@media (max-width:640px){
+  .bagpill{ left:50%; right:auto; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) - 7px);
+    height:47px; min-width:211px; padding:0 20px; justify-content:center; gap:10px; font-size:13px; letter-spacing:.18em;
+    background:rgba(255,255,255,.86); color:#111; -webkit-backdrop-filter:blur(22px) saturate(1.8); backdrop-filter:blur(22px) saturate(1.8);
+    box-shadow:0 8px 28px rgba(0,0,0,.14), 0 0 0 .5px rgba(0,0,0,.08);
+    transition:height .35s cubic-bezier(.22,1,.36,1), min-width .35s cubic-bezier(.22,1,.36,1), font-size .35s, gap .35s, bottom .35s cubic-bezier(.22,1,.36,1); }
+  .bagpill:hover{ transform:translateX(-50%); }
+  .bagpill svg{ width:17px; height:17px; transition:width .35s, height .35s; }
+  .bagpill__n{ background:#111; color:#fff; min-width:22px; height:22px; font-size:12px; transition:min-width .35s, height .35s, font-size .35s; }
+  html.sb-compact .bagpill{ height:31px; min-width:121px; padding:0 14px; gap:7px; font-size:10px; }
+  html.sb-compact .bagpill svg{ width:13px; height:13px; }
+  html.sb-compact .bagpill__n{ min-width:17px; height:17px; font-size:10px; padding:0 5px; }
+}
 </style>
 <a class="bagpill" id="bagPill" href="checkout.html" hidden aria-label="Open bag and checkout">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 13H5L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
@@ -4324,6 +4339,10 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const bag = window.BYMARCCC && window.BYMARCCC.bag; if (!pill || !bag) return;
   const sync = () => { const c = bag.count(); n.textContent = c; pill.hidden = c === 0; };
   bag.onChange(sync); sync();
+  // Safari bar state: the page gets taller when the bar shrinks (scrolling down) and shorter when it expands again
+  let base = innerHeight; const root = document.documentElement;
+  const sb = () => { if (innerHeight < base) base = innerHeight; root.classList.toggle('sb-compact', innerHeight > base + 20); };
+  addEventListener('resize', sb, { passive: true }); addEventListener('scroll', sb, { passive: true }); sb();
 })();
 </script>
 
