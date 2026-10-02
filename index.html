@@ -1148,6 +1148,9 @@
   .scanfx.is-run::before { animation: scanMove 1.9s cubic-bezier(.4,.1,.6,.9) forwards; }
   @keyframes scanMove { from { transform: translateY(0); } to { transform: translateY(560%); } }
   @keyframes scanFade { 0% { opacity: 0; } 8% { opacity: .74; } 88% { opacity: .74; } 100% { opacity: 0; } }
+  /* alien card: only the black alien outline glows (under the headphones), a bit stronger since the line is thin */
+  .scanfx--card.is-run { animation-name: scanFadeCard; }
+  @keyframes scanFadeCard { 0% { opacity: 0; } 8% { opacity: .95; } 88% { opacity: .95; } 100% { opacity: 0; } }
   .shop__img:has(img.is-on:not(:first-of-type)) .scanfx { display: none; }
   @media (prefers-reduced-motion: reduce) { .scanfx { display: none; } }
   .shop__bars { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 4px; }
