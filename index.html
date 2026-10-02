@@ -1140,13 +1140,14 @@
   .scanfx { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; opacity: 0;
     -webkit-mask: var(--m) center / var(--fit, cover) no-repeat; mask: var(--m) center / var(--fit, cover) no-repeat; }
   .scanfx--card { inset: 12px; border-radius: 16px; }
-  .scanfx::before { content: ""; position: absolute; left: -15%; right: -15%; top: -75%; height: 75%;
-    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #b79bff 18%, #ff8ad8 36%, #ffd27a 56%, #9df0b4 76%, rgba(255,255,255,0) 100%);
-    filter: blur(14px); }
-  .scanfx.is-run { animation: scanFade 2.3s ease forwards; }
-  .scanfx.is-run::before { animation: scanMove 2.3s cubic-bezier(.45,.05,.35,1) forwards; }
-  @keyframes scanMove { from { transform: translateY(0); } to { transform: translateY(240%); } }
-  @keyframes scanFade { 0% { opacity: 0; } 10% { opacity: .72; } 80% { opacity: .72; } 100% { opacity: 0; } }
+  /* thin, soft band (≈22% of the height) that takes ~1.5 s to cross the subject */
+  .scanfx::before { content: ""; position: absolute; left: -10%; right: -10%; top: -22%; height: 22%;
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #b9a3ff 20%, #ff9fd9 40%, #ffd98a 60%, #a6efc4 80%, rgba(255,255,255,0) 100%);
+    filter: blur(8px); }
+  .scanfx.is-run { animation: scanFade 1.9s ease forwards; }
+  .scanfx.is-run::before { animation: scanMove 1.9s cubic-bezier(.4,.1,.6,.9) forwards; }
+  @keyframes scanMove { from { transform: translateY(0); } to { transform: translateY(560%); } }
+  @keyframes scanFade { 0% { opacity: 0; } 8% { opacity: .74; } 88% { opacity: .74; } 100% { opacity: 0; } }
   .shop__img:has(img.is-on:not(:first-of-type)) .scanfx { display: none; }
   @media (prefers-reduced-motion: reduce) { .scanfx { display: none; } }
   .shop__bars { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 4px; }
@@ -4708,7 +4709,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const timers = new WeakMap();
   const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => {
     const el = e.target; clearInterval(timers.get(el));
-    if (e.isIntersecting) { setTimeout(() => run(el), 350); timers.set(el, setInterval(() => run(el), 6500)); }
+    if (e.isIntersecting) { setTimeout(() => run(el), 350); timers.set(el, setInterval(() => run(el), 4400));   // 1.9 s sweep + ~2.5 s pause }
   }), { threshold: 0.55 }) : null;
   const wire = el => { if (el.dataset.scanWired) return; el.dataset.scanWired = '1'; io && io.observe(el);
     const host = el.parentElement; ['pointerenter', 'touchstart'].forEach(ev => host.addEventListener(ev, () => run(el), { passive: true })); };
