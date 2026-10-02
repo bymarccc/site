@@ -2512,8 +2512,10 @@ body.pdp .ai-launch{--ai-offset:92px}
 html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-select: none !important; -webkit-touch-callout: none !important; }
 .vp.is-docked { pointer-events: none; }
 .vp.is-pip { opacity: 0 !important; pointer-events: none !important; }   /* the system PiP window is the player now */
-.vp-tab.is-dock { width: 26px; height: 64px; top: var(--ty, 58%); border-radius: 0 10px 10px 0; background: rgba(20,20,20,.92); }
-.vp-tab.is-dock svg { width: 16px; height: 16px; }
+.vp-tab.is-dock { width: 26px; height: 96px; top: var(--ty, 58%); border-radius: 0 16px 16px 0; color: rgba(255,255,255,.95);
+  background: rgba(72,72,74,.62); -webkit-backdrop-filter: blur(24px) saturate(1.7); backdrop-filter: blur(24px) saturate(1.7);
+  box-shadow: 0 6px 22px rgba(0,0,0,.18), inset 0 0 0 .5px rgba(255,255,255,.18); }   /* same look as iPhone's own stashed PiP tab */
+.vp-tab.is-dock svg { width: 14px; height: 34px; }
 .vp-tab.is-right { left: auto; right: 0; border-radius: 10px 0 0 10px; }
 .vp-tab.is-right .vp-tab__c { transform: scaleX(-1); }
 .vp-tab { touch-action: none; }
@@ -2665,7 +2667,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 </div>
 <button class="vp-tab" id="vpTab" type="button" hidden aria-label="Show music videos">
   <svg class="vp-tab__i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg>
-  <svg class="vp-tab__c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M9 5l7 7-7 7"/></svg>
+  <svg class="vp-tab__c" viewBox="6 0 12 24" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M9 3l6 9-6 9"/></svg>
 </button>
 </div>
 <script>
