@@ -1139,6 +1139,10 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
         src:   M + 'madness.m4a',
         video: M + 'madness.mp4', poster: M + 'madness.jpg',
         thumb: 'assets/img/thumb-madness.jpg' },
+      { id: 'let-go',    title: 'Central Cee - Let Go',          channel: '', duration: '2:57',
+        src:   M + 'let-go.m4a',
+        video: M + 'let-go.mp4', poster: M + 'let-go.jpg',
+        thumb: 'assets/img/thumb-let-go.jpg' },
       { id: 'killin-em', title: "Nemzzz - Killin' Em",            channel: '', duration: '2:10',
         src:   M + 'killin-em.m4a',
         video: M + 'killin-em.mp4', poster: M + 'killin-em.jpg',
@@ -1478,7 +1482,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   /* ---------- open / close ---------- */
   function open() { vp.hidden = false; tab.hidden = true; store.set(KEY_OPEN, true); if (docked) undock(); clampToViewport(); showCtrls(); }
-  function close() { video.pause(); snd.pause(); bgPlay = false; vp.hidden = true; vp.classList.remove('is-ended', 'is-docked'); docked = false; setTab('reopen'); tab.hidden = false; store.set(KEY_OPEN, false); clearNow(); }
+  function close() { video.pause(); snd.pause(); bgPlay = false; vp.hidden = true; vp.classList.remove('is-ended', 'is-docked'); docked = false; setTab('reopen'); tab.hidden = true; /* X closes it for good — the side tab only appears when it is dragged off the edge */ store.set(KEY_OPEN, false); clearNow(); }
   /* --- dock: dragged off the LEFT edge → keeps playing, only a small arrow tab stays --- */
   let docked = false;
   const setTab = mode => { tab.classList.toggle('is-dock', mode === 'dock'); tab.querySelector('.vp-tab__i').toggleAttribute('hidden', mode === 'dock'); tab.querySelector('.vp-tab__c').toggleAttribute('hidden', mode !== 'dock');   /* SVG has no .hidden property */ tab.setAttribute('aria-label', mode === 'dock' ? 'Show video' : 'Show music videos'); };
@@ -1622,7 +1626,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const visible = Math.min(x + w, W) - Math.max(x, 0);
     if (x < 0 && visible < w * 0.4) { dock('left'); return; }
     if (x + w > W && visible < w * 0.4) { dock('right'); return; }
-    settleToCorner();                                          // free drag while held; only after release it glides to the nearest corner
+    settleToCorner();                                          // free drag; on release it stays put (only pulled back inside the screen if needed)
     store.set(KEY_POS, { x, y });                             // remembered across refreshes
   };
   const audioCard = $('vpAudio');
@@ -1673,8 +1677,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const sat = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
     const minX = Math.min(b.maxX, M), maxX = Math.max(minX, b.maxX - M);
     const minY = Math.min(b.maxY, Math.max(M, sat + 8)), maxY = Math.max(minY, b.maxY - M);
-    const tx = x + vp.offsetWidth / 2 < vw() / 2 ? minX : maxX;
-    const ty = y + vp.offsetHeight / 2 < innerHeight / 2 ? minY : maxY;
+    const tx = Math.min(maxX, Math.max(minX, x)), ty = Math.min(maxY, Math.max(minY, y));   // stays exactly where the user leaves it — only nudged back inside the screen if it hangs off an edge
     if (Math.abs(tx - x) < 0.5 && Math.abs(ty - y) < 0.5) return;
     vp.classList.remove('is-snapping'); vp.classList.add('is-settling');
     x = tx; y = ty; apply();
