@@ -63,7 +63,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "imageColours": true,
       "id": "relaxed-zebra-patch-jeans",
       "title": "Relaxed Zebra Patch Jeans",
-      "price": 450,
+      "price": 500,
       "currency": "RON",
       "cut": "Relaxed, straight leg",
       "details": ["100% cotton denim, 14 oz","Hand-applied zebra patches","Paint-splatter finish","Relaxed straight fit","Raw hem","Model measurements: 184 cm & 74 kg. Model is wearing size M","All clothing is custom made."],
