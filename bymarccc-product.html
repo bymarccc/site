@@ -626,6 +626,34 @@ body.is-custom-bag-page #gallery { display: none; }
 
 </style>
 <style>html,body{margin:0;padding:0;background:#fff}</style>
+<!-- Quick-view mode (?qv=1 inside the homepage long-press sheet): no music / AI widgets, links leave the sheet, bag syncs back -->
+<script>
+(() => {
+  if (!/[?&]qv=1(&|$)/.test(location.search) || window.top === window) return;
+  document.documentElement.classList.add('is-qv');
+  HTMLMediaElement.prototype.play = function () { return Promise.resolve(); };
+  const post = m => { try { parent.postMessage(m, location.origin); } catch (e) {} };
+  const go = u => {
+    let d; try { d = new URL(u, location.href); } catch (e) { return; }
+    if (d.origin === location.origin && /bymarccc-product\.html$/.test(d.pathname) && d.searchParams.get('p')) { d.searchParams.set('qv', '1'); location.href = d.pathname + d.search + d.hash; return; }
+    post({ bymQv: 'nav', url: d.href });
+  };
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('a[href]'); if (!a) return;
+    const h = a.getAttribute('href') || '';
+    if (!h || h[0] === '#' || /^(mailto|tel|javascript):/i.test(h) || a.target === '_blank' || a.hasAttribute('download')) return;
+    e.preventDefault(); e.stopImmediatePropagation(); go(a.href);
+  }, true);
+  addEventListener('DOMContentLoaded', () => {
+    if (window.BYM_NAV) window.BYM_NAV.navigate = go;
+    const b = window.BYMARCCC && window.BYMARCCC.bag;
+    if (b && b.listeners) b.listeners.add(() => post({ bymQv: 'bag' }));
+  });
+})();
+</script>
+<style>
+.is-qv .vp-layer, .is-qv .vp, .is-qv .ai, .is-qv .ai-launch { display: none !important; }
+</style>
 </head>
 <body class="pdp">
 

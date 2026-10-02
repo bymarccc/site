@@ -4720,5 +4720,91 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   let q = 0; scan(); new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; scan(); }); }).observe(document.body, { childList: true, subtree: true });
 })();
 </script>
+<!-- Long-press quick view: hold a product card (touch) -> the real product page opens in a small live sheet
+     (scroll, height & weight, description, delivery & returns, Add to bag all work). Replaces Safari's static link preview. -->
+<style>
+@media (hover: none) { .shop__card, .shop__card img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; } }
+.qv { position: fixed; inset: 0; z-index: 2147483000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: calc(env(safe-area-inset-top, 0px) + 18px) 16px calc(env(safe-area-inset-bottom, 0px) + 18px);
+  background: rgba(20,20,20,.28); -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2);
+  opacity: 0; transition: opacity .28s cubic-bezier(.22,1,.36,1); touch-action: none; }
+.qv[hidden] { display: none; }
+.qv.is-on { opacity: 1; }
+.qv__sheet { position: relative; width: min(100%, 430px); height: min(76vh, 780px); height: min(76dvh, 780px); border-radius: 20px; overflow: hidden; background: #fff;
+  box-shadow: 0 24px 70px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.08); transform: scale(.86); transform-origin: var(--qv-o, 50% 50%);
+  transition: transform .38s cubic-bezier(.22,1,.36,1); touch-action: auto; }
+.qv.is-on .qv__sheet { transform: none; }
+.qv__sheet iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+.qv__load { position: absolute; inset: 0; display: grid; place-items: center; background: #fff; transition: opacity .25s; pointer-events: none; }
+.qv__load img { width: 100%; height: 100%; object-fit: contain; background: #f0f0f0; }
+.qv.is-ready .qv__load { opacity: 0; }
+.qv__acts { display: flex; gap: 10px; width: min(100%, 430px); touch-action: auto; transform: translateY(8px); transition: transform .38s cubic-bezier(.22,1,.36,1); }
+.qv.is-on .qv__acts { transform: none; }
+.qv__btn { flex: 1; height: 46px; border: 0; border-radius: 999px; font: 500 12px/1 "Jost", "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: .16em; text-transform: uppercase; cursor: pointer; }
+.qv__btn--open { background: #111; color: #fff; }
+.qv__btn--close { background: rgba(255,255,255,.92); color: #111; }
+html.qv-lock, html.qv-lock body { overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .qv, .qv__sheet, .qv__acts { transition: none; } }
+</style>
+<script>
+(() => {
+  const HOLD = 420, SLOP = 10;
+  let ov = null, frame = null, url = '', timer = 0, start = null, swallow = null;
+  const bag = () => window.BYMARCCC && window.BYMARCCC.bag;
+  const syncBag = () => { const b = bag(); if (b && b.load) { b.load(); b.emit && b.emit(); } };
+  function build() {
+    ov = document.createElement('div'); ov.className = 'qv'; ov.hidden = true;
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'Product quick view');
+    ov.innerHTML = '<div class="qv__sheet"><iframe title="Product" loading="eager"></iframe><div class="qv__load"><img alt=""></div></div>'
+      + '<div class="qv__acts"><button type="button" class="qv__btn qv__btn--close">Close</button><button type="button" class="qv__btn qv__btn--open">Open product</button></div>';
+    document.body.appendChild(ov);
+    frame = ov.querySelector('iframe');
+    frame.addEventListener('load', () => ov.classList.add('is-ready'));
+    ov.addEventListener('click', e => { if (e.target === ov) close(); });
+    ov.querySelector('.qv__btn--close').addEventListener('click', () => close());
+    ov.querySelector('.qv__btn--open').addEventListener('click', () => { let u = url; try { u = frame.contentWindow.location.href.replace(/([?&])qv=1&?/, '$1').replace(/[?&]$/, ''); } catch (e) {} go(u); });
+    addEventListener('keydown', e => { if (e.key === 'Escape' && ov && !ov.hidden) close(); });
+  }
+  function open(card) {
+    if (!ov) build();
+    url = card.href;
+    const u = new URL(card.href, location.href); u.searchParams.set('qv', '1');
+    const r = card.getBoundingClientRect();
+    ov.style.setProperty('--qv-o', `${Math.round(r.left + r.width / 2 - (innerWidth - Math.min(innerWidth - 32, 430)) / 2)}px ${Math.round(r.top + r.height / 2)}px`);
+    const im = card.querySelector('img.is-on') || card.querySelector('img');
+    ov.querySelector('.qv__load img').src = im ? (im.currentSrc || im.src) : '';
+    ov.classList.remove('is-ready', 'is-on');
+    frame.src = u.pathname + u.search;
+    ov.hidden = false; document.documentElement.classList.add('qv-lock');
+    requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('is-on')));
+    try { navigator.vibrate && navigator.vibrate(12); } catch (e) {}
+  }
+  function close(after) {
+    if (!ov || ov.hidden) { after && after(); return; }
+    ov.classList.remove('is-on'); document.documentElement.classList.remove('qv-lock');
+    setTimeout(() => { ov.hidden = true; frame.src = 'about:blank'; syncBag(); after && after(); }, 260);
+  }
+  function go(u) { close(() => { if (window.BYM_NAV && window.BYM_NAV.navigate) window.BYM_NAV.navigate(u); else location.href = u; }); }
+  addEventListener('message', e => {
+    if (e.origin !== location.origin || !e.data || !e.data.bymQv) return;
+    if (e.data.bymQv === 'bag') syncBag();
+    else if (e.data.bymQv === 'nav' && e.data.url) go(e.data.url);
+  });
+  const cancel = () => { clearTimeout(timer); timer = 0; start = null; };
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse') return;
+    const card = e.target.closest && e.target.closest('a.shop__card'); if (!card) return;
+    start = { x: e.clientX, y: e.clientY, card };
+    clearTimeout(timer);
+    timer = setTimeout(() => { const c = start && start.card; cancel(); if (!c) return; swallow = c; setTimeout(() => { if (swallow === c) swallow = null; }, 900); open(c); }, HOLD);
+  }, { passive: true });
+  document.addEventListener('pointermove', e => { if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > SLOP) cancel(); }, { passive: true });
+  document.addEventListener('pointerup', cancel, { passive: true });
+  document.addEventListener('pointercancel', cancel, { passive: true });
+  addEventListener('scroll', cancel, { passive: true, capture: true });
+  document.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('a.shop__card') && matchMedia('(hover: none)').matches) e.preventDefault(); });
+  window.addEventListener('click', e => { if (swallow && e.target.closest && e.target.closest('a.shop__card') === swallow) { e.preventDefault(); e.stopImmediatePropagation(); swallow = null; } }, true);
+})();
+</script>
 </body>
 </html>
