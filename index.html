@@ -325,8 +325,8 @@
     .zebra__buy { margin-top: 12px; }
   }
   @media (max-height: 520px) and (orientation: landscape) {   /* phone turned sideways: bigger jeans, section fills the screen */
-    :root { --jeans-h: 64vh; --step: 27vw; }
-    @supports (height: 1svh) { :root { --jeans-h: 64svh; } }
+    :root { --jeans-h: 77vh; --step: 32vw; }
+    @supports (height: 1svh) { :root { --jeans-h: 77svh; } }
     .zebra { min-height: 100vh; min-height: 100svh; height: auto; max-height: none; padding-top: calc(env(safe-area-inset-top, 0px) + 10px); padding-bottom: 10px; grid-template-rows: auto minmax(0, 1fr) auto; }
     .zebra__heading { font-size: 16px; padding-bottom: 0; }
     .zebra__info { padding-top: 4px; }
@@ -1036,7 +1036,7 @@
 <style>
   .crumble { position: relative; background: #fff; }
   .crumble__sticky { position: relative; height: var(--ch, auto); overflow: hidden; display: grid; place-items: center; background: #fff; }
-  .crumble__img { width: min(100%, 1100px); height: auto; max-height: 100vh; max-height: 100svh; object-fit: contain; display: block; }
+  .crumble__img { width: auto; height: auto; max-width: min(100%, 1100px); max-height: 100vh; max-height: 100svh; display: block; }   /* keeps its own shape: the particle canvas copies this exact box (no stretching sideways) */
   #shop { padding-bottom: 28px; }
   #shopWomen { padding-top: 12px; border-top: 0; }
   .crumble__img.is-hidden { visibility: hidden; }
@@ -1141,7 +1141,7 @@
   @media (max-width: 640px) { .shop__tab { font-size: 12px; letter-spacing: .12em; } .shop__tabs { gap: 16px; justify-content: flex-start; flex-wrap: nowrap; } .shop__tab:first-child { margin-left: auto; } .shop__tab:last-child { margin-right: auto; } }   /* one row you swipe left/right (NEW COLLECTION sits right of SALES); still centred when the tabs fit */
   .shop__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(22px, 3vw, 34px) clamp(10px, 2vw, 20px); padding: 0 clamp(16px, 4vw, 48px); max-width: 1320px; margin: 0 auto; }
   @media (min-width: 900px) { .shop__grid { grid-template-columns: repeat(5, 1fr); } }
-  @media (max-width: 899px) and (orientation: landscape) { .shop__grid { grid-template-columns: repeat(3, 1fr); } }   /* phone turned sideways: 3 per row */
+  @media (max-width: 899px) and (orientation: landscape) { .shop__grid { grid-template-columns: repeat(4, 1fr); } }   /* phone turned sideways: 4 per row (photo + price fit on screen) */
   .shop__card { display: block; color: inherit; text-decoration: none; }
   .shop__img { position: relative; display: block; aspect-ratio: 1212 / 1816; background: #f2f2f0; overflow: hidden; touch-action: pan-y pinch-zoom; }
   /* Diesel-style vertical label on the photo */
@@ -1266,7 +1266,7 @@
   .sales__section { grid-column: 1 / -1; }
   .sales__standalone { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(22px, 3vw, 34px) 10px; padding: 0 clamp(16px, 4vw, 48px); max-width: 1320px; margin: 0 auto clamp(28px, 4vw, 44px); }
   @media (min-width: 900px) { .sales__standalone { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  @media (max-width: 899px) and (orientation: landscape) { .sales__standalone { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 899px) and (orientation: landscape) { .sales__standalone { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   .sales__standalone .sales__card, .shop .salerail .sales__standalone .sales__card { width: auto; min-width: 0; }
   /* men SALES on mobile: the grid and the size-40 rail line up exactly with the normal shop grid (16px sides, 10px gap, same card width) */
   @media (max-width: 899px) {
@@ -3085,6 +3085,7 @@
   .reel__track::-webkit-scrollbar { display: none; }
   .reel__item { flex: 0 0 min(62vw, 356px); scroll-snap-align: center; }
   @media (min-width: 900px) { .reel__item { flex-basis: calc((100vw - 2 * clamp(16px, 4vw, 48px) - 3 * clamp(10px, 1.6vw, 22px)) / 4.3); max-width: 445px; } }
+  @media (max-width: 899px) and (orientation: landscape) { .reel__item { flex-basis: calc((100vw - 2 * clamp(16px, 4vw, 48px) - 3 * clamp(10px, 1.6vw, 22px)) / 3.6); } }   /* phone sideways: ~3.5 videos per row */
   .reel__video { position: relative; aspect-ratio: 2 / 3; background: #f2f2f0; overflow: hidden; }
   .reel__video video { width: 100%; height: 100%; object-fit: cover; display: block; }
   .reel__mute { position: absolute; right: 12px; bottom: 12px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgba(255,255,255,.85); display: grid; place-items: center; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
