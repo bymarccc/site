@@ -3375,12 +3375,23 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   let scrubbing = false;
   const setMode = m => { vp.dataset.mode = m; clampToViewport(); };
   const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-  const aMetaSet = (t, a) => { aTitle.innerHTML = a ? `<b>${esc(a)}</b> - ${esc(t)}` : esc(t || 'bymarccc'); aArtist.textContent = ''; };
+  // long song names scroll right → left in the small music PiP (same marquee as the playlist)
+  const aMarq = () => {
+    const h = aTitle.dataset.html; if (h == null) return;
+    if (aTitle.classList.contains('is-marq')) { if (aTitle.clientWidth === aTitle._mqcw) return; aTitle.classList.remove('is-marq'); aTitle.innerHTML = h; }
+    const cw = aTitle.clientWidth; if (!cw || aTitle.scrollWidth <= cw + 2) return;
+    aTitle.classList.add('is-marq'); aTitle._mqcw = cw;
+    aTitle.innerHTML = `<span class="mq"><span>${h}</span><span aria-hidden="true">${h}</span></span>`;
+    const mq = aTitle.firstChild, w = mq.firstChild.getBoundingClientRect().width;
+    mq.style.setProperty('--mqw', w + 'px'); mq.style.setProperty('--mqd', Math.max(5, w / 28).toFixed(2) + 's');
+  };
+  const aMetaSet = (t, a) => { const h = a ? `<b>${esc(a)}</b> - ${esc(t)}` : esc(t || 'bymarccc'); aTitle.classList.remove('is-marq'); aTitle.innerHTML = h; aTitle.dataset.html = h; aTitle.dataset.txt = aTitle.textContent; aArtist.textContent = ''; requestAnimationFrame(aMarq); };
+  setInterval(aMarq, 800);
   const aMeta = () => { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || 'bymarccc', a = (document.getElementById('miniArtist')?.textContent || '').trim(); aMetaSet(t, a); };
   const aUI = () => { const on = A && !A.paused && !A.ended; aPlayIcon.setAttribute('d', on ? ICON_PAUSE : ICON_PLAY); aPlay.setAttribute('aria-label', on ? 'Pause' : 'Play'); };
   const aTime = () => { if (!A || !A.duration) return; const p = A.currentTime / A.duration; if (!scrubbing) scrubFill.style.width = (p * 100) + '%'; aCur.textContent = fmtT(A.currentTime); aRem.textContent = '-' + fmtT(A.duration - A.currentTime); };
   if (A) {
-    const saveAudioState = paused => { const src = A.currentSrc || A.src; if (!src) return; const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle.textContent || '').replace(/^.*? - /, ''), ar = (document.getElementById('miniArtist')?.textContent || '').trim(); saveNow('audio', { src, title: t, artist: ar, time: A.currentTime || 0, paused }); };
+    const saveAudioState = paused => { const src = A.currentSrc || A.src; if (!src) return; const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle.dataset.txt || aTitle.textContent || '').replace(/^.*? - /, ''), ar = (document.getElementById('miniArtist')?.textContent || '').trim(); saveNow('audio', { src, title: t, artist: ar, time: A.currentTime || 0, paused }); };
     let lastASaveT = 0;
     A.addEventListener('play', () => { if (!video.paused) video.pause(); aMeta(); setMode('audio'); if (vp.hidden) { vp.hidden = false; tab.hidden = true; restore(); } aUI(); saveAudioState(false); });
     A.addEventListener('pause', () => { aUI(); saveAudioState(true); }); A.addEventListener('ended', () => { aUI(); clearNow(); });
@@ -3420,7 +3431,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     video.addEventListener('pause', () => { if (!bgPlay && vp.dataset.mode === 'video') navigator.mediaSession.playbackState = 'paused'; });
     // ...and the same for plain music, so lock-screen / CarPlay controls and background
     // playback work for audio too, not just music videos.
-    const aMediaMeta = () => { try { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle?.textContent || '').replace(/^.*? - /, '') || 'bymarccc'; navigator.mediaSession.metadata = new MediaMetadata({ title: t, artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
+    const aMediaMeta = () => { try { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle?.dataset.txt || aTitle?.textContent || '').replace(/^.*? - /, '') || 'bymarccc'; navigator.mediaSession.metadata = new MediaMetadata({ title: t, artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
     const aHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
       set('play', () => A.play().catch(() => {})); set('pause', () => A.pause());
       set('seekbackward', null);
@@ -3924,6 +3935,11 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
   box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.06) !important; }
 .vp[data-mode="audio"] .vp__audio { padding: 11px 10px 10px; }
 .vp[data-mode="audio"] .vp__atitle { color: #111; font-size: 12px; letter-spacing: 0; padding-right: 28px; }
+.vp__atitle.is-marq { text-overflow: clip; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6px, #000 calc(100% - 12px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 6px, #000 calc(100% - 12px), transparent); }
+.vp__atitle .mq { display: inline-block; animation: vpMarq var(--mqd, 8s) linear infinite; animation-delay: .8s; }
+.vp__atitle .mq > span { padding-right: 28px; }
+@keyframes vpMarq { from { transform: translateX(0); } to { transform: translateX(calc(-1 * var(--mqw, 0px))); } }
+@media (prefers-reduced-motion: reduce) { .vp__atitle .mq { animation: none; } }
 .vp[data-mode="audio"] .vp__ax { top: 5px; right: 7px; width: 22px; height: 22px; background: rgba(0,0,0,.07); color: #111; }
 .vp[data-mode="audio"] .vp__scrub, .vp[data-mode="audio"] #vpACur, .vp[data-mode="audio"] #vpARem { display: none; }
 .vp[data-mode="audio"] .vp__atimes { margin: 6px 0 0; padding: 3px 0; }
