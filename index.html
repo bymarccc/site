@@ -1175,6 +1175,11 @@
   .shop__price { text-align: right; }
   .shop__price--old, .shop__price--sale { display: block; }
   .shop__price--old { margin-right: 0; }
+  .shop__lookrow { display: flex; justify-content: center; margin: -6px 0 6px; }
+  .shop__tab--look { font-size: 11px; letter-spacing: .14em; }
+  @media (min-width: 641px) { .shop__tab--look { font-size: 12px; } }
+  .shop__newtag.shop__looktag { writing-mode: horizontal-tb; transform: none; top: 12px; left: 12px; font-size: 10px; font-weight: 500; letter-spacing: .12em; }
+  @media (min-width: 900px) { .shop__newtag.shop__looktag { top: 16px; left: 16px; font-size: 11px; } }
   .shop__meta--look { justify-content: center; }
   .shop__meta--look .shop__price { text-align: center; }
   .shop__meta--look .shop__price, .shop__meta--look .shop__price--sale { color: #8a8a8a; font-weight: 600; }
@@ -1303,7 +1308,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=cab8f7a6bp"></script>
+<script src="/assets/catalog.js?v=4be889491q"></script>
 <script>
 (() => {
   'use strict';
@@ -1326,10 +1331,10 @@
   const sizeTag = (size, key) => !size || /one.?size/i.test(size) ? '' : SIZE_FLAT.has(key) ? `<span class="shop__sizeflat">SIZE: ${size}</span>` : `<span class="shop__newtag shop__sizetag">SIZE: ${size}</span>`;
   function card(key, p, tab) {
     const look = (p.collections || []).includes('looks') && (tab === 'looks' || /^LOOK\s*\d/i.test(p.title || '')) && (p.lookNo ? 'LOOK ' + p.lookNo : ((p.title || '').match(/^LOOK\s*\d+/i) || [''])[0].toUpperCase());   // SHOP THE LOOK: "LOOK n" written vertically top-left, price only
-    const imgs = ((look && p.lookGallery) || p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
+    const imgs = look ? [p.lookCover || (p.gallery || [])[0]].filter(Boolean) : (p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
     const a = document.createElement('a'); a.className = 'shop__card'; a.href = 'bymarccc-product.html?p=' + key;
     a.innerHTML = `<span class="shop__img">${look ? `<span class="shop__newtag shop__looktag">${look}</span>` : newTag(key)}${scanFx(key)}${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
-      ${look ? `<span class="shop__meta shop__meta--look">` : `<span class="shop__meta"><span class="shop__name">${p.title}</span>`}${typeof p.price === 'number' ? (typeof p.salePrice === 'number' ? `<span class="shop__price"><span class="shop__price--old">${fmt(p.price, p.currency)}</span><span class="shop__price--sale">${fmt(p.salePrice, p.currency)}</span></span>` : `<span class="shop__price">${fmt(p.price, p.currency)}</span>`) : ''}</span>`;
+      ${look ? '' : `<span class="shop__meta"><span class="shop__name">${p.title}</span>${typeof p.price === 'number' ? (typeof p.salePrice === 'number' ? `<span class="shop__price"><span class="shop__price--old">${fmt(p.price, p.currency)}</span><span class="shop__price--sale">${fmt(p.salePrice, p.currency)}</span></span>` : `<span class="shop__price">${fmt(p.price, p.currency)}</span>`) : ''}</span>`}`;
     if (imgs.length > 1) {
       const pics = [...a.querySelectorAll('img')], bars = [...a.querySelectorAll('.shop__bars i')]; let i = 0;
       const show = n => { i = ((n % pics.length) + pics.length) % pics.length; pics.forEach((im, k) => im.classList.toggle('is-on', k === i)); bars.forEach((b, k) => b.classList.toggle('is-on', k === i)); };
@@ -1638,9 +1643,10 @@
     collections.forEach(c => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__tab'; b.setAttribute('role', 'tab'); b.dataset.key = c.key; b.textContent = c.label;
       b.setAttribute('aria-selected', String(c.key === active));
-      b.addEventListener('click', () => { active = c.key; tabs.querySelectorAll('.shop__tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.key === active))); render(); b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
+      b.addEventListener('click', () => { active = c.key; section.querySelectorAll('.shop__tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.key === active))); render(); b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
       tabBtns.push(b);
-      tabs.appendChild(b);
+      if (c.key === 'looks') { b.classList.add('shop__tab--look'); const row = document.createElement('div'); row.className = 'shop__lookrow'; row.appendChild(b); tabs.parentNode.insertBefore(row, tabs); }   // SHOP THE LOOK: its own small line between MEN/WOMEN and the other tabs
+      else tabs.appendChild(b);
     });
     render();
   }
