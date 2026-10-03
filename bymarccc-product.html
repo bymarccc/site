@@ -910,7 +910,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=e4f78fc7cz"></script>
+<script src="/assets/catalog.js?v=4808565b1s"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1902,7 +1902,7 @@ body.is-custom-bag-page #gallery { display: none; }
     const nice = t => String(t).toLowerCase().replace(/(^|\s|-)\S/g, c => c.toUpperCase());
     const links = items.map(k => `<a href="bymarccc-product.html?p=${encodeURIComponent(k)}">${nice(CATALOG[k].title)}</a>`).join(' <span>&amp;</span> ');
     const el = document.createElement('div'); el.className = 'pdp-lookof'; el.id = 'pdpLookOf';
-    el.innerHTML = `<p class="pdp-lookof__pieces">${links}</p><p class="pdp-lookof__note">${items.length > 1 ? 'Styled together, offered together — the complete look at a privileged price.' : 'The complete look, styled together — the matching piece arrives soon.'}</p>`;
+    el.innerHTML = `<p class="pdp-lookof__pieces">${links}</p><p class="pdp-lookof__note">The complete look at a privileged price.</p>`;
     const sizes = document.getElementById('sizes'); if (sizes && sizes.parentNode) sizes.parentNode.insertBefore(el, sizes);
     el.addEventListener('click', e => { const a = e.target.closest('a'); if (a && window.BYM_NAV && window.BYM_NAV.navigate) { e.preventDefault(); window.BYM_NAV.navigate(a.getAttribute('href')); } });
   })();
