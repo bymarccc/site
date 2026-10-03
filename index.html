@@ -4966,6 +4966,7 @@ html.qv-lock, html.qv-lock body { overflow: hidden; }
 .bmp__srow, .bmp__res { display: none; }
 .bmp.is-search .bmp__srow { display: flex; }
 .bmp.is-search .bmp__sbtn { display: none; }
+body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: search lives in the header unless music is playing */
 .bmp.is-search .bmp__res.has { display: block; }
 .bmp__res { max-height: min(52vh, 440px); overflow-y: auto; -webkit-overflow-scrolling: touch; border-radius: 22px; padding: 6px; }
 .bmp__h { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #555; padding: 10px 10px 4px; }
@@ -5064,6 +5065,7 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
   function open() { root.classList.add('is-search'); setTimeout(() => q.focus(), 30); search(); }
   function close() { root.classList.remove('is-search'); q.value = ''; res.classList.remove('has'); res.innerHTML = ''; q.blur(); }
   $('bmpS').addEventListener('click', open);
+  window.BMP_OPEN = open;
   $('bmpBack').addEventListener('click', close);
   document.addEventListener('pointerdown', e => { if (root.classList.contains('is-search') && !root.contains(e.target)) close(); });
   /* ---- stay above the page's own bottom UI (Add to bag bar, bag pill, stylist button) ---- */
