@@ -5068,8 +5068,10 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
   });
   q.addEventListener('input', search);
   q.addEventListener('keydown', e => { if (e.key === 'Escape') close(); if (e.key === 'Enter') { const f = res.querySelector('.bmp__it'); if (f) f.click(); } });
-  function open() { root.classList.add('is-search'); setTimeout(() => q.focus(), 30); search(); }
-  function close() { root.classList.remove('is-search'); q.value = ''; res.classList.remove('has'); res.innerHTML = ''; q.blur(); }
+  // while searching, the rest of the page is inert: no other field to jump to, so Safari drops its ˄ ˅ ✓ bar above the keyboard
+  const setInert = on => document.querySelectorAll('body > *').forEach(el => { if (el === root || /^(SCRIPT|STYLE|AUDIO|LINK)$/.test(el.tagName)) return; if (on && !el.inert) { el.inert = true; el.dataset.bmpInert = '1'; } else if (!on && el.dataset.bmpInert) { el.inert = false; delete el.dataset.bmpInert; } });
+  function open() { root.classList.add('is-search'); setInert(true); q.focus(); search(); setTimeout(place, 50); setTimeout(place, 300); }
+  function close() { root.classList.remove('is-search'); setInert(false); q.value = ''; res.classList.remove('has'); res.innerHTML = ''; q.blur(); place(); }
   $('bmpS').addEventListener('click', open);
   window.BMP_OPEN = open;
   document.addEventListener('pointerdown', e => { if (root.classList.contains('is-search') && !root.contains(e.target)) close(); });
@@ -5088,9 +5090,9 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
     const vv = window.visualViewport;
     if (vv && root.classList.contains('is-search')) {
       const kb = Math.max(0, innerHeight - vv.height - vv.offsetTop);
-      if (kb > 80) { root.style.bottom = Math.round(kb + 6) + 'px'; root.style.top = 'auto'; }
-      else root.style.bottom = '';
-    } else root.style.bottom = '';
+      if (kb > 80) { root.style.bottom = 'auto'; root.style.top = Math.round(vv.offsetTop + vv.height - root.offsetHeight - 8) + 'px'; }   // bottom edge = top of the keyboard
+      else { root.style.top = ''; root.style.bottom = ''; }
+    } else { root.style.top = ''; root.style.bottom = ''; }
     const hideForSheet = !!document.querySelector('.wl:not([hidden]), .cart:not([hidden]), .qv:not([hidden]), .pdp-modal:not([hidden])');
     const s1 = document.getElementById('play'), inS1 = !!(s1 && s1.offsetParent !== null && s1.getBoundingClientRect().bottom > innerHeight * 0.6 && !root.classList.contains('is-search'));
     root.style.visibility = hideForSheet || inS1 ? 'hidden' : '';
