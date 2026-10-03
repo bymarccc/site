@@ -2243,7 +2243,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .bmp__row { display: flex; gap: 8px; align-items: stretch; }
 .bmp__now { flex: 1 1 auto; min-width: 0; height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 8px; }
 .bmp__now[hidden] { display: none; }
-.bmp__cats { flex: 1 1 auto; min-width: 0; height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 20px; padding: 0 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x proximity; }
+.bmp__cats { flex: 1 1 auto; min-width: 0; height: 54px; border-radius: 999px; display: flex; align-items: center; gap: 20px; padding: 0 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x proximity; }
 .bmp__cats::-webkit-scrollbar { display: none; }
 .bmp__cats[hidden] { display: none; }
 .bmp__cats button { flex: 0 0 auto; border: 0; background: none; padding: 6px 0; font: inherit; font-size: 12.5px; letter-spacing: .14em; color: #111; cursor: pointer; border-bottom: 1.5px solid transparent; scroll-snap-align: center; white-space: nowrap; }
@@ -2278,8 +2278,7 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
 .bmp__it small { flex: 0 0 auto; font-size: 13px; color: #555; }
 .bmp__none { padding: 14px 12px; font-size: 14px; color: #555; }
 /* music: the small white PiP everywhere; only the account page keeps the now-playing pill instead */
-body:not(.is-members) .bmp__now { display: none !important; }
-html.bmp-audio body.is-members .vp[data-mode="audio"], html.bmp-audio body.is-members .vp[data-mode="audio"] + .vp-tab { display: none !important; }
+.bmp__now { display: none !important; }   /* no song in the bar — music lives in the small PiP on every page */
 @media (min-width: 900px) { .bmp { left: auto; right: 24px; width: 420px; } }
 @media print { .bmp { display: none; } }
 /* music PiP: very small, white + translucent like the bottom bar — title · ⟲ / play-pause / next (music video player unchanged) */
@@ -2392,7 +2391,7 @@ html.bmp-audio body.is-members .vp[data-mode="audio"], html.bmp-audio body.is-me
   function cats() {
     const box = $('bmpCats'), secs = ['shop', 'shopWomen'].map(id => document.getElementById(id)).filter(Boolean);
     if (!box || !secs.length || innerWidth >= 900) { if (box) box.hidden = true; document.documentElement.classList.remove('bmp-cats'); return; }
-    const s1 = document.getElementById('play'); if (s1 && s1.getBoundingClientRect().bottom > innerHeight * 0.6) { box.hidden = true; return; }   // not in section 1
+    if (secs[0].getBoundingClientRect().top > innerHeight * 0.6) { box.hidden = true; return; }   // only from the MEN section on
     let sec = secs.find(x => { const r = x.getBoundingClientRect(); return r.top < innerHeight * 0.5 && r.bottom > innerHeight * 0.5; });
     if (!sec) { const w = secs[1], r = w && w.getBoundingClientRect(); sec = r && r.top < innerHeight * 0.5 ? w : secs[0]; }
     const tabs = [...sec.querySelectorAll('.shop__tabs .shop__tab')];
