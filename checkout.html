@@ -1773,7 +1773,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   /* ---------- lock screen / CarPlay for the music video's audio ---------- */
   if ('mediaSession' in navigator) {
-    const ART = [{ src: new URL('assets/img/lockscreen-alien-sky-512.jpg', location.href).href, sizes: '512x512', type: 'image/jpeg' }, { src: new URL('assets/img/lockscreen-alien-sky.jpg', location.href).href, sizes: '1024x1024', type: 'image/jpeg' }];
+    const ART = [{ src: new URL('assets/img/lockscreen-alien-sky-v2-512.jpg', location.href).href, sizes: '512x512', type: 'image/jpeg' }, { src: new URL('assets/img/lockscreen-alien-sky-v2.jpg', location.href).href, sizes: '1024x1024', type: 'image/jpeg' }];
     const vMeta = () => { try { navigator.mediaSession.metadata = new MediaMetadata({ title: title.textContent || 'bymarccc', artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
     const vHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
       const M = () => bgPlay ? snd : video;
@@ -2334,7 +2334,7 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
     const t = cur();
     let [title, artist] = t ? split(t.title) : [($('miniTitle') && $('miniTitle').textContent) || 'bymarccc', ($('miniArtist') && $('miniArtist').textContent) || ''];
     T.textContent = title || 'bymarccc'; AR.textContent = artist || 'bymarccc';
-    const th = t && (t.thumb || t.poster); const want = th ? abs(th) : '/assets/img/lockscreen-alien-sky-512.jpg';
+    const th = t && (t.thumb || t.poster); const want = th ? abs(th) : '/assets/img/lockscreen-alien-sky-v2-512.jpg';
     if (art.getAttribute('src') !== want) art.setAttribute('src', want);
     const on = !a.paused && !a.ended; icon.setAttribute('d', on ? PAUSE : PLAY); $('bmpPlay').setAttribute('aria-label', on ? 'Pause' : 'Play');
   }
