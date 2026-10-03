@@ -2246,7 +2246,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .bmp__cats { flex: 1 1 auto; min-width: 0; height: 54px; border-radius: 999px; display: flex; align-items: center; gap: 20px; padding: 0 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x proximity; }
 .bmp__cats::-webkit-scrollbar { display: none; }
 .bmp__cats[hidden] { display: none; }
-.bmp__cats button { flex: 0 0 auto; border: 0; background: none; padding: 6px 0; font: inherit; font-size: 12.5px; letter-spacing: .14em; color: #111; cursor: pointer; border-bottom: 1.5px solid transparent; scroll-snap-align: center; white-space: nowrap; }
+.bmp__cats button { flex: 0 0 auto; border: 0; background: none; padding: 6px 0; font: inherit; font-size: 10.6px; letter-spacing: .14em; color: #111; cursor: pointer; border-bottom: 1.5px solid transparent; scroll-snap-align: center; white-space: nowrap; }
 .bmp__cats button[aria-selected="true"] { border-bottom-color: #111; }
 .bmp__art { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 8px; object-fit: cover; background: #ddd; }
 .bmp__meta { flex: 1 1 auto; min-width: 0; line-height: 1.2; cursor: pointer; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; overflow: hidden; }   /* song on one line: Title Artist */
@@ -2282,15 +2282,15 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
 @media (min-width: 900px) { .bmp { left: auto; right: 24px; width: 420px; } }
 @media print { .bmp { display: none; } }
 /* music PiP: very small, white + translucent like the bottom bar — title · ⟲ / play-pause / next (music video player unchanged) */
-.vp[data-mode="audio"] { width: clamp(170px, 46vw, 230px) !important; background: rgba(255,255,255,.78) !important; color: #111 !important; border-radius: 18px !important;
+.vp[data-mode="audio"] { width: clamp(153px, 41.4vw, 207px) !important; background: rgba(255,255,255,.78) !important; color: #111 !important; border-radius: 18px !important;
   -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8);
   box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.06) !important; }
-.vp[data-mode="audio"] .vp__audio { padding: 8px 10px 6px; }
+.vp[data-mode="audio"] .vp__audio { padding: 11px 10px 10px; }
 .vp[data-mode="audio"] .vp__atitle { color: #111; font-size: 12px; letter-spacing: 0; padding-right: 28px; }
 .vp[data-mode="audio"] .vp__ax { top: 5px; right: 7px; width: 22px; height: 22px; background: rgba(0,0,0,.07); color: #111; }
 .vp[data-mode="audio"] .vp__scrub, .vp[data-mode="audio"] #vpACur, .vp[data-mode="audio"] #vpARem { display: none; }
-.vp[data-mode="audio"] .vp__atimes { margin: 2px 0 0; padding: 2px 0; }
-.vp[data-mode="audio"] .vp__actr { gap: 18px; }
+.vp[data-mode="audio"] .vp__atimes { margin: 6px 0 0; padding: 3px 0; }
+.vp[data-mode="audio"] .vp__actr { gap: 6px; }   /* controls close together: free space left/right to grab and drag the PiP */
 .vp[data-mode="audio"] .vp__abtn { color: #111; }
 
 </style>
