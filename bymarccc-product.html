@@ -2725,6 +2725,22 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
         src:   M + 'talk-is-cheap.m4a',
         video: M + 'talk-is-cheap.mp4', poster: M + 'talk-is-cheap.jpg',
         thumb: 'assets/img/thumb-talk-is-cheap.jpg' },
+      { id: 'billie-lunch', title: "Billie Eilish - LUNCH", channel: '', duration: '3:22',
+        src:   M + 'lunch.m4a',
+        video: M + 'lunch.mp4', poster: M + 'lunch.jpg',
+        thumb: 'assets/img/thumb-lunch.jpg' },
+      { id: 'meant-to-be', title: "Stay Flee Get Lizzy x Central Cee - Meant To Be", channel: '', duration: '3:14',
+        src:   M + 'meant-to-be.m4a',
+        video: M + 'meant-to-be.mp4', poster: M + 'meant-to-be.jpg',
+        thumb: 'assets/img/thumb-madness.jpg' },
+      { id: 'travis-i-know', title: "Travis Scott - I KNOW ?", channel: '', duration: '3:46',
+        src:   M + 'i-know.m4a',
+        video: M + 'i-know.mp4', poster: M + 'i-know.jpg',
+        thumb: 'assets/img/thumb-i-know.jpg' },
+      { id: 'tyla-bliss', title: "Tyla - BLISS", channel: '', duration: '2:40',
+        src:   M + 'bliss.m4a',
+        video: M + 'bliss.mp4', poster: M + 'bliss.jpg',
+        thumb: 'assets/img/thumb-bliss.jpg' },
       { id: 'killin-em', title: "Nemzzz - Killin' Em",            channel: '', duration: '2:10',
         src:   M + 'killin-em.m4a',
         video: M + 'killin-em.mp4', poster: M + 'killin-em.jpg',
@@ -2738,9 +2754,9 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
         video: M + 'paradise.mp4', poster: M + 'paradise.jpg',
         thumb: 'assets/img/thumb-sade-paradise.jpg' },
       { id: 'weeknd-earned-it', title: 'The Weeknd - Earned It',   channel: '', duration: '4:36',
-        src:   M + 'earned-it.m4a',
-        video: M + 'earned-it.mp4',
-        poster: M + 'earned-it.jpg',
+        src:   M + 'earned-it2.m4a',
+        video: M + 'earned-it2.mp4',
+        poster: M + 'earned-it2.jpg',
         thumb: 'assets/img/thumb-weeknd-earned-it.jpg' },
       { id: 'goosebumps', title: 'Travis Scott - Goosebumps',      channel: '', duration: '4:11',
         src:   M + 'goosebumps.m4a',
@@ -2752,10 +2768,10 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
         video: M + 'flowers.mp4',
         poster: M + 'flowers.jpg',
         thumb: 'assets/img/thumb-miley-flowers.jpg' },
-      { id: 'carbonne-imagine', title: 'Carbonne - Imagine',       channel: '', duration: '2:55',
-        src:   M + 'imagine.m4a',
-        video: M + 'imagine.mp4',
-        poster: M + 'imagine.jpg',
+      { id: 'carbonne-imagine', title: 'Carbonne - Imagine',       channel: '', duration: '2:47',
+        src:   M + 'imagine8.m4a',
+        video: M + 'imagine8.mp4',
+        poster: M + 'imagine8.jpg',
         thumb: 'assets/img/thumb-carbonne-imagine.jpg' },
       { id: 'mj-heal-the-world', title: 'Michael Jackson - Heal the World', channel: '', duration: '',
         src:   CLD + 'v1790321282/Michael_Jackson_Heal_The_World_44s-346s.m4a',
@@ -3329,7 +3345,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   /* ---------- lock screen / CarPlay for the music video's audio ---------- */
   if ('mediaSession' in navigator) {
-    const ART = [{ src: new URL('assets/img/lockscreen-alien-512.jpg', location.href).href, sizes: '512x512', type: 'image/jpeg' }, { src: new URL('assets/img/lockscreen-alien.jpg', location.href).href, sizes: '1024x1024', type: 'image/jpeg' }];
+    const ART = [{ src: new URL('assets/img/lockscreen-alien-sky-512.jpg', location.href).href, sizes: '512x512', type: 'image/jpeg' }, { src: new URL('assets/img/lockscreen-alien-sky.jpg', location.href).href, sizes: '1024x1024', type: 'image/jpeg' }];
     const vMeta = () => { try { navigator.mediaSession.metadata = new MediaMetadata({ title: title.textContent || 'bymarccc', artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
     const vHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
       const M = () => bgPlay ? snd : video;
