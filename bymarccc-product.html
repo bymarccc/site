@@ -3874,13 +3874,13 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
      button. Tap search → the search field opens (round music button + "Products, songs and more"), results above it.
      Same block on index / product / checkout / members. Reads the ONE #miniAudio element; never creates its own audio. -->
 <style>
-.bmp { position: fixed; left: 12px; right: 12px; bottom: calc(var(--bmp-b, 10px) + env(safe-area-inset-bottom, 0px)); z-index: 60; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; pointer-events: none; font-family: inherit; }
+.bmp { position: fixed; left: 12px; right: 12px; bottom: calc(var(--bmp-b, 3px) + env(safe-area-inset-bottom, 0px)); z-index: 60; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; pointer-events: none; font-family: inherit; }
 .bmp > * { pointer-events: auto; }
 .bmp__glass { background: rgba(255,255,255,.74); -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8); box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.06); }
 .bmp__row { display: flex; gap: 8px; align-items: stretch; }
 .bmp__now { flex: 1 1 auto; min-width: 0; height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 8px; }
 .bmp__now[hidden] { display: none; }
-.bmp__cats { flex: 1 1 auto; min-width: 0; height: 54px; border-radius: 999px; display: flex; align-items: center; gap: 20px; padding: 0 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x proximity; }
+.bmp__cats { flex: 1 1 auto; min-width: 0; height: 43px; border-radius: 999px; display: flex; align-items: center; gap: 11px; padding: 0 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .bmp__cats::-webkit-scrollbar { display: none; }
 .bmp__cats[hidden] { display: none; }
 .bmp__cats button { flex: 0 0 auto; border: 0; background: none; padding: 6px 0; font: inherit; font-size: 10.6px; letter-spacing: .14em; color: #111; cursor: pointer; border-bottom: 1.5px solid transparent; scroll-snap-align: center; white-space: nowrap; }
@@ -3892,8 +3892,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .bmp__b { flex: 0 0 auto; width: 40px; height: 40px; border: 0; background: none; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
 .bmp__b svg { width: 22px; height: 22px; display: block; }
 .bmp__b:active svg { transform: scale(.88); }
-.bmp__round { flex: 0 0 48px; width: 48px; height: 48px; align-self: center; border-radius: 50%; border: 0; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; margin-left: auto; }
-.bmp__round svg { width: 20px; height: 20px; }
+.bmp__round { flex: 0 0 38px; width: 38px; height: 38px; align-self: center; border-radius: 50%; border: 0; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; margin-left: auto; }
+.bmp__round svg { width: 17px; height: 17px; }
 .bmp__search { flex: 1 1 auto; min-width: 0; height: 52px; border-radius: 999px; display: flex; align-items: center; gap: 10px; padding: 0 18px; }
 .bmp.is-search .bmp__search { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .bmp__search svg { flex: 0 0 auto; width: 22px; height: 22px; color: #111; }
@@ -4037,9 +4037,10 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
       const keep = catSec === sec ? box.scrollLeft : 0;
       catSig = sig; catSec = sec;
       box.innerHTML = tabs.map(t => `<button type="button" data-k="${t.dataset.key}" aria-selected="${t.getAttribute('aria-selected')}">${t.textContent}</button>`).join('');
-      box.scrollLeft = keep;
+      box.scrollLeft = keep; var peek = catSec !== sec || !keep;
     }
     box.hidden = false; document.documentElement.classList.add('bmp-cats');
+    if (peek) { const last = box.lastElementChild; if (last) { const br = box.getBoundingClientRect(), lr = last.getBoundingClientRect(); if (lr.left > br.right - 7) box.scrollLeft = Math.round(lr.left - br.right + 7); } }   // shift left so the first letter of the last tab (SALES) peeks: hints the bar scrolls
   }
   document.addEventListener('click', e => {
     const b = e.target.closest && e.target.closest('#bmpCats button'); if (!b || !catSec) return;
@@ -4050,7 +4051,7 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
   });
   function place() {
     markPage(); bind(); cats();
-    let off = 10;
+    let off = 3;
     ['bar', 'bagPill'].map(id => document.getElementById(id)).concat([document.querySelector('.ai-launch')]).forEach(el => {
       if (!el || el.hidden) return; const cs = getComputedStyle(el); if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
       const r = el.getBoundingClientRect(); if (!r.height || r.top >= innerHeight) return;
