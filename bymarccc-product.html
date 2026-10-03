@@ -286,7 +286,7 @@ body.is-custom-bag-page #gallery { display: none; }
 .cart__empty .pdp-btn { padding: 0 32px; }
 .cart__lines { list-style: none; margin: 10px 0 0; padding: 0; }
 .cl { display: grid; grid-template-columns: 84px 1fr; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); }
-.cl__img { aspect-ratio: 3/4; background: var(--soft); border-radius: 6px; overflow: hidden; }
+.cl__img { aspect-ratio: 2/3; background: var(--soft); border-radius: 6px; overflow: hidden; }
 .cl__img img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .cl__top { display: flex; justify-content: space-between; gap: 10px; }
 .cl__name { margin: 0; font-size: 14.5px; font-weight: 500; }
@@ -481,6 +481,11 @@ body.is-custom-bag-page #gallery { display: none; }
 .wl__remove { margin-top: 10px; border: 0; background: none; font: inherit; font-size: 12px; letter-spacing: .08em; text-decoration: underline; text-underline-offset: 3px; padding: 0; }
 .wl__empty { padding: 28px 0; text-align: center; font-size: 14px; color: var(--muted); }
 .wl__actions { display: grid; gap: 10px; margin-top: 18px; }
+.wl__x { display: none !important; }   /* top CLOSE text removed — the round ✕ next to SIGN UP closes the sheet */
+.wl__row { display: flex; align-items: center; gap: 12px; }
+.wl__row .pdp-btn { flex: 1 1 auto; height: 46px; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.wl__close { flex: 0 0 46px; width: 46px; height: 46px; border-radius: 50%; border: 1.5px solid #111; background: #fff; color: #111; display: grid; place-items: center; padding: 0; }
+.wl__close svg { width: 16px; height: 16px; }
 .wl__actions .pdp-btn { border-radius: 12px; height: 50px; }
 @media (min-width: 900px) {
   .wl { align-items: center; }
@@ -1284,12 +1289,12 @@ body.is-custom-bag-page #gallery { display: none; }
       const it = items.find(x => x.id === PRODUCT.id);
       wlTitle.textContent = 'ADDED TO WISHLIST'; wlNote.hidden = false;
       wlBody.innerHTML = it ? wlItem(it) : '';
-      wlActions.innerHTML = '<button type="button" class="pdp-btn" id="wlView">VIEW WISHLIST</button><button type="button" class="pdp-btn pdp-btn--ghost" id="wlDone">CLOSE</button>';
+      wlActions.innerHTML = '<div class="wl__row"><button type="button" class="pdp-btn" id="wlView">VIEW WISHLIST</button><button type="button" class="wl__close" id="wlDone" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
       $('wlView').addEventListener('click', () => wlRender('list')); $('wlDone').addEventListener('click', wlClose);
     } else {
       wlTitle.textContent = `WISHLIST (${items.length})`; wlNote.hidden = items.length === 0;
       wlBody.innerHTML = items.length ? items.map(wlItem).join('') : '<p class="wl__empty">Your wishlist is empty.</p>';
-      wlActions.innerHTML = '<button type="button" class="pdp-btn pdp-btn--ghost" id="wlDone">CLOSE</button>';
+      wlActions.innerHTML = '<div class="wl__row"><a class="pdp-btn" href="members.html#join">SIGN UP NOW</a><button type="button" class="wl__close" id="wlDone" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
       $('wlDone').addEventListener('click', wlClose);
     }
     wlBody.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', () => { wishSet(wishGet().filter(x => x.id !== b.dataset.remove)); wishRender(); wlRender('list'); announce('Removed from wishlist'); }));
@@ -1297,7 +1302,7 @@ body.is-custom-bag-page #gallery { display: none; }
   function wlOpen(mode) {
     wlOpener = document.activeElement; wlRender(mode);
     wl.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => wl.classList.add('is-in')));
-    wlTrap = trap(wl); wl.addEventListener('keydown', wlTrap); $('wlClose').focus({ preventScroll: true });
+    wlTrap = trap(wl); wl.addEventListener('keydown', wlTrap); ($('wlDone') || $('wlClose')).focus({ preventScroll: true });
   }
   function wlClose() { wl.classList.remove('is-in'); wl.removeEventListener('keydown', wlTrap); setTimeout(() => { wl.hidden = true; (wlOpener || wishBtn).focus({ preventScroll: true }); }, reduced.matches ? 0 : 300); }
   $('wlClose').addEventListener('click', wlClose);
