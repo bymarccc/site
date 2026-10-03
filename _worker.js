@@ -2485,6 +2485,7 @@ async function acctInit() {
     db.prepare("CREATE TABLE IF NOT EXISTS acct_addresses (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL, data TEXT NOT NULL, is_default INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)"),
     db.prepare("CREATE TABLE IF NOT EXISTS acct_wishlist (email TEXT NOT NULL, pkey TEXT NOT NULL, added_at TEXT NOT NULL, PRIMARY KEY (email, pkey))"),
     db.prepare("CREATE TABLE IF NOT EXISTS acct_playlist (email TEXT NOT NULL, track TEXT NOT NULL, added_at TEXT NOT NULL, PRIMARY KEY (email, track))"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_ytm (email TEXT PRIMARY KEY, url TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', updated_at TEXT NOT NULL)"),
     db.prepare("CREATE TABLE IF NOT EXISTS acct_orders (order_id TEXT PRIMARY KEY, email TEXT NOT NULL, created_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'placed', pay TEXT, currency TEXT, total_local REAL, ship_local REAL, total_ron REAL NOT NULL DEFAULT 0, discount_pct REAL DEFAULT 0, credit_ron REAL DEFAULT 0, items TEXT, ship_to TEXT)"),
     db.prepare("CREATE INDEX IF NOT EXISTS acct_orders_email ON acct_orders (email, created_at)"),
     db.prepare("CREATE TABLE IF NOT EXISTS acct_credits (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL, kind TEXT NOT NULL, amount_ron REAL NOT NULL DEFAULT 0, pct REAL NOT NULL DEFAULT 0, note TEXT, created_at TEXT NOT NULL, expires_at TEXT, used_order TEXT)"),
@@ -2746,6 +2747,21 @@ async function accountApi(request) {
     if (b.remove) await db.prepare("DELETE FROM acct_playlist WHERE email = ?1 AND track = ?2").bind(email, clean(b.remove)).run();
     const rows = (await db.prepare("SELECT track FROM acct_playlist WHERE email = ?1 ORDER BY added_at").bind(email).all()).results || [];
     return json(200, { playlist: rows.map((r) => r.track) });
+  }
+  // YouTube Music playlist link — the customer saves it here; we connect it by hand (status: pending → connected)
+  if (action === "ytm") {
+    if (request.method === "POST") {
+      const raw = String(b.url || "").trim().slice(0, 500);
+      if (!raw) { await db.prepare("DELETE FROM acct_ytm WHERE email = ?1").bind(email).run(); return json(200, { ytm: null }); }
+      let u; try { u = new URL(raw); } catch { return json(400, { error: "Paste the full link of your YouTube Music playlist." }); }
+      if (!/(^|\.)(youtube\.com|youtu\.be)$/i.test(u.hostname) || u.protocol !== "https:") return json(400, { error: "That doesn't look like a YouTube Music link." });
+      await db.prepare("INSERT INTO acct_ytm (email, url, status, updated_at) VALUES (?1,?2,'pending',?3) ON CONFLICT(email) DO UPDATE SET url = ?2, status = 'pending', updated_at = ?3").bind(email, u.href, acctNow()).run();
+      if (env("RESEND_API_KEY") && env("ORDER_EMAIL_FROM") && env("ORDER_NOTIFY_TO")) {
+        try { await resendSend({ from: env("ORDER_EMAIL_FROM"), to: env("ORDER_NOTIFY_TO").split(",").map((x) => x.trim()).filter(Boolean), reply_to: email, subject: `YouTube Music playlist — ${email}`, text: `${email} added a YouTube Music playlist to connect:\n\n${u.href}` }); } catch {}
+      }
+    }
+    const r = await db.prepare("SELECT url, status, updated_at FROM acct_ytm WHERE email = ?1").bind(email).first();
+    return json(200, { ytm: r ? { url: r.url, status: r.status, updated: r.updated_at } : null });
   }
   return json(400, { error: "Unknown action" });
 }

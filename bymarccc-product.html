@@ -168,6 +168,7 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-members__check { color: #fff; font-weight: 700; }
 .pdp-members__bottom { background: #fff; color: #111; padding: 18px 20px; }
 .pdp-members__soon { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.pdp-members__cta { display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; text-decoration: none; }
 .pdp-members__note { margin: 0; font-size: 13px; color: #6f6f6f; line-height: 1.5; }
 .pdp-service__terms { margin: 8px 0 0; }
 .pdp-split-go { width: 100%; margin: 14px 0 0; }
@@ -1807,9 +1808,9 @@ body.is-custom-bag-page #gallery { display: none; }
     svc.appendChild(li); return li;
   }
   function membersPanelHTML() {
-    return `<div class="pdp-members"><div class="pdp-members__top"><p class="pdp-members__brand">${MEMBERSHIP.title}</p><p class="pdp-members__lead">${MEMBERSHIP.text}</p><ul class="pdp-members__benefits">${MEMBERSHIP.benefits.map(b => `<li><span class="pdp-members__check" aria-hidden="true">\u2713</span>${b}</li>`).join('')}</ul></div><div class="pdp-members__bottom"><p class="pdp-members__soon">${MEMBERSHIP.comingSoonTitle}</p><p class="pdp-members__note">${MEMBERSHIP.comingSoonBody}</p></div></div>`;
+    return `<div class="pdp-members"><div class="pdp-members__top"><p class="pdp-members__brand">${MEMBERSHIP.title}</p><p class="pdp-members__lead">${MEMBERSHIP.text}</p><ul class="pdp-members__benefits">${MEMBERSHIP.benefits.map(b => `<li><span class="pdp-members__check" aria-hidden="true">\u2713</span>${b}</li>`).join('')}</ul></div><div class="pdp-members__bottom"><a class="pdp-btn pdp-members__cta" href="members.html#join">SIGN UP NOW</a></div></div>`;
   }
-  const freeReturnsText = [POLICY.freeReturns && ((window.BYM_GEO && window.BYM_GEO.cc && window.BYM_GEO.cc !== 'RO') ? 'Returns within 14 days.' : 'Free returns.'), POLICY.freeShippingMembers && 'Free shipping for members only.'].filter(Boolean).join(' ');
+  const freeReturnsText = POLICY.freeReturns || POLICY.freeShippingMembers ? 'Free shipping & returns for members only.' : '';
   if (freeReturnsText) svcRow(ICON.ret, freeReturnsText, membersPanelHTML(), 'svc-member');
   if (SERVICE.expressRomania.enabled) svcRow(ICON.ro, SERVICE.expressRomania.text, SERVICE.expressRomania.body, 'svc-ro');
   if (SERVICE.euDuties.enabled) svcRow(ICON.box, SERVICE.euDuties.text, null, 'svc-eu');

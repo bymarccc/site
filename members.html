@@ -188,7 +188,7 @@
   }
 
   /* ---------------- signed in ---------------- */
-  const SECTIONS = [['circle', 'CIRCLE'], ['orders', 'Orders and returns'], ['credits', 'Credits and refunds'], ['details', 'Details and security'], ['addresses', 'Address book'], ['wishlist', 'Wishlist'], ['playlist', 'My playlist'], ['prefs', 'Communication preferences'], ['refer', 'Refer a friend']];
+  const SECTIONS = [['circle', 'CIRCLE'], ['orders', 'Orders and returns'], ['credits', 'Credits and refunds'], ['details', 'Details and security'], ['addresses', 'Address book'], ['wishlist', 'Wishlist'], ['playlist', 'My playlist'], ['ytm', 'YouTube Music playlist'], ['prefs', 'Communication preferences'], ['refer', 'Refer a friend']];
   function signedIn() {
     const t = P.tier;
     root.innerHTML = `<div class="ac" id="ac"><nav class="ac-nav" aria-label="Account">
@@ -211,7 +211,7 @@
     main.innerHTML = '<a href="#" class="ac-back" id="acBack">← Account</a><div id="acSec"><p class="ac-load">Loading…</p></div>';
     document.getElementById('acBack').addEventListener('click', e => { e.preventDefault(); go(''); });
     const sec = document.getElementById('acSec');
-    ({ circle: secCircle, orders: secOrders, credits: secCredits, details: secDetails, addresses: secAddresses, wishlist: secWishlist, playlist: secPlaylist, prefs: secPrefs, refer: secRefer }[s] || secCircle)(sec);
+    ({ circle: secCircle, orders: secOrders, credits: secCredits, details: secDetails, addresses: secAddresses, wishlist: secWishlist, playlist: secPlaylist, ytm: secYtm, prefs: secPrefs, refer: secRefer }[s] || secCircle)(sec);
     if (!first && matchMedia('(max-width:860px)').matches) window.scrollTo({ top: 0 });
   }
 
@@ -338,6 +338,26 @@
       const pa = el.querySelector('#plAll'); if (pa) pa.addEventListener('click', () => { const l = list.filter(t => plMode === 'music' || t.video); if (l[0]) playT(l[0]); });
     };
     render();
+  }
+  /* ---------- YouTube Music playlist: the customer pastes the link, we connect it by hand ---------- */
+  async function secYtm(el) {
+    let cur = null; try { cur = (await API('ytm')).ytm; } catch {}
+    const render = msg => {
+      el.innerHTML = `<h2>YouTube Music playlist</h2>
+        <p style="max-width:560px;line-height:1.6">Add your own playlist from YouTube Music and we'll connect it to your bymarccc account, so your songs play on the site.</p>
+        <ol style="max-width:560px;line-height:1.7;padding-left:18px;color:var(--sub)"><li>Open your playlist in YouTube Music</li><li>Tap <b>Share</b> → <b>Copy link</b></li><li>Paste it below and save</li></ol>
+        <form id="ytF" style="max-width:560px"><div class="f"><label for="ytU">Playlist link</label><input id="ytU" type="url" inputmode="url" placeholder="https://music.youtube.com/playlist?list=…" value="${esc(cur ? cur.url : '')}"></div>
+        <p class="msg" id="ytMsg" role="alert">${msg ? esc(msg) : ''}</p>
+        <button class="btn" type="submit">${cur ? 'Update playlist' : 'Save playlist'}</button>${cur ? ' <button class="btn btn--ghost btn--sm" type="button" id="ytDel">Remove</button>' : ''}</form>
+        ${cur ? `<p style="margin-top:18px">Status: <b>${cur.status === 'connected' ? 'Connected ✓' : 'Waiting to be connected'}</b>${cur.status === 'connected' ? '' : ' — we usually connect it within 1–2 days.'}</p>` : ''}`;
+      el.querySelector('#ytF').addEventListener('submit', async e => {
+        e.preventDefault(); const b = e.submitter || el.querySelector('#ytF button[type=submit]'); b.disabled = true;
+        try { cur = (await API('ytm', { url: el.querySelector('#ytU').value })).ytm; render('Saved. We\'ll connect it soon.'); }
+        catch (err) { el.querySelector('#ytMsg').textContent = err.message; b.disabled = false; }
+      });
+      const d = el.querySelector('#ytDel'); if (d) d.addEventListener('click', async () => { cur = (await API('ytm', { url: '' })).ytm; render('Removed.'); });
+    };
+    render('');
   }
   function secPrefs(el) {
     const p = P.prefs || {};
