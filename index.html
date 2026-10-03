@@ -1014,7 +1014,7 @@
      SECTION 3 — Collections (Acne-style tabs + product grid), data from catalog.js
      ===================================================================== -->
 <section class="shop" id="shop" aria-label="bymarccc menswear collections" data-gender="men">
-  <h2 class="shop__title shop__title--hidden">MEN</h2>
+  <h2 class="shop__title shop__title--bold">MEN</h2>
   <nav class="shop__tabs" role="tablist" aria-label="Menswear collections"></nav>
   <div class="shop__grid" role="tabpanel"></div>
 </section>
@@ -1108,7 +1108,7 @@
 })();
 </script>
 <section class="shop shop--women" id="shopWomen" aria-label="bymarccc womenswear collections" data-gender="women">
-  <h2 class="shop__title shop__title--hidden">WOMEN</h2>
+  <h2 class="shop__title shop__title--bold">WOMEN</h2>
   <nav class="shop__tabs" role="tablist" aria-label="Womenswear collections"></nav>
   <div class="shop__grid" role="tabpanel"></div>
 </section>
@@ -1120,6 +1120,14 @@
 </section>
 <style>
   .shop { background: #fff; color: #111; padding: clamp(28px, 5vw, 56px) 0 clamp(56px, 8vw, 110px); font-family: "Jost", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  .shop__title--bold { font-weight: 700; font-size: 13px; letter-spacing: .3em; margin: 0 0 4px; }
+  /* phone: while a shop section fills the screen its category tabs sit at the very bottom, under the music pill */
+  @media (max-width: 899px) {
+    .shop.is-tabsdock .shop__tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 58; margin: 0; padding: 12px 16px calc(10px + env(safe-area-inset-bottom, 0px)); border-bottom: 0; border-top: 1px solid rgba(0,0,0,.06);
+      background: rgba(255,255,255,.82); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); }
+    .shop.is-tabsdock .shop__tabs .shop__tab { padding: 4px 0; }
+    .shop.is-tabsdock .shop__grid { padding-bottom: 70px; margin-top: var(--tabs-h, 0px); }   /* keeps the page from jumping when the tabs leave the flow */
+  }
   .shop__title--hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* MEN / WOMEN words removed from view (kept for screen readers/SEO) */
   .shop__title { margin: 0 0 14px; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; }
   .shop__subhead { grid-column: 1 / -1; margin: clamp(20px, 4vw, 34px) 0 14px; padding: 0 clamp(16px, 4vw, 48px); text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; color: #111; }
@@ -1716,10 +1724,10 @@
   ------------------------------------------------------------------ */
   const PRODUCTS_SKINNY = [
     { id: 'blue',   name: 'Blue Zebra Patch Jeans',   bg: '#057CA7', tone: 'dark', image: 'assets/img/zebra-skinny-blue.webp',   price: 450, currency: 'RON' },
-    { id: 'green',  name: 'Green Zebra Patch Jeans',  bg: '#144E13', tone: 'dark', image: 'assets/img/zebra-skinny-green.webp',  price: 450, currency: 'RON' },
-    { id: 'grey',   name: 'Grey Zebra Patch Jeans',   bg: '#565656', tone: 'dark', image: 'assets/img/zebra-skinny-grey.webp',   price: 450, currency: 'RON' },
     { id: 'red',    name: 'Red Zebra Patch Jeans',    bg: '#890712', tone: 'dark', image: 'assets/img/zebra-skinny-red.webp',    price: 450, currency: 'RON' },
     { id: 'pink',   name: 'Pink Zebra Patch Jeans',   bg: '#9B4178', tone: 'dark', image: 'assets/img/zebra-skinny-pink.webp',   price: 450, currency: 'RON' },
+    { id: 'green',  name: 'Green Zebra Patch Jeans',  bg: '#144E13', tone: 'dark', image: 'assets/img/zebra-skinny-green.webp',  price: 450, currency: 'RON' },
+    { id: 'grey',   name: 'Grey Zebra Patch Jeans',   bg: '#565656', tone: 'dark', image: 'assets/img/zebra-skinny-grey.webp',   price: 450, currency: 'RON' },
     { id: 'white',  name: 'White Zebra Patch Jeans',  bg: '#999999', tone: 'light', image: 'assets/img/zebra-skinny-white.webp', price: 450, currency: 'RON' },
     { id: 'brown',  name: 'Brown Zebra Patch Jeans',  bg: '#422A10', tone: 'dark', image: 'assets/img/zebra-skinny-brown.webp',  price: 450, currency: 'RON' },
     { id: 'purple', name: 'Purple Zebra Patch Jeans', bg: '#26003E', tone: 'dark', image: 'assets/img/zebra-skinny-purple.webp', price: 450, currency: 'RON' },
@@ -1727,10 +1735,10 @@
   ];
   const PRODUCTS_RELAXED = [
     { id: 'blue',   name: 'Blue Zebra Patch Jeans',   bg: '#057CA7', tone: 'dark', image: 'assets/img/zebra-relaxed-blue.webp',   price: 500, currency: 'RON' },
-    { id: 'green',  name: 'Green Zebra Patch Jeans',  bg: '#144E13', tone: 'dark', image: 'assets/img/zebra-relaxed-green.webp',  price: 500, currency: 'RON' },
-    { id: 'grey',   name: 'Grey Zebra Patch Jeans',   bg: '#565656', tone: 'dark', image: 'assets/img/zebra-relaxed-grey.webp',   price: 500, currency: 'RON' },
     { id: 'red',    name: 'Red Zebra Patch Jeans',    bg: '#890712', tone: 'dark', image: 'assets/img/zebra-relaxed-red.webp',    price: 500, currency: 'RON' },
     { id: 'pink',   name: 'Pink Zebra Patch Jeans',   bg: '#9B4178', tone: 'dark', image: 'assets/img/zebra-relaxed-pink.webp',   price: 500, currency: 'RON' },
+    { id: 'green',  name: 'Green Zebra Patch Jeans',  bg: '#144E13', tone: 'dark', image: 'assets/img/zebra-relaxed-green.webp',  price: 500, currency: 'RON' },
+    { id: 'grey',   name: 'Grey Zebra Patch Jeans',   bg: '#565656', tone: 'dark', image: 'assets/img/zebra-relaxed-grey.webp',   price: 500, currency: 'RON' },
     { id: 'white',  name: 'White Zebra Patch Jeans',  bg: '#999999', tone: 'light', image: 'assets/img/zebra-relaxed-white.webp', price: 500, currency: 'RON' },
     { id: 'brown',  name: 'Brown Zebra Patch Jeans',  bg: '#422A10', tone: 'dark', image: 'assets/img/zebra-relaxed-brown.webp',  price: 500, currency: 'RON' },
     { id: 'purple', name: 'Purple Zebra Patch Jeans', bg: '#26003E', tone: 'dark', image: 'assets/img/zebra-relaxed-purple.webp', price: 500, currency: 'RON' },
@@ -2911,7 +2919,8 @@
   const vinylChain = () => {
     const vinylItem = OBJECT_ITEMS.find(t => t.key === 'vinyl');
     const cdItem = OBJECT_ITEMS.find(t => t.key === 'cd');
-    return [vinylItem, cdItem].filter(Boolean).concat(playlist);
+    const own = [vinylItem, cdItem].filter(Boolean);
+    return own.concat(playlist.filter(t => !own.some(o => o.src === t.src)));   // WAGWAN → the CD → the playlist (no repeats)
   };
 
   /* volume: restored from the last choice, applied to the shared <audio> element */
@@ -2963,7 +2972,9 @@
   function miniToggle(key) {
     if (miniItem && miniItem.key === key && !mini.hidden) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
     if (key === 'vinyl') { miniPlayList(vinylChain(), 0); return; }
-    miniPlayList(OBJECT_ITEMS, OBJECT_ITEMS.findIndex(t => t.key === key));
+    // any other object (the CD): its own track, then straight into the GOOD VIBES ONLY playlist — never back to WAGWAN
+    const it = OBJECT_ITEMS.find(t => t.key === key); if (!it) return;
+    miniPlayList([it].concat(playlist.filter(t => t.src !== it.src)), 0);
   }
   function miniFullStop() {
     audio.pause(); audio.currentTime = 0;
@@ -4953,14 +4964,14 @@ html.qv-lock, html.qv-lock body { overflow: hidden; }
 .bmp > * { pointer-events: auto; }
 .bmp__glass { background: rgba(255,255,255,.74); -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8); box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.06); }
 .bmp__row { display: flex; gap: 8px; align-items: stretch; }
-.bmp__now { flex: 1 1 auto; min-width: 0; height: 60px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 8px; }
+.bmp__now { flex: 1 1 auto; min-width: 0; height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 8px; }
 .bmp__now[hidden] { display: none; }
-.bmp__art { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: #ddd; }
-.bmp__meta { flex: 1 1 auto; min-width: 0; line-height: 1.2; cursor: pointer; }
-.bmp__t { font-size: 15px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0; }
-.bmp__a { font-size: 14px; color: #222; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bmp__b { flex: 0 0 auto; width: 44px; height: 44px; border: 0; background: none; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
-.bmp__b svg { width: 26px; height: 26px; display: block; }
+.bmp__art { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 8px; object-fit: cover; background: #ddd; }
+.bmp__meta { flex: 1 1 auto; min-width: 0; line-height: 1.2; cursor: pointer; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; overflow: hidden; }   /* song on one line: Title Artist */
+.bmp__t { flex: 0 1 auto; min-width: 0; font-size: 14.5px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0; }
+.bmp__a { flex: 1 1 0; min-width: 0; font-size: 13.5px; color: #222; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bmp__b { flex: 0 0 auto; width: 40px; height: 40px; border: 0; background: none; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
+.bmp__b svg { width: 22px; height: 22px; display: block; }
 .bmp__b:active svg { transform: scale(.88); }
 .bmp__round { flex: 0 0 48px; width: 48px; height: 48px; align-self: center; border-radius: 50%; border: 0; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; margin-left: auto; }
 .bmp__round svg { width: 20px; height: 20px; }
@@ -5079,6 +5090,10 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
   function place() {
     bind();
     let off = 10;
+    let docked = null;
+    if (innerWidth < 900) document.querySelectorAll('#shop, #shopWomen').forEach(sec => { const r = sec.getBoundingClientRect(); const t = sec.querySelector('.shop__tabs'); if (t && !sec.classList.contains('is-tabsdock')) sec.style.setProperty('--tabs-h', (t.offsetHeight + parseFloat(getComputedStyle(t).marginBottom || 0)) + 'px'); const on = r.top < innerHeight * 0.35 && r.bottom > innerHeight * 0.6; sec.classList.toggle('is-tabsdock', on); if (on) docked = sec; });
+    else document.querySelectorAll('.shop.is-tabsdock').forEach(sec => sec.classList.remove('is-tabsdock'));
+    if (docked) { const t = docked.querySelector('.shop__tabs'); if (t) off = Math.max(off, t.getBoundingClientRect().height + 8 - (parseFloat(getComputedStyle(root).getPropertyValue('--bmp-safe')) || 0)); }
     ['bar', 'bagPill'].map(id => document.getElementById(id)).concat([document.querySelector('.ai-launch')]).forEach(el => {
       if (!el || el.hidden) return; const cs = getComputedStyle(el); if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
       const r = el.getBoundingClientRect(); if (!r.height || r.top >= innerHeight) return;
@@ -5094,7 +5109,7 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
       else { root.style.top = ''; root.style.bottom = ''; }
     } else { root.style.top = ''; root.style.bottom = ''; }
     const hideForSheet = !!document.querySelector('.wl:not([hidden]), .cart:not([hidden]), .qv:not([hidden]), .pdp-modal:not([hidden])');
-    const s1 = document.getElementById('play'), inS1 = !!(s1 && s1.offsetParent !== null && s1.getBoundingClientRect().bottom > innerHeight * 0.6 && !root.classList.contains('is-search'));
+    const s1 = document.getElementById('play'), playing = !now.hidden, inS1 = !playing && !!(s1 && s1.offsetParent !== null && s1.getBoundingClientRect().bottom > innerHeight * 0.6 && !root.classList.contains('is-search'));   // section 1: only when music is playing
     root.style.visibility = hideForSheet || inS1 ? 'hidden' : '';
   }
   // env(safe-area-inset-bottom) is added by the CSS; measure it once so the offset above isn't counted twice

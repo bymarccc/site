@@ -3861,14 +3861,14 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .bmp > * { pointer-events: auto; }
 .bmp__glass { background: rgba(255,255,255,.74); -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8); box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.06); }
 .bmp__row { display: flex; gap: 8px; align-items: stretch; }
-.bmp__now { flex: 1 1 auto; min-width: 0; height: 60px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 8px; }
+.bmp__now { flex: 1 1 auto; min-width: 0; height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 8px; }
 .bmp__now[hidden] { display: none; }
-.bmp__art { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: #ddd; }
-.bmp__meta { flex: 1 1 auto; min-width: 0; line-height: 1.2; cursor: pointer; }
-.bmp__t { font-size: 15px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0; }
-.bmp__a { font-size: 14px; color: #222; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bmp__b { flex: 0 0 auto; width: 44px; height: 44px; border: 0; background: none; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
-.bmp__b svg { width: 26px; height: 26px; display: block; }
+.bmp__art { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 8px; object-fit: cover; background: #ddd; }
+.bmp__meta { flex: 1 1 auto; min-width: 0; line-height: 1.2; cursor: pointer; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; overflow: hidden; }   /* song on one line: Title Artist */
+.bmp__t { flex: 0 1 auto; min-width: 0; font-size: 14.5px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0; }
+.bmp__a { flex: 1 1 0; min-width: 0; font-size: 13.5px; color: #222; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bmp__b { flex: 0 0 auto; width: 40px; height: 40px; border: 0; background: none; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
+.bmp__b svg { width: 22px; height: 22px; display: block; }
 .bmp__b:active svg { transform: scale(.88); }
 .bmp__round { flex: 0 0 48px; width: 48px; height: 48px; align-self: center; border-radius: 50%; border: 0; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; margin-left: auto; }
 .bmp__round svg { width: 20px; height: 20px; }
@@ -4002,7 +4002,7 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
       else { root.style.top = ''; root.style.bottom = ''; }
     } else { root.style.top = ''; root.style.bottom = ''; }
     const hideForSheet = !!document.querySelector('.wl:not([hidden]), .cart:not([hidden]), .qv:not([hidden]), .pdp-modal:not([hidden])');
-    const s1 = document.getElementById('play'), inS1 = !!(s1 && s1.offsetParent !== null && s1.getBoundingClientRect().bottom > innerHeight * 0.6 && !root.classList.contains('is-search'));
+    const s1 = document.getElementById('play'), playing = !now.hidden, inS1 = !playing && !!(s1 && s1.offsetParent !== null && s1.getBoundingClientRect().bottom > innerHeight * 0.6 && !root.classList.contains('is-search'));   // section 1: only when music is playing
     root.style.visibility = hideForSheet || inS1 ? 'hidden' : '';
   }
   // env(safe-area-inset-bottom) is added by the CSS; measure it once so the offset above isn't counted twice
