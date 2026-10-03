@@ -2233,5 +2233,154 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 })();
 </script>
 <script src="/assets/gv.js" defer></script>
+<!-- Bottom dock (Apple-Music style): now-playing pill (artwork · title · artist · play/pause · next) + round search
+     button. Tap search → the search field opens (round music button + "Products, songs and more"), results above it.
+     Same block on index / product / checkout / members. Reads the ONE #miniAudio element; never creates its own audio. -->
+<style>
+.bmp { position: fixed; left: 12px; right: 12px; bottom: calc(var(--bmp-b, 10px) + env(safe-area-inset-bottom, 0px)); z-index: 60; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; pointer-events: none; font-family: inherit; }
+.bmp > * { pointer-events: auto; }
+.bmp__glass { background: rgba(255,255,255,.74); -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8); box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.06); }
+.bmp__row { display: flex; gap: 8px; align-items: stretch; }
+.bmp__now { flex: 1 1 auto; min-width: 0; height: 60px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 8px; }
+.bmp__now[hidden] { display: none; }
+.bmp__art { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: #ddd; }
+.bmp__meta { flex: 1 1 auto; min-width: 0; line-height: 1.2; cursor: pointer; }
+.bmp__t { font-size: 15px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0; }
+.bmp__a { font-size: 14px; color: #222; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bmp__b { flex: 0 0 auto; width: 44px; height: 44px; border: 0; background: none; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
+.bmp__b svg { width: 26px; height: 26px; display: block; }
+.bmp__b:active svg { transform: scale(.88); }
+.bmp__round { flex: 0 0 60px; width: 60px; height: 60px; border-radius: 50%; border: 0; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; margin-left: auto; }
+.bmp__round svg { width: 24px; height: 24px; }
+.bmp__search { flex: 1 1 auto; min-width: 0; height: 60px; border-radius: 999px; display: flex; align-items: center; gap: 10px; padding: 0 18px; }
+.bmp__search svg { flex: 0 0 auto; width: 22px; height: 22px; color: #111; }
+.bmp__search input { flex: 1 1 auto; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; color: #111; outline: none !important; box-shadow: none !important; padding: 0; -webkit-appearance: none; appearance: none; }
+.bmp__it em { font-style: normal; color: #777; font-size: 12.5px; }
+.bmp__search input::placeholder { color: #555; }
+.bmp__srow, .bmp__res { display: none; }
+.bmp.is-search .bmp__srow { display: flex; }
+.bmp.is-search .bmp__sbtn { display: none; }
+.bmp.is-search .bmp__res.has { display: block; }
+.bmp__res { max-height: min(52vh, 440px); overflow-y: auto; -webkit-overflow-scrolling: touch; border-radius: 22px; padding: 6px; }
+.bmp__h { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #555; padding: 10px 10px 4px; }
+.bmp__it { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border: 0; background: none; text-align: left; font: inherit; color: #111; text-decoration: none; border-radius: 14px; cursor: pointer; }
+.bmp__it:active { background: rgba(0,0,0,.06); }
+.bmp__it img { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #eee; }
+.bmp__it img.p { width: 34px; height: 46px; object-fit: contain; background: #f0f0f0; }
+.bmp__it span { min-width: 0; flex: 1 1 auto; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bmp__it small { flex: 0 0 auto; font-size: 13px; color: #555; }
+.bmp__none { padding: 14px 12px; font-size: 14px; color: #555; }
+html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .vp-tab { display: none !important; }   /* the pill replaces the black floating card for music */
+@media (min-width: 900px) { .bmp { left: auto; right: 24px; width: 420px; } }
+@media print { .bmp { display: none; } }
+</style>
+<div class="bmp" id="bmp">
+  <div class="bmp__res bmp__glass" id="bmpRes" role="listbox" aria-label="Search results"></div>
+  <div class="bmp__row">
+    <div class="bmp__now bmp__glass" id="bmpNow" hidden>
+      <img class="bmp__art" id="bmpArt" alt="">
+      <div class="bmp__meta" id="bmpMeta"><div class="bmp__t" id="bmpT">—</div><div class="bmp__a" id="bmpA"></div></div>
+      <button class="bmp__b" id="bmpPlay" type="button" aria-label="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><path id="bmpPlayIcon" d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z"/></svg></button>
+      <button class="bmp__b" id="bmpNext" type="button" aria-label="Next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 5.6v12.8c0 .7.8 1.1 1.4.7L13 12.7V18.4c0 .7.8 1.1 1.4.7l9-6.4c.5-.4.5-1.1 0-1.4l-9-6.4c-.6-.4-1.4 0-1.4.7v5.7L3.9 4.9c-.6-.4-1.4 0-1.4.7z"/></svg></button>
+    </div>
+    <button class="bmp__round bmp__glass bmp__sbtn" id="bmpS" type="button" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></svg></button>
+  </div>
+  <div class="bmp__row bmp__srow">
+    <button class="bmp__round bmp__glass" id="bmpBack" type="button" aria-label="Close search" style="margin-left:0"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h10M6 6.5h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/><rect x="4.5" y="9" width="15" height="12" rx="3"/><path d="M14.2 11.3v5.4a1.9 1.9 0 11-1-1.7v-3.1l-3.2.7v4.3a1.9 1.9 0 11-1-1.7v-3.8z" fill="#fff"/></svg></button>
+    <label class="bmp__search bmp__glass"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></svg><input id="bmpQ" type="search" placeholder="Products, songs and more" autocomplete="off" enterkeyhint="search" aria-label="Search products and songs"></label>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+  const root = document.getElementById('bmp'); if (!root || root.dataset.on) return; root.dataset.on = '1';
+  const $ = id => document.getElementById(id);
+  const A = () => document.getElementById('miniAudio');
+  const now = $('bmpNow'), art = $('bmpArt'), T = $('bmpT'), AR = $('bmpA'), icon = $('bmpPlayIcon'), res = $('bmpRes'), q = $('bmpQ');
+  const PLAY = 'M7 4.8v14.4c0 .9 1 1.5 1.8 1l11.3-7.2c.7-.5.7-1.5 0-2L8.8 3.8C8 3.3 7 3.9 7 4.8z', PAUSE = 'M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z';
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const list = () => window.BYMARCCC_PLAYLIST || [];
+  const abs = p => !p ? '' : /^(https?:|data:|\/)/.test(p) ? p : '/' + p;
+  const cur = () => { const a = A(), src = a && (a.currentSrc || a.src); if (!src) return null; return list().find(t => t.src && src.endsWith(String(t.src).replace(/^\.?\//, ''))) || null; };
+  const split = t => { const s = String(t || ''); const i = s.indexOf(' - '); return i > 0 ? [s.slice(i + 3), s.slice(0, i)] : [s, '']; };
+  /* ---- now-playing pill ---- */
+  function paint() {
+    const a = A(), src = a && (a.currentSrc || a.src);
+    const has = !!(src && !/^about:/.test(src));
+    now.hidden = !has; document.documentElement.classList.toggle('bmp-audio', has);
+    if (!has) return;
+    const t = cur();
+    let [title, artist] = t ? split(t.title) : [($('miniTitle') && $('miniTitle').textContent) || 'bymarccc', ($('miniArtist') && $('miniArtist').textContent) || ''];
+    T.textContent = title || 'bymarccc'; AR.textContent = artist || 'bymarccc';
+    const th = t && (t.thumb || t.poster); const want = th ? abs(th) : '/assets/img/lockscreen-alien-sky-512.jpg';
+    if (art.getAttribute('src') !== want) art.setAttribute('src', want);
+    const on = !a.paused && !a.ended; icon.setAttribute('d', on ? PAUSE : PLAY); $('bmpPlay').setAttribute('aria-label', on ? 'Pause' : 'Play');
+  }
+  function playTrack(t) {
+    const a = A(); if (!a || !t) return;
+    const [title, artist] = split(t.title);
+    ['miniTitle', 'miniArtist'].forEach(id => { if (!$(id)) { const s = document.createElement('span'); s.id = id; s.hidden = true; document.body.appendChild(s); } });
+    $('miniTitle').textContent = title; $('miniArtist').textContent = artist;
+    if (window.BYMARCCC_VP && window.BYMARCCC_VP.pause) try { window.BYMARCCC_VP.pause(); } catch {}
+    a.src = abs(t.src); a.play().catch(() => {}); paint();
+  }
+  function next() {
+    if ($('miniNext')) { $('miniNext').click(); return; }      // homepage: the music section's own queue (shuffle / repeat aware)
+    const L = list().filter(t => t.src), c = cur(); if (!L.length) return;
+    const i = c ? L.indexOf(c) : -1; playTrack(L[(i + 1) % L.length]);
+  }
+  $('bmpPlay').addEventListener('click', () => { const a = A(); if (!a) return; a.paused ? a.play().catch(() => {}) : a.pause(); });
+  $('bmpNext').addEventListener('click', next);
+  let bound = null;
+  const bind = () => { const a = A(); if (!a || a === bound) return; bound = a; ['play', 'pause', 'ended', 'emptied', 'loadedmetadata', 'durationchange'].forEach(ev => a.addEventListener(ev, paint)); paint(); };
+  /* ---- search: products (catalog) + songs (playlist) ---- */
+  const products = () => { const D = window.BYMARCCC_PRODUCT_DATA && window.BYMARCCC_PRODUCT_DATA.products; const C = (window.BYMARCCC_CATALOG && window.BYMARCCC_CATALOG.CATALOG) || D || {}; return Object.entries(C).filter(([, p]) => p && p.title && !p.hidden); };
+  const go = url => { close(); if (window.BYM_NAV && window.BYM_NAV.navigate) window.BYM_NAV.navigate(url); else location.href = url; };
+  function search() {
+    const s = q.value.trim().toLowerCase();
+    if (!s) { res.classList.remove('has'); res.innerHTML = ''; return; }
+    const words = s.split(/\s+/);
+    const hit = txt => { const t = String(txt || '').toLowerCase(); return words.every(w => t.includes(w)); };
+    const P = products().filter(([k, p]) => hit(p.title + ' ' + (p.cut || '') + ' ' + (p.colours || []).map(c => c.name).join(' ') + ' ' + (p.gender || ''))).slice(0, 12);
+    const S = list().filter(t => hit(t.title)).slice(0, 10);
+    const fmt = p => typeof p.price === 'number' ? (typeof p.salePrice === 'number' ? p.salePrice : p.price) + ' ' + (p.currency || 'RON') : '';
+    res.innerHTML = (P.length ? '<div class="bmp__h">Products</div>' + P.map(([k, p]) => `<a class="bmp__it" href="bymarccc-product.html?p=${encodeURIComponent(k)}" data-go><img class="p" src="${esc(abs(((p.lookCover || (p.gallery || [])[0]) || {}).src))}" alt="" loading="lazy"><span>${esc(p.title)} <em>${p.gender === 'women' ? '· Women' : p.gender === 'men' ? '· Men' : ''}</em></span><small>${esc(fmt(p))}</small></a>`).join('') : '')
+      + (S.length ? '<div class="bmp__h">Songs</div>' + S.map(t => `<button class="bmp__it" type="button" data-song="${esc(t.id)}"><img src="${esc(abs(t.thumb || t.poster))}" alt="" loading="lazy"><span>${esc(t.title)}</span><small>${esc(t.duration || '')}</small></button>`).join('') : '')
+      || '<div class="bmp__none">No results</div>';
+    res.classList.add('has');
+  }
+  res.addEventListener('click', e => {
+    const a = e.target.closest('a[data-go]'); if (a) { e.preventDefault(); go(a.getAttribute('href')); return; }
+    const b = e.target.closest('[data-song]'); if (b) { const t = list().find(x => x.id === b.dataset.song); if (t) playTrack(t); }
+  });
+  q.addEventListener('input', search);
+  q.addEventListener('keydown', e => { if (e.key === 'Escape') close(); if (e.key === 'Enter') { const f = res.querySelector('.bmp__it'); if (f) f.click(); } });
+  function open() { root.classList.add('is-search'); setTimeout(() => q.focus(), 30); search(); }
+  function close() { root.classList.remove('is-search'); q.value = ''; res.classList.remove('has'); res.innerHTML = ''; q.blur(); }
+  $('bmpS').addEventListener('click', open);
+  $('bmpBack').addEventListener('click', close);
+  document.addEventListener('pointerdown', e => { if (root.classList.contains('is-search') && !root.contains(e.target)) close(); });
+  /* ---- stay above the page's own bottom UI (Add to bag bar, bag pill, stylist button) ---- */
+  function place() {
+    bind();
+    let off = 10;
+    ['bar', 'bagPill'].map(id => document.getElementById(id)).concat([document.querySelector('.ai-launch')]).forEach(el => {
+      if (!el || el.hidden) return; const cs = getComputedStyle(el); if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
+      const r = el.getBoundingClientRect(); if (!r.height || r.top >= innerHeight) return;
+      const safe = parseFloat(getComputedStyle(root).getPropertyValue('--bmp-safe')) || 0;
+      off = Math.max(off, innerHeight - r.top + 8 - safe);
+    });
+    root.style.setProperty('--bmp-b', Math.round(off) + 'px');
+    const hideForSheet = !!document.querySelector('.wl:not([hidden]), .cart:not([hidden]), .qv:not([hidden]), .pdp-modal:not([hidden])');
+    root.style.visibility = hideForSheet ? 'hidden' : '';
+  }
+  // env(safe-area-inset-bottom) is added by the CSS; measure it once so the offset above isn't counted twice
+  const probe = document.createElement('div'); probe.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;visibility:hidden'; document.body.appendChild(probe);
+  root.style.setProperty('--bmp-safe', probe.offsetHeight + 'px'); probe.remove();
+  place(); setInterval(place, 400); addEventListener('resize', place); addEventListener('scroll', place, { passive: true });
+  paint();
+})();
+</script>
+
 </body>
 </html>
