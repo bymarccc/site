@@ -1176,9 +1176,7 @@
   .shop__price { text-align: right; }
   .shop__price--old, .shop__price--sale { display: block; }
   .shop__price--old { margin-right: 0; }
-  .shop__lookrow { display: flex; justify-content: center; margin: -6px 0 6px; }
-  .shop__tab--look { font-size: 11px; letter-spacing: .14em; }
-  @media (min-width: 641px) { .shop__tab--look { font-size: 12px; } }
+  .shop__lookrow { display: flex; justify-content: center; margin: -14px 0 -4px; }   /* SHOP THE LOOK: same size as the tabs, close above them */
   .shop__newtag.shop__looktag { writing-mode: horizontal-tb; transform: none; top: 12px; left: 12px; font-size: 10px; font-weight: 500; letter-spacing: .12em; }
   @media (min-width: 900px) { .shop__newtag.shop__looktag { top: 16px; left: 16px; font-size: 11px; } }
   .shop__meta--look { justify-content: center; }
@@ -1329,7 +1327,7 @@
   // men SALES: the piece's only size, written vertically in the photo's top-left corner (same type as NEW COLLECTION)
   // trial: on these 3 the size is written horizontally (Ksubi-style), so Mark can compare with the vertical one
   const SIZE_FLAT = new Set();   // trial over: every SALES size is the small vertical tag
-  const sizeTag = (size, key) => !size || /one.?size/i.test(size) ? '' : SIZE_FLAT.has(key) ? `<span class="shop__sizeflat">SIZE: ${size}</span>` : `<span class="shop__newtag shop__sizetag">SIZE: ${size}</span>`;
+  const sizeTag = (size, key) => !size || /one.?size/i.test(size) ? '' : SIZE_FLAT.has(key) ? `<span class="shop__sizeflat">SIZE: ${size}</span>` : `<span class="shop__newtag shop__looktag shop__sizetag">SIZE: ${size}</span>`;
   function card(key, p, tab) {
     const look = (p.collections || []).includes('looks') && (tab === 'looks' || /^LOOK\s*\d/i.test(p.title || '')) && (p.lookNo ? 'LOOK ' + p.lookNo : ((p.title || '').match(/^LOOK\s*\d+/i) || [''])[0].toUpperCase());   // SHOP THE LOOK: "LOOK n" written vertically top-left, price only
     const imgs = look ? [p.lookCover || (p.gallery || [])[0]].filter(Boolean) : (p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
