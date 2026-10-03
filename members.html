@@ -106,7 +106,12 @@
   .trk img{ width:52px; height:52px; object-fit:cover; border-radius:8px; background:#eee; }
   .trk .n{ font-size:15px; } .trk .d{ font-size:12px; color:var(--sub); }
   .trk button{ width:38px; height:38px; border-radius:50%; border:1px solid #ddd; background:#fff; cursor:pointer; font-size:15px; display:grid; place-items:center; }
-  .trk button.play{ background:#111; color:#fff; border-color:#111; }
+  .trk button{ color:#111; }
+  .trk button.play{ width:42px; height:42px; border:0; color:#fff; background:radial-gradient(circle at 50% 30%, #2b2b2b 0%, #111 55%, #050505 100%); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55), 0 3px 10px rgba(0,0,0,.28); transition: transform .15s; }
+  .trk button.play:active{ transform: scale(.92); }
+  .trk button.play svg{ width:19px; height:19px; display:block; }
+  .trk button.play .ic-pause{ display:none; } .trk button.play.is-playing .ic-play{ display:none; } .trk button.play.is-playing .ic-pause{ display:block; }
+  .trk button.play .ic-play{ margin-left:2px; }
   .trk.is-on .n{ font-weight:600; }
 </style>
 <script src="/assets/catalog.js?v=382e12888t" defer></script>
@@ -308,7 +313,12 @@
     render(d.wishlist);
   }
   /* ---------- my playlist: the site's songs, saved per account; plays in the site's own player (music or music video) ---------- */
-  let plMode = 'music';
+  let plMode = 'music', plNow = null;
+  /* the round play buttons show the real state of the audio player: pause icon on the song that is playing */
+  function syncPlay() {
+    const A = document.getElementById('miniAudio'), on = A && !A.paused && !A.ended ? plNow : null;
+    document.querySelectorAll('.trk button.play').forEach(b => { const p = b.dataset.play === on; b.classList.toggle('is-playing', p); b.setAttribute('aria-label', p ? 'Pause' : 'Play'); });
+  }
   async function secPlaylist(el) {
     const all = (window.BYMARCCC_PLAYLIST || []).slice();
     let mine = (await API('playlist')).playlist;
@@ -320,11 +330,12 @@
       if (!A) { A = document.createElement('audio'); A.id = 'miniAudio'; document.body.appendChild(A); }
       ['miniTitle', 'miniArtist'].forEach(id => { if (!document.getElementById(id)) { const s = document.createElement('span'); s.id = id; s.hidden = true; document.body.appendChild(s); } });
       const parts = String(t.title).split(' - '); document.getElementById('miniArtist').textContent = parts.length > 1 ? parts[0] : ''; document.getElementById('miniTitle').textContent = parts.length > 1 ? parts.slice(1).join(' - ') : t.title;
-      A.src = t.src; A.play().catch(() => {});
+      plNow = t.id; A.src = t.src; A.play().catch(() => {});
+      if (!A.dataset.plSync) { A.dataset.plSync = '1'; ['play', 'pause', 'ended', 'emptied'].forEach(ev => A.addEventListener(ev, () => syncPlay())); }
       A.onended = () => { const list = mine.map(byId).filter(Boolean); const i = list.findIndex(x => x.id === t.id); if (i >= 0 && list[i + 1]) playT(list[i + 1]); };
     };
     const row = (t, inList) => `<div class="trk" data-id="${esc(t.id)}"><img src="${esc(t.thumb && !/^https/.test(t.thumb) ? '/' + t.thumb.replace(/^\//, '') : t.thumb || '')}" alt=""><div><div class="n">${esc(t.title)}</div><div class="d">${esc(t.duration || '')}${plMode === 'video' && !t.video ? ' · music only' : ''}</div></div>
-      <button class="play" data-play="${esc(t.id)}" aria-label="Play">▶</button>${inList ? `<button data-rm="${esc(t.id)}" aria-label="Remove from my playlist">−</button>` : `<button data-add="${esc(t.id)}" aria-label="Add to my playlist">+</button>`}</div>`;
+      <button class="play" data-play="${esc(t.id)}" aria-label="Play / pause"><svg class="ic-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.6v12.8c0 .8.9 1.3 1.6.9l10-6.4c.6-.4.6-1.4 0-1.8l-10-6.4C8.9 4.3 8 4.8 8 5.6z"/></svg><svg class="ic-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.3" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.3" fill="currentColor"/></svg></button>${inList ? `<button data-rm="${esc(t.id)}" aria-label="Remove from my playlist">−</button>` : `<button data-add="${esc(t.id)}" aria-label="Add to my playlist">+</button>`}</div>`;
     const render = () => {
       const list = mine.map(byId).filter(Boolean), rest = all.filter(t => !mine.includes(t.id) && (plMode === 'music' || t.video));
       el.innerHTML = `<h2>My playlist</h2><div class="pl-tabs"><button data-m="music" aria-pressed="${plMode === 'music'}">Music</button><button data-m="video" aria-pressed="${plMode === 'video'}">Music video</button></div>
@@ -332,7 +343,13 @@
         ${list.length ? '<p style="margin-top:16px"><button class="btn btn--sm" id="plAll">Play my playlist</button></p>' : ''}
         <h4>All bymarccc songs</h4><div>${rest.map(t => row(t, false)).join('')}</div>`;
       el.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { plMode = b.dataset.m; render(); }));
-      el.querySelectorAll('[data-play]').forEach(b => b.addEventListener('click', () => { const t = byId(b.dataset.play); if (t) playT(t); }));
+      el.querySelectorAll('[data-play]').forEach(b => b.addEventListener('click', () => {
+        const t = byId(b.dataset.play); if (!t) return;
+        const A = document.getElementById('miniAudio');
+        if (plMode === 'music' && A && plNow === t.id && A.src) { if (A.paused) A.play().catch(() => {}); else A.pause(); return; }
+        playT(t);
+      }));
+      syncPlay();
       el.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', async () => { mine = (await API('playlist', { add: b.dataset.add })).playlist; render(); }));
       el.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', async () => { mine = (await API('playlist', { remove: b.dataset.rm })).playlist; render(); }));
       const pa = el.querySelector('#plAll'); if (pa) pa.addEventListener('click', () => { const l = list.filter(t => plMode === 'music' || t.video); if (l[0]) playT(l[0]); });
