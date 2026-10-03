@@ -132,6 +132,8 @@ body.is-custom-bag-page .pdp-header.is-solid { background: transparent; box-shad
 .pdp-summary__row { display: none; }
 .pdp-info__title { margin: 0; font-size: 14px; font-weight: 400; letter-spacing: .04em; min-width: 0; line-height: 1.4; }
 .pdp-info__price { margin: 0; font-size: 14px; font-weight: 400; letter-spacing: .04em; flex: 0 0 auto; }
+.pdp-info__price-old { color: #8a8a8a; font-weight: 400; margin-right: 6px; }
+.pdp-info__price-sale { color: #b3121f; }
 .pdp-summary__reviews { display: flex; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 14px; font-size: 13px; color: var(--muted); }
 .pdp-summary__reviews:empty { display: none; }
 body.is-custom-bag-page #gallery { display: none; }
@@ -876,7 +878,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=7c688fecdd"></script>
+<script src="/assets/catalog.js?v=903d483aea"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1751,7 +1753,7 @@ body.is-custom-bag-page #gallery { display: none; }
     }
     if (DESIGNS.length && !state.design) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a design.'; designsEl.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }
     if (!state.size) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a size.'; $('sizes').scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); setTimeout(() => $('sizes').querySelector('.pdp-size:not([disabled])')?.focus({ preventScroll: true }), 400); return false; }
-    const line = { id: variantId(), name: PRODUCT.title, variant: [state.colour === 'default' ? '' : colourOf(state.colour).name, PRODUCT.noSize ? '' : sizeLabel(state.size), state.design || ''].filter(Boolean).join(' · '), image: (PRODUCT.imageColours ? GALLERY[COLOURS.findIndex(x => x.id === state.colour)] || GALLERY[0] : GALLERY[0]).src, price: PRODUCT.price, currency: PRODUCT.currency, quantity: 1 };
+    const line = { id: variantId(), name: PRODUCT.title, variant: [state.colour === 'default' ? '' : colourOf(state.colour).name, PRODUCT.noSize ? '' : sizeLabel(state.size), state.design || ''].filter(Boolean).join(' · '), image: (PRODUCT.imageColours ? GALLERY[COLOURS.findIndex(x => x.id === state.colour)] || GALLERY[0] : GALLERY[0]).src, price: UNIT_PRICE, currency: PRODUCT.currency, quantity: 1 };
     if (PRODUCT.needsBody) { line.id += `:${hw.h}x${hw.w}`; line.variant += (line.variant ? ' · ' : '') + `${hw.h} cm · ${hw.w} kg`; line.attributes = { 'Height (cm)': hw.h, 'Weight (kg)': hw.w }; }
     btn.disabled = true; btn.classList.add('is-busy');
     try { await BAG.add(line); msg.classList.add('is-ok'); msg.textContent = `Added — ${line.name}`; return true; }
@@ -1763,9 +1765,11 @@ body.is-custom-bag-page #gallery { display: none; }
   /* ==================================================================
      SUMMARY (title / price / reviews) + SERVICE ROWS
   ================================================================== */
-  const priceMinor = () => toMinor(PRODUCT.price);      // variant-aware hook: all Zebra variants share one price today
+  const ON_SALE = typeof PRODUCT.salePrice === 'number' && typeof PRODUCT.price === 'number' && PRODUCT.salePrice < PRODUCT.price;
+  const UNIT_PRICE = ON_SALE ? PRODUCT.salePrice : PRODUCT.price;   // looks / sale pieces: the reduced price is what goes in the bag
+  const priceMinor = () => toMinor(UNIT_PRICE);      // variant-aware hook: all Zebra variants share one price today
   $('pTitle').textContent = PRODUCT.title;
-  function renderPrice() { $('pPrice').textContent = hasPrice ? fmtMinor(priceMinor()) : ''; $('pPrice').hidden = !hasPrice; const bp = $('barPrice'); if (bp) { bp.textContent = hasPrice ? fmtMinor(priceMinor()) : ''; bp.hidden = !hasPrice; } renderSplit(); }
+  function renderPrice() { $('pPrice').textContent = hasPrice ? fmtMinor(priceMinor()) : ''; if (hasPrice && ON_SALE) $('pPrice').innerHTML = `<s class="pdp-info__price-old">${fmtMinor(toMinor(PRODUCT.price))}</s> <span class="pdp-info__price-sale">${fmtMinor(priceMinor())}</span>`; $('pPrice').hidden = !hasPrice; const bp = $('barPrice'); if (bp) { bp.textContent = hasPrice ? fmtMinor(priceMinor()) : ''; bp.hidden = !hasPrice; } renderSplit(); }
   (function renderReviews() {
     const r = PRODUCT.reviews, row = $('reviewRow');
     if (!r || !r.count) { row.innerHTML = '<span>No reviews yet</span>'; return; }
