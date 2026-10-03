@@ -1014,7 +1014,7 @@
      SECTION 3 — Collections (Acne-style tabs + product grid), data from catalog.js
      ===================================================================== -->
 <section class="shop" id="shop" aria-label="bymarccc menswear collections" data-gender="men">
-  <h2 class="shop__title">MEN</h2>
+  <h2 class="shop__title shop__title--hidden">MEN</h2>
   <nav class="shop__tabs" role="tablist" aria-label="Menswear collections"></nav>
   <div class="shop__grid" role="tabpanel"></div>
 </section>
@@ -1108,7 +1108,7 @@
 })();
 </script>
 <section class="shop shop--women" id="shopWomen" aria-label="bymarccc womenswear collections" data-gender="women">
-  <h2 class="shop__title">WOMEN</h2>
+  <h2 class="shop__title shop__title--hidden">WOMEN</h2>
   <nav class="shop__tabs" role="tablist" aria-label="Womenswear collections"></nav>
   <div class="shop__grid" role="tabpanel"></div>
 </section>
@@ -1120,6 +1120,7 @@
 </section>
 <style>
   .shop { background: #fff; color: #111; padding: clamp(28px, 5vw, 56px) 0 clamp(56px, 8vw, 110px); font-family: "Jost", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  .shop__title--hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* MEN / WOMEN words removed from view (kept for screen readers/SEO) */
   .shop__title { margin: 0 0 14px; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; }
   .shop__subhead { grid-column: 1 / -1; margin: clamp(20px, 4vw, 34px) 0 14px; padding: 0 clamp(16px, 4vw, 48px); text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; color: #111; }
   .shop__subhead:first-child { margin-top: 0; }
@@ -1308,7 +1309,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=4be889491q"></script>
+<script src="/assets/catalog.js?v=0defadd2es"></script>
 <script>
 (() => {
   'use strict';
@@ -1573,6 +1574,7 @@
       grid.innerHTML = '';
       grid.classList.remove('shop__grid--sales');
       let items = Object.entries(CATALOG).filter(([, p]) => genderOf(p).includes(gender) && (p.collections || []).includes(active));
+      if (active === 'looks') items.sort((a, b) => (a[1].lookNo || 99) - (b[1].lookNo || 99));   // LOOK 1 left, LOOK 2 right, …
       if (active === 'new') items = NEW_LIST.filter(k => CATALOG[k] && genderOf(CATALOG[k]).includes(gender)).map(k => [k, CATALOG[k]]);   // NEW COLLECTION tab: every piece with the NEW COLLECTION label
       if (active === 'jackets' && gender === 'women') items = (WOMEN_FEATURED.jackets || []).map(k => items.find(([x]) => x === k)).filter(Boolean);   // women JACKETS: only the Logo Windbreakers
       if (active === 'sales' && gender === 'women') {
