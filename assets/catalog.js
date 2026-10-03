@@ -865,7 +865,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "Silver sequin shorts with bymarccc tag.",
       "unavailable": [],
       "colours": [{"id":"silver","name":"Silver","hex":"#c9c9c9"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/19D34461-F680-493B-A81A-9B88066F0BAC.jpg?v=1773342399&width=1400","w":1200,"h":1600},{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/CF6730EE-BBA9-42BA-B3D7-5BE53EE5C37C.jpg?v=1&width=1400","w":1200,"h":1600},{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/0B7F585E-6F6A-42DB-9FD5-91819C9B461D.jpg?v=1&width=1400","w":1200,"h":1600}]
     },
     "w-black-sequin-shorts": {
@@ -880,7 +880,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "Black sequin shorts with bymarccc tag.",
       "unavailable": [],
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/B8DCCBEB-0795-49A2-BB82-15758B30E788.jpg?v=1773176987&width=1400","w":1200,"h":1600},{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/95051829-853C-40F2-A998-499BE949F8E2.jpg?v=1&width=1400","w":1200,"h":1600},{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/51B9056C-5068-468D-AC85-964563827D0B.jpg?v=1&width=1400","w":1200,"h":1600},{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/AEE9E0B6-2B45-434D-BC99-4F703247728F.jpg?v=1&width=1400","w":1200,"h":1600}]
     },
     "w-walking-art-black-jeans": {
@@ -991,7 +991,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "White mini sequin skirt with bymarccc tag.",
       "unavailable": [],
       "colours": [{"id":"default","name":"As shown","hex":"#dcdcd8"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/514A3676-2E63-4984-BEBA-FE5091DC0172.jpg?v=1772814015&width=1400","w":1200,"h":1600},{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/074AE64A-411A-4175-AFF0-F5E8A6E224A3.jpg?v=1&width=1400","w":1200,"h":1600},{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/D25BCF0D-9486-472C-A07C-42C587CEE058.jpg?v=1&width=1400","w":1200,"h":1600},{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/A227A87A-8FC9-4615-AE91-F2B2C5F40049.jpg?v=1&width=1400","w":1200,"h":1600}]
     },
     "w-cross-embroidery": {
@@ -1021,7 +1021,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "Black sweatpants with butterflies embroidery.",
       "unavailable": [],
       "colours": [{"id":"default","name":"As shown","hex":"#dcdcd8"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/2B7826A3-B60F-4C60-A434-E7F4B84384CA.jpg?v=1760026695&width=1400","w":1200,"h":1600}]
     },
     "w-no-waist-jean": {
@@ -1068,7 +1068,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "Black sweatpants with Art Dept print and hand-painted splatter.",
       "unavailable": [],
       "colours": [{"id":"default","name":"As shown","hex":"#dcdcd8"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"https://cdn.shopify.com/s/files/1/0955/7835/8108/files/ACEF2008-4A66-4F6A-A4C1-605462CEE988.jpg?v=1760028518&width=1400","w":1200,"h":1600}]
     },
     "w-cap-1": {
@@ -1149,7 +1149,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "An oversized black blazer finished with colourful \"HOT GIRLS ARE DELULU\" embroidery on the hem.",
       "unavailable": [],
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"assets/img/gallery/delulu-blazer-1-73460abe.webp","w":900,"h":1353},{"src":"assets/img/gallery/delulu-blazer-2-00ef28a9.webp","w":1212,"h":1816},{"src":"assets/img/gallery/hot-girls-blazer-3.webp","w":1212,"h":1816}]
     },
     "w-delulu-blazer-2": {
@@ -1164,7 +1164,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "An oversized black blazer finished with a small colourful \"DELULU\" embroidery on the shoulder.",
       "unavailable": [],
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"assets/img/gallery/delulu-blazer2-1.webp","w":1093,"h":1637},{"src":"assets/img/gallery/delulu-blazer2-2.webp","w":1093,"h":1637},{"src":"assets/img/gallery/delulu-blazer2-3.webp","w":1093,"h":1637},{"src":"assets/img/gallery/delulu-blazer2-4.webp","w":1093,"h":1637},{"src":"assets/img/gallery/delulu-blazer2-5.webp","w":1093,"h":1637}]
     },
     "w-muse-blazer": {
@@ -1179,7 +1179,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "An oversized black blazer finished with a small red \"Muse\" script embroidery on the chest.",
       "unavailable": [],
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"assets/img/gallery/muse-blazer-1.webp","w":1093,"h":1637},{"src":"assets/img/gallery/muse-blazer-2.webp","w":1093,"h":1637},{"src":"assets/img/gallery/muse-blazer-3.webp","w":1093,"h":1637},{"src":"assets/img/gallery/muse-blazer-4.webp","w":1093,"h":1637},{"src":"assets/img/gallery/muse-blazer-5.webp","w":1093,"h":1439}]
     },
     "w-delulu-pardesiu": {
@@ -1195,7 +1195,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "A tailored black blazer with \"DELULU\" embroidered on the lapel.",
       "unavailable": [],
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"assets/img/gallery/w-delulu-pardesiu-1-f45b8022.webp","w":1212,"h":1816}]
     },
     "w-logo-vest": {
@@ -1353,7 +1353,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "A cropped black zip-up top with a high collar, sculpting seams, zipped waist pockets and a white alien logo on the sleeve.",
       "unavailable": [],
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"assets/img/gallery/w-sporty-top-1-af68c16e.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-sporty-top-2-23cb31b2.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-11-8839b7cc.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-12-b4cd5ef0.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-13-64088253.webp","w":1024,"h":1534}]
     },
     "w-sporty-top-ecru": {
@@ -1368,7 +1368,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "A cropped ecru zip-up top with a high collar, sculpting seams, zipped waist pockets and a black alien logo on the sleeve.",
       "unavailable": [],
       "colours": [{"id":"ecru","name":"Ecru","hex":"#efe9dc"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"assets/img/gallery/w-sporty-top-ecru-11-a77dd443.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-12-ae91d27a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-13-d1847dc6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-14-21aeb101.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-15-5c0457fb.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-16-118f8abe.webp","w":1024,"h":1534}]
     },
     "w-logo-flare-jeans": {
@@ -1383,7 +1383,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "Ecru flared trousers with front pintuck seams, a wide waistband and a black alien logo on the hip.",
       "unavailable": [],
       "colours": [{"id":"ecru","name":"Ecru","hex":"#efe9dc"}],
-      "chart": ["S","M","L"],
+      "chart": ["XS-S","M-L"],
       "gallery": [{"src":"assets/img/gallery/w-logo-flare-jeans-1-452bb0b9.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-logo-flare-jeans-2-d1847dc6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-logo-flare-jeans-3-ae91d27a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-logo-flare-jeans-4-5c0457fb.webp","w":1024,"h":1534}]
     },
     "w-purple-sweatpants": {
