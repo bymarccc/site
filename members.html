@@ -1801,8 +1801,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .bmp__b { flex: 0 0 auto; width: 44px; height: 44px; border: 0; background: none; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; touch-action: manipulation; }
 .bmp__b svg { width: 26px; height: 26px; display: block; }
 .bmp__b:active svg { transform: scale(.88); }
-.bmp__round { flex: 0 0 60px; width: 60px; height: 60px; border-radius: 50%; border: 0; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; margin-left: auto; }
-.bmp__round svg { width: 24px; height: 24px; }
+.bmp__round { flex: 0 0 48px; width: 48px; height: 48px; align-self: center; border-radius: 50%; border: 0; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; margin-left: auto; }
+.bmp__round svg { width: 20px; height: 20px; }
 .bmp__search { flex: 1 1 auto; min-width: 0; height: 60px; border-radius: 999px; display: flex; align-items: center; gap: 10px; padding: 0 18px; }
 .bmp__search svg { flex: 0 0 auto; width: 22px; height: 22px; color: #111; }
 .bmp__search input { flex: 1 1 auto; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; color: #111; outline: none !important; box-shadow: none !important; padding: 0; -webkit-appearance: none; appearance: none; }
@@ -1838,7 +1838,6 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
     <button class="bmp__round bmp__glass bmp__sbtn" id="bmpS" type="button" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></svg></button>
   </div>
   <div class="bmp__row bmp__srow">
-    <button class="bmp__round bmp__glass" id="bmpBack" type="button" aria-label="Close search" style="margin-left:0"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h10M6 6.5h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/><rect x="4.5" y="9" width="15" height="12" rx="3"/><path d="M14.2 11.3v5.4a1.9 1.9 0 11-1-1.7v-3.1l-3.2.7v4.3a1.9 1.9 0 11-1-1.7v-3.8z" fill="#fff"/></svg></button>
     <label class="bmp__search bmp__glass"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></svg><input id="bmpQ" type="search" placeholder="Products, songs and more" autocomplete="off" enterkeyhint="search" aria-label="Search products and songs"></label>
   </div>
 </div>
@@ -1911,7 +1910,6 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
   function close() { root.classList.remove('is-search'); q.value = ''; res.classList.remove('has'); res.innerHTML = ''; q.blur(); }
   $('bmpS').addEventListener('click', open);
   window.BMP_OPEN = open;
-  $('bmpBack').addEventListener('click', close);
   document.addEventListener('pointerdown', e => { if (root.classList.contains('is-search') && !root.contains(e.target)) close(); });
   /* ---- stay above the page's own bottom UI (Add to bag bar, bag pill, stylist button) ---- */
   function place() {
@@ -1925,7 +1923,8 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
     });
     root.style.setProperty('--bmp-b', Math.round(off) + 'px');
     const hideForSheet = !!document.querySelector('.wl:not([hidden]), .cart:not([hidden]), .qv:not([hidden]), .pdp-modal:not([hidden])');
-    root.style.visibility = hideForSheet ? 'hidden' : '';
+    const s1 = document.getElementById('play'), inS1 = !!(s1 && s1.offsetParent !== null && s1.getBoundingClientRect().bottom > innerHeight * 0.6 && !root.classList.contains('is-search'));
+    root.style.visibility = hideForSheet || inS1 ? 'hidden' : '';
   }
   // env(safe-area-inset-bottom) is added by the CSS; measure it once so the offset above isn't counted twice
   const probe = document.createElement('div'); probe.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;visibility:hidden'; document.body.appendChild(probe);
