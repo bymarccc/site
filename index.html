@@ -1621,9 +1621,17 @@
         const duo = items.filter(([, p]) => p.saleDuo);   // a small shared swipeable row for a fixed group of items (e.g. Black Leather Jacket + Embroidered Cross Turtleneck)
         if (rail.length || duo.length) {
           const section = document.createElement('div'); section.className = 'sales__section sales__section--men'; grid.appendChild(section);
-          if (standalone.length) { const sWrap = document.createElement('div'); sWrap.className = 'sales__standalone'; standalone.forEach(([k, p]) => sWrap.appendChild(saleRailCard(k, p))); section.appendChild(sWrap); }
-          if (duo.length) mountSalesSlider(section, duo, { compact: true, rail: true });
-          if (rail.length) mountSalesSlider(section, rail, { compact: true, rail: true }); // the size-40 pieces: one sliding row of shop-sized cards + scroll bar, below the grid
+          if (rail.length) mountSalesSlider(section, rail, { compact: true, rail: true }); // the size-40 pieces first: one sliding row of shop-sized cards + scroll bar
+          const rest = standalone.concat(duo);   // then every other sale piece, 2 per row; 6 shown, the rest behind LOAD MORE
+          if (rest.length) {
+            const sWrap = document.createElement('div'); sWrap.className = 'sales__standalone'; sWrap.style.marginTop = '28px'; section.appendChild(sWrap);
+            rest.slice(0, 6).forEach(([k, p]) => sWrap.appendChild(saleRailCard(k, p)));
+            if (rest.length > 6) {
+              const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__loadmore'; b.textContent = 'LOAD MORE';
+              b.addEventListener('click', () => { b.remove(); rest.slice(6).forEach(([k, p]) => sWrap.appendChild(saleRailCard(k, p))); }, { once: true });
+              section.appendChild(b);
+            }
+          }
           return;
         }
         mountSalesSlider(grid, items); return;
