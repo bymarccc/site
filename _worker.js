@@ -2751,13 +2751,20 @@ async function accountApi(request) {
   // YouTube Music playlist link — the customer saves it here; we connect it by hand (status: pending → connected)
   if (action === "ytm") {
     if (request.method === "POST") {
-      const raw = String(b.url || "").trim().slice(0, 500);
-      if (!raw) { await db.prepare("DELETE FROM acct_ytm WHERE email = ?1").bind(email).run(); return json(200, { ytm: null }); }
-      let u; try { u = new URL(raw); } catch { return json(400, { error: "Paste the full link of your YouTube Music playlist." }); }
-      if (!/(^|\.)(youtube\.com|youtu\.be)$/i.test(u.hostname) || u.protocol !== "https:") return json(400, { error: "That doesn't look like a YouTube Music link." });
-      await db.prepare("INSERT INTO acct_ytm (email, url, status, updated_at) VALUES (?1,?2,'pending',?3) ON CONFLICT(email) DO UPDATE SET url = ?2, status = 'pending', updated_at = ?3").bind(email, u.href, acctNow()).run();
+      const lines = String(b.url || "").split(/[\s,]+/).map((x) => x.trim()).filter(Boolean).slice(0, 20);
+      if (!lines.length) { await db.prepare("DELETE FROM acct_ytm WHERE email = ?1").bind(email).run(); return json(200, { ytm: null }); }
+      const sp = await acctSpend(db, email), tf = acctTierFor(sp.spend, sp.override);
+      if (tf.tier.id === "bronze") return json(403, { error: "My Playlist unlocks at CIRCLE Silver." });
+      const urls = [];
+      for (const raw of lines) {
+        let u; try { u = new URL(raw.slice(0, 500)); } catch { return json(400, { error: "Paste the full YouTube Music links (one per line)." }); }
+        if (!/(^|\.)(youtube\.com|youtu\.be)$/i.test(u.hostname) || u.protocol !== "https:") return json(400, { error: "Only YouTube Music links, please." });
+        urls.push(u.href);
+      }
+      const joined = urls.join("\n");
+      await db.prepare("INSERT INTO acct_ytm (email, url, status, updated_at) VALUES (?1,?2,'pending',?3) ON CONFLICT(email) DO UPDATE SET url = ?2, status = 'pending', updated_at = ?3").bind(email, joined, acctNow()).run();
       if (env("RESEND_API_KEY") && env("ORDER_EMAIL_FROM") && env("ORDER_NOTIFY_TO")) {
-        try { await resendSend({ from: env("ORDER_EMAIL_FROM"), to: env("ORDER_NOTIFY_TO").split(",").map((x) => x.trim()).filter(Boolean), reply_to: email, subject: `YouTube Music playlist — ${email}`, text: `${email} added a YouTube Music playlist to connect:\n\n${u.href}` }); } catch {}
+        try { await resendSend({ from: env("ORDER_EMAIL_FROM"), to: env("ORDER_NOTIFY_TO").split(",").map((x) => x.trim()).filter(Boolean), reply_to: email, subject: `YouTube Music playlist — ${email}`, text: `${email} added YouTube Music links to connect:\n\n${joined}` }); } catch {}
       }
     }
     const r = await db.prepare("SELECT url, status, updated_at FROM acct_ytm WHERE email = ?1").bind(email).first();

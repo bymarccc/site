@@ -113,6 +113,9 @@
   .trk button.play .ic-pause{ display:none; } .trk button.play.is-playing .ic-play{ display:none; } .trk button.play.is-playing .ic-pause{ display:block; }
   .trk button.play .ic-play{ margin-left:2px; }
   .trk.is-on .n{ font-weight:600; }
+  .al-logo{ height:.72em; width:auto; vertical-align:baseline; margin-right:.22em; position:relative; top:.02em; }   /* original alien logo, cap height (same as an O) */
+  .ytm-lock{ max-width:560px; border:1px solid var(--line); border-radius:14px; padding:18px 20px; background:var(--bg); }
+  .ytm-lock b{ display:block; margin-bottom:6px; }
 </style>
 <script src="/assets/catalog.js?v=382e12888t" defer></script>
 </head>
@@ -193,7 +196,7 @@
   }
 
   /* ---------------- signed in ---------------- */
-  const SECTIONS = [['circle', 'CIRCLE'], ['orders', 'Orders and returns'], ['credits', 'Credits and refunds'], ['details', 'Details and security'], ['addresses', 'Address book'], ['wishlist', 'Wishlist'], ['playlist', 'My playlist'], ['ytm', 'YouTube Music playlist'], ['prefs', 'Communication preferences'], ['refer', 'Refer a friend']];
+  const SECTIONS = [['circle', 'CIRCLE'], ['orders', 'Orders and returns'], ['credits', 'Credits and refunds'], ['details', 'Details and security'], ['addresses', 'Address book'], ['wishlist', 'Wishlist'], ['playlist', '<img class="al-logo" src="/assets/img/alien-logo.png" alt="">Playlist'], ['ytm', 'My Playlist'], ['prefs', 'Communication preferences'], ['refer', 'Refer a friend']];
   function signedIn() {
     const t = P.tier;
     root.innerHTML = `<div class="ac" id="ac"><nav class="ac-nav" aria-label="Account">
@@ -338,7 +341,7 @@
       <button class="play" data-play="${esc(t.id)}" aria-label="Play / pause"><svg class="ic-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.6v12.8c0 .8.9 1.3 1.6.9l10-6.4c.6-.4.6-1.4 0-1.8l-10-6.4C8.9 4.3 8 4.8 8 5.6z"/></svg><svg class="ic-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.3" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.3" fill="currentColor"/></svg></button>${inList ? `<button data-rm="${esc(t.id)}" aria-label="Remove from my playlist">−</button>` : `<button data-add="${esc(t.id)}" aria-label="Add to my playlist">+</button>`}</div>`;
     const render = () => {
       const list = mine.map(byId).filter(Boolean), rest = all.filter(t => !mine.includes(t.id) && (plMode === 'music' || t.video));
-      el.innerHTML = `<h2>My playlist</h2><div class="pl-tabs"><button data-m="music" aria-pressed="${plMode === 'music'}">Music</button><button data-m="video" aria-pressed="${plMode === 'video'}">Music video</button></div>
+      el.innerHTML = `<h2><img class="al-logo" src="/assets/img/alien-logo.png" alt="">Playlist</h2><div class="pl-tabs"><button data-m="music" aria-pressed="${plMode === 'music'}">Music</button><button data-m="video" aria-pressed="${plMode === 'video'}">Music video</button></div>
         <div>${list.length ? list.map(t => row(t, true)).join('') : '<p class="empty">Your playlist is empty</p><p>Add songs from the list below — they stay in your account on every device.</p>'}</div>
         ${list.length ? '<p style="margin-top:16px"><button class="btn btn--sm" id="plAll">Play my playlist</button></p>' : ''}
         <h4>All bymarccc songs</h4><div>${rest.map(t => row(t, false)).join('')}</div>`;
@@ -356,16 +359,21 @@
     };
     render();
   }
-  /* ---------- YouTube Music playlist: the customer pastes the link, we connect it by hand ---------- */
+  /* ---------- My Playlist (Silver and up): the customer's own YouTube Music playlist / songs — we connect them by hand ---------- */
   async function secYtm(el) {
+    if (!P || !P.tier || P.tier.id === 'bronze') {
+      const sil = (P.tiers || []).find(x => x.id === 'silver'), need = sil ? Math.max(0, sil.min - (P.spend || 0)) : 0;
+      el.innerHTML = `<h2>My Playlist</h2><div class="ytm-lock"><b>Unlocks at CIRCLE Silver</b>Bring your own songs from YouTube Music to bymarccc. Available from Silver (${money(sil ? sil.min : 1500)} total spend)${need ? ` — ${money(need)} to go.` : '.'}</div>`;
+      return;
+    }
     let cur = null; try { cur = (await API('ytm')).ytm; } catch {}
     const render = msg => {
-      el.innerHTML = `<h2>YouTube Music playlist</h2>
-        <p style="max-width:560px;line-height:1.6">Add your own playlist from YouTube Music and we'll connect it to your bymarccc account, so your songs play on the site.</p>
-        <ol style="max-width:560px;line-height:1.7;padding-left:18px;color:var(--sub)"><li>Open your playlist in YouTube Music</li><li>Tap <b>Share</b> → <b>Copy link</b></li><li>Paste it below and save</li></ol>
-        <form id="ytF" style="max-width:560px"><div class="f"><label for="ytU">Playlist link</label><input id="ytU" type="url" inputmode="url" placeholder="https://music.youtube.com/playlist?list=…" value="${esc(cur ? cur.url : '')}"></div>
+      el.innerHTML = `<h2>My Playlist</h2>
+        <p style="max-width:560px;line-height:1.6">Add your own songs from YouTube Music — a playlist or single songs — and we'll connect them to your bymarccc account, so they play on the site.</p>
+        <ol style="max-width:560px;line-height:1.7;padding-left:18px;color:var(--sub)"><li>Open a playlist or a song in YouTube Music</li><li>Tap <b>Share</b> → <b>Copy link</b></li><li>Paste it below (one link per line) and save</li></ol>
+        <form id="ytF" style="max-width:560px"><div class="f"><label for="ytU">Links</label><textarea id="ytU" rows="4" inputmode="url" placeholder="https://music.youtube.com/playlist?list=…" style="width:100%;font:inherit;font-size:16px;padding:12px 14px;border:1px solid #c9c9c5;border-radius:6px;resize:vertical">${esc(cur ? cur.url : '')}</textarea></div>
         <p class="msg" id="ytMsg" role="alert">${msg ? esc(msg) : ''}</p>
-        <button class="btn" type="submit">${cur ? 'Update playlist' : 'Save playlist'}</button>${cur ? ' <button class="btn btn--ghost btn--sm" type="button" id="ytDel">Remove</button>' : ''}</form>
+        <button class="btn" type="submit">${cur ? 'Update' : 'Save'}</button>${cur ? ' <button class="btn btn--ghost btn--sm" type="button" id="ytDel">Remove</button>' : ''}</form>
         ${cur ? `<p style="margin-top:18px">Status: <b>${cur.status === 'connected' ? 'Connected ✓' : 'Waiting to be connected'}</b>${cur.status === 'connected' ? '' : ' — we usually connect it within 1–2 days.'}</p>` : ''}`;
       el.querySelector('#ytF').addEventListener('submit', async e => {
         e.preventDefault(); const b = e.submitter || el.querySelector('#ytF button[type=submit]'); b.disabled = true;
