@@ -2797,10 +2797,13 @@ async function accountAdmin(request) {
   if (b.action === "customers") {
     const cs = (await db.prepare("SELECT email, name, phone, created_at, ref_code, referred_by, spend_import, tier_override FROM acct_customers ORDER BY created_at DESC LIMIT 5000").all()).results || [];
     const out = [];
+    const ytmRows = (await db.prepare("SELECT email, url, status, updated_at FROM acct_ytm").all().catch(() => ({ results: [] }))).results || [];
+    const ytmBy = Object.fromEntries(ytmRows.map((y) => [y.email, { url: y.url, status: y.status, updated: y.updated_at }]));
+    const newSince = new Date(Date.now() - 7 * 864e5).toISOString();
     for (const c of cs) {
       const sp = await acctSpend(db, c.email), tf = acctTierFor(sp.spend, sp.override);
       const last = await db.prepare("SELECT MAX(created_at) AS t, COUNT(*) AS n FROM acct_orders WHERE email = ?1").bind(c.email).first();
-      out.push({ email: c.email, name: c.name, phone: c.phone, since: c.created_at, tier: tf.tier.id, tierName: tf.tier.name, discountPct: tf.tier.pct, spend12mRon: sp.spend, ordersTotal: (last && last.n) || 0, lastOrderAt: last && last.t, toNextTier: tf.toNext, nextTier: tf.next && tf.next.name, referredBy: c.referred_by, refCode: c.ref_code, tierOverride: c.tier_override });
+      out.push({ email: c.email, name: c.name, phone: c.phone, since: c.created_at, tier: tf.tier.id, tierName: tf.tier.name, discountPct: tf.tier.pct, spend12mRon: sp.spend, ordersTotal: (last && last.n) || 0, lastOrderAt: last && last.t, toNextTier: tf.toNext, nextTier: tf.next && tf.next.name, referredBy: c.referred_by, refCode: c.ref_code, tierOverride: c.tier_override, freeShip: tf.tier.freeShip, drops: tf.tier.drops, isNew: String(c.created_at || "") >= newSince, ytm: ytmBy[c.email] || null });
     }
     return json(200, { customers: out, tiers: ACCT_TIERS });
   }
@@ -2811,6 +2814,15 @@ async function accountAdmin(request) {
     return json(200, { ok: true });
   }
   if (!validEmail(email)) return json(400, { error: "Bad email" });
+  if (b.action === "ytm-status") {
+    const st = b.status === "connected" ? "connected" : "pending";
+    await db.prepare("UPDATE acct_ytm SET status = ?2, updated_at = ?3 WHERE email = ?1").bind(email, st, acctNow()).run();
+    return json(200, { ok: true, status: st });
+  }
+  if (b.action === "customer-orders") {
+    const rows = (await db.prepare("SELECT order_id, created_at, status, currency, total_local, total_ron, discount_pct, credit_ron FROM acct_orders WHERE email = ?1 ORDER BY created_at DESC LIMIT 200").bind(email).all()).results || [];
+    return json(200, { orders: rows.map((o) => ({ id: o.order_id, at: o.created_at, status: o.status, currency: o.currency, total: o.total_local, totalRon: o.total_ron, discountPct: o.discount_pct || 0, creditRon: o.credit_ron || 0 })) });
+  }
   const ensure = async () => { const c = await db.prepare("SELECT 1 FROM acct_customers WHERE email = ?1").bind(email).first(); if (!c) await db.prepare("INSERT INTO acct_customers (email, name, created_at, ref_code, prefs) VALUES (?1,?2,?3,?4,?5)").bind(email, String(b.name || "").slice(0, 80), acctNow(), acctRand(7), JSON.stringify({ news: true, drops: true })).run(); };
   if (b.action === "import-spend-bulk") {
     let n = 0;
