@@ -1803,7 +1803,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .bmp__b:active svg { transform: scale(.88); }
 .bmp__round { flex: 0 0 48px; width: 48px; height: 48px; align-self: center; border-radius: 50%; border: 0; padding: 0; color: #111; display: grid; place-items: center; cursor: pointer; margin-left: auto; }
 .bmp__round svg { width: 20px; height: 20px; }
-.bmp__search { flex: 1 1 auto; min-width: 0; height: 60px; border-radius: 999px; display: flex; align-items: center; gap: 10px; padding: 0 18px; }
+.bmp__search { flex: 1 1 auto; min-width: 0; height: 52px; border-radius: 999px; display: flex; align-items: center; gap: 10px; padding: 0 18px; }
+.bmp.is-search .bmp__search { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .bmp__search svg { flex: 0 0 auto; width: 22px; height: 22px; color: #111; }
 .bmp__search input { flex: 1 1 auto; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; color: #111; outline: none !important; box-shadow: none !important; padding: 0; -webkit-appearance: none; appearance: none; }
 .bmp__it em { font-style: normal; color: #777; font-size: 12.5px; }
@@ -1922,6 +1923,13 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
       off = Math.max(off, innerHeight - r.top + 8 - safe);
     });
     root.style.setProperty('--bmp-b', Math.round(off) + 'px');
+    // searching on a phone: sit right on top of the keyboard (the keyboard only shrinks the visual viewport)
+    const vv = window.visualViewport;
+    if (vv && root.classList.contains('is-search')) {
+      const kb = Math.max(0, innerHeight - vv.height - vv.offsetTop);
+      if (kb > 80) { root.style.bottom = Math.round(kb + 6) + 'px'; root.style.top = 'auto'; }
+      else root.style.bottom = '';
+    } else root.style.bottom = '';
     const hideForSheet = !!document.querySelector('.wl:not([hidden]), .cart:not([hidden]), .qv:not([hidden]), .pdp-modal:not([hidden])');
     const s1 = document.getElementById('play'), inS1 = !!(s1 && s1.offsetParent !== null && s1.getBoundingClientRect().bottom > innerHeight * 0.6 && !root.classList.contains('is-search'));
     root.style.visibility = hideForSheet || inS1 ? 'hidden' : '';
@@ -1930,6 +1938,8 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
   const probe = document.createElement('div'); probe.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);width:0;visibility:hidden'; document.body.appendChild(probe);
   root.style.setProperty('--bmp-safe', probe.offsetHeight + 'px'); probe.remove();
   place(); setInterval(place, 400); addEventListener('resize', place); addEventListener('scroll', place, { passive: true });
+  if (window.visualViewport) { visualViewport.addEventListener('resize', place); visualViewport.addEventListener('scroll', place); }
+  q.addEventListener('focus', () => { setTimeout(place, 60); setTimeout(place, 350); });
   paint();
 })();
 </script>
