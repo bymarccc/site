@@ -4266,8 +4266,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       const M = () => bgPlay ? snd : video;
       const bgJump = d => { load(idx + d); try { snd.currentTime = 0; } catch {} snd.play().catch(() => {}); };
       set('play', () => M().play().catch(() => {})); set('pause', () => M().pause());
-      set('seekbackward', d => { const m = M(); m.currentTime = Math.max(0, m.currentTime - (d.seekOffset || 10)); });
-      set('seekforward', d => { const m = M(); m.currentTime = Math.min(m.duration || 0, m.currentTime + (d.seekOffset || 10)); });
+      set('seekbackward', null);
+      set('seekforward', null);
       set('seekto', d => { if (typeof d.seekTime === 'number') M().currentTime = d.seekTime; });
       set('nexttrack', () => bgPlay ? bgJump(1) : load(idx + 1, { autoplay: true })); set('previoustrack', () => bgPlay ? bgJump(-1) : load(idx - 1, { autoplay: true })); };
     snd.addEventListener('play', () => { if (bgPlay) navigator.mediaSession.playbackState = 'playing'; });
@@ -4279,8 +4279,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const aMediaMeta = () => { try { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle?.textContent || '').replace(/^.*? - /, '') || 'bymarccc'; navigator.mediaSession.metadata = new MediaMetadata({ title: t, artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
     const aHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
       set('play', () => A.play().catch(() => {})); set('pause', () => A.pause());
-      set('seekbackward', d => { A.currentTime = Math.max(0, A.currentTime - (d.seekOffset || 10)); });
-      set('seekforward', d => { A.currentTime = Math.min(A.duration || 0, A.currentTime + (d.seekOffset || 10)); });
+      set('seekbackward', null);
+      set('seekforward', null);
       set('seekto', d => { if (typeof d.seekTime === 'number') A.currentTime = d.seekTime; });
       set('nexttrack', () => $('vpANext')?.click()); set('previoustrack', () => $('vpAPrev')?.click()); };
     if (A) {
@@ -4431,8 +4431,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
   set('play', () => audio.play().catch(() => {}));
   set('pause', () => audio.pause());
-  set('seekbackward', d => { audio.currentTime = Math.max(0, audio.currentTime - (d.seekOffset || 10)); });
-  set('seekforward',  d => { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + (d.seekOffset || 10)); });
+  set('seekbackward', null);
+  set('seekforward', null);
   set('seekto', d => { if (typeof d.seekTime === 'number') audio.currentTime = d.seekTime; });
   set('nexttrack', () => document.getElementById('miniNext')?.click());
   set('previoustrack', () => document.getElementById('miniPrev')?.click());
