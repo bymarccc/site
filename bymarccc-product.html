@@ -144,7 +144,7 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-service { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
 .pdp-service li { border-bottom: 1px solid var(--line); }
 .pdp-service__row { width: 100%; display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 12px; padding: 9px 0; background: none; border: 0; text-align: left; font-size: 12px; font-weight: 400; }
-.pdp-service__text { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdp-service__text { font-size: var(--svc-fs, 14px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pdp-service__row[disabled] { cursor: default; }
 .pdp-service__row svg { width: 18px; height: 18px; display: block; }
 .pdp-service__chev { width: 14px; height: 14px; color: #111; }
@@ -181,7 +181,7 @@ body.is-custom-bag-page #gallery { display: none; }
 
 /* ---------- Accordions ---------- */
 .pdp-acc { margin-top: 0; }
-.pdp-acc__guide { display: inline-block; margin-bottom: 22px; background: none; border: 0; padding: 0; font-weight: 400; font-size: 16px; text-decoration: underline; text-underline-offset: 4px; }
+.pdp-acc__guide { display: inline-block; margin-top: 16px; background: none; border: 0; padding: 0; font-weight: 400; font-size: 12.8px; text-decoration: underline; text-underline-offset: 3px; }
 .pdp-acc__row { border: 0; }
 .pdp-acc__btn { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 0; border: 0; background: none; text-align: left; font-weight: 400; font-size: 16px; }
 .pdp-acc__btn::after { content: "+"; font-weight: 400; font-size: 20px; line-height: 1; }
@@ -571,8 +571,8 @@ body.is-custom-bag-page #gallery { display: none; }
   .pdp-info > #cbVariants { order: 5; }
   .pdp-info > #cbAi { order: 5; }
   .pdp-info > .pdp-acc { order: 6; margin-top: 20px; }
-  .pdp-info > #reviewRow { order: 7; }
-  .pdp-info > #serviceRows { order: 8; }
+  .pdp-info > #serviceRows { order: 7; }
+  .pdp-info > #reviewRow { order: 8; }
   .pdp-info > #bar { order: 9; margin-top: 16px; }
 
   /* ---- Custom Painted Bag, mobile only: tighter header gap, title clear of the logo,
@@ -621,7 +621,7 @@ body.is-custom-bag-page #gallery { display: none; }
   body:not(.is-custom-bag-page) .pdp-info .pdp-info__title { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: 0; text-transform: none; }
   body:not(.is-custom-bag-page) .pdp-info .pdp-info__price { margin: 0; font-size: 16px; font-weight: 600; }
   body:not(.is-custom-bag-page) #barPrice { display: none !important; }
-  body:not(.is-custom-bag-page) .pdp-left .pdp-acc__guide { display: block; margin: 0 0 8px; font-size: 15px; }
+  body:not(.is-custom-bag-page) .pdp-left .pdp-acc__guide { display: block; margin: 14px 0 0; font-size: 12px; }
   body:not(.is-custom-bag-page) .pdp-left .pdp-acc__guide[hidden] { display: none; }
   body:not(.is-custom-bag-page) .pdp-left .pdp-acc__btn { justify-content: space-between; padding: 16px 0; font-size: 15px; }
 }
@@ -783,8 +783,6 @@ body.is-custom-bag-page #gallery { display: none; }
       
 
       <div class="pdp-acc">
-        <button class="pdp-acc__guide" id="openGuide" type="button" aria-haspopup="dialog" aria-controls="sizeModal">View size guide</button>
-
         <div class="pdp-acc__row">
           <button class="pdp-acc__btn" type="button" aria-expanded="false" aria-controls="accDetails" data-acc>Details</button>
           <div class="pdp-acc__panel" id="accDetails"><div><div class="pdp-acc__body" id="detailsBody"></div></div></div>
@@ -797,9 +795,10 @@ body.is-custom-bag-page #gallery { display: none; }
           <button class="pdp-acc__btn" type="button" aria-expanded="false" aria-controls="accShip" data-acc>Delivery &amp; Returns</button>
           <div class="pdp-acc__panel" id="accShip"><div><div class="pdp-acc__body" id="shipBody"></div></div></div>
         </div>
+        <button class="pdp-acc__guide" id="openGuide" type="button" aria-haspopup="dialog" aria-controls="sizeModal">View size guide</button>
       </div>
-      <div class="pdp-summary__reviews" id="reviewRow"></div>
       <ul class="pdp-service" id="serviceRows"></ul>
+      <div class="pdp-summary__reviews" id="reviewRow"></div>
       <div class="pdp-bar" id="bar">
         <div class="pdp-bar__row">
           <p class="pdp-bar__price" id="barPrice" hidden></p>
@@ -878,7 +877,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=25df7cec31"></script>
+<script src="/assets/catalog.js?v=073ec86ebx"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1815,8 +1814,21 @@ body.is-custom-bag-page #gallery { display: none; }
     splitRow.querySelector('.pdp-service__text').textContent = SERVICE.splitPay.label(fmtMinor(a));
     const bodyEl = splitRow.querySelector('.pdp-service__body');
     if (bodyEl) bodyEl.innerHTML = splitPayBodyInner();
+    if (typeof fitSvc === 'function') fitSvc();
   }
   renderSplit();
+  /* Service-row texts: one shared size, as large as fits up to the chevron (11–18px). */
+  function fitSvc() {
+    const ts = [...svc.querySelectorAll('.pdp-service__text')].filter(t => t.textContent.trim());
+    if (!ts.length || !svc.clientWidth) return;
+    svc.style.setProperty('--svc-fs', '20px');
+    let f = 18;
+    ts.forEach(t => { if (t.clientWidth && t.scrollWidth) f = Math.min(f, 20 * t.clientWidth / t.scrollWidth); });
+    svc.style.setProperty('--svc-fs', Math.max(11, Math.floor(f * 2 - 0.2) / 2) + 'px');
+  }
+  fitSvc();
+  if (window.ResizeObserver) { let lw = 0; new ResizeObserver(() => { if (svc.clientWidth !== lw) { lw = svc.clientWidth; fitSvc(); } }).observe(svc); }
+  document.fonts && document.fonts.ready.then(fitSvc);
   /* "Checkout · Pay in 2": adds the selected piece to the bag (same checks as ADD TO BAG) and opens
      checkout with the 2-installment card option preselected. */
   if (splitRow) splitRow.addEventListener('click', async e => {

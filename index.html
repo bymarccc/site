@@ -1175,6 +1175,9 @@
   .shop__price { text-align: right; }
   .shop__price--old, .shop__price--sale { display: block; }
   .shop__price--old { margin-right: 0; }
+  .shop__meta--look { justify-content: center; }
+  .shop__meta--look .shop__price { text-align: center; }
+  .shop__meta--look .shop__price--sale { color: #8a8a8a; font-weight: 600; }
   .shop__all, .shop__next { grid-column: 1 / -1; width: 100%; height: 54px; margin-top: 8px; border: 0; background: #111; color: #fff; font: inherit; font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; cursor: pointer; }
   .shop__all:hover, .shop__next:hover { background: #000; }
   .shop__loadmore { grid-column: 1 / -1; display: block; width: auto; margin: 28px auto 8px; padding: 16px 52px; border: 0; border-radius: 999px; background: #111; color: #fff; font: inherit; font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; cursor: pointer; }
@@ -1299,7 +1302,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=25df7cec31"></script>
+<script src="/assets/catalog.js?v=073ec86ebx"></script>
 <script>
 (() => {
   'use strict';
@@ -1322,9 +1325,10 @@
   const sizeTag = (size, key) => !size || /one.?size/i.test(size) ? '' : SIZE_FLAT.has(key) ? `<span class="shop__sizeflat">SIZE: ${size}</span>` : `<span class="shop__newtag shop__sizetag">SIZE: ${size}</span>`;
   function card(key, p) {
     const imgs = (p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
+    const look = (p.collections || []).includes('looks') && ((p.title || '').match(/^LOOK\s*\d+/i) || [''])[0].toUpperCase();   // SHOP THE LOOK: "LOOK 1" on the photo, price only
     const a = document.createElement('a'); a.className = 'shop__card'; a.href = 'bymarccc-product.html?p=' + key;
-    a.innerHTML = `<span class="shop__img">${newTag(key)}${scanFx(key)}${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
-      <span class="shop__meta"><span class="shop__name">${p.title}</span>${typeof p.price === 'number' ? (typeof p.salePrice === 'number' ? `<span class="shop__price"><span class="shop__price--old">${fmt(p.price, p.currency)}</span><span class="shop__price--sale">${fmt(p.salePrice, p.currency)}</span></span>` : `<span class="shop__price">${fmt(p.price, p.currency)}</span>`) : ''}</span>`;
+    a.innerHTML = `<span class="shop__img">${look ? `<span class="shop__newtag shop__looktag">${look}</span>` : newTag(key)}${scanFx(key)}${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
+      ${look ? `<span class="shop__meta shop__meta--look">` : `<span class="shop__meta"><span class="shop__name">${p.title}</span>`}${typeof p.price === 'number' ? (typeof p.salePrice === 'number' ? `<span class="shop__price"><span class="shop__price--old">${fmt(p.price, p.currency)}</span><span class="shop__price--sale">${fmt(p.salePrice, p.currency)}</span></span>` : `<span class="shop__price">${fmt(p.price, p.currency)}</span>`) : ''}</span>`;
     if (imgs.length > 1) {
       const pics = [...a.querySelectorAll('img')], bars = [...a.querySelectorAll('.shop__bars i')]; let i = 0;
       const show = n => { i = ((n % pics.length) + pics.length) % pics.length; pics.forEach((im, k) => im.classList.toggle('is-on', k === i)); bars.forEach((b, k) => b.classList.toggle('is-on', k === i)); };
