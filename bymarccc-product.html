@@ -287,9 +287,16 @@ body.is-custom-bag-page #gallery { display: none; }
 .cart__empty { display: flex; justify-content: center; padding: 60px 0 40px; }
 .cart__empty[hidden] { display: none; }
 .cart__empty .pdp-btn { padding: 0 32px; }
-.cart__lines { list-style: none; margin: 10px 0 0; padding: 0; }
-.cl { display: grid; grid-template-columns: 84px 1fr; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); }
-.cl__img { aspect-ratio: 2/3; background: var(--soft); border-radius: 6px; overflow: hidden; }
+.cart__lines { list-style: none; margin: 10px 0 0; padding: 0 0 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 6px; border-bottom: 1px solid var(--line); }
+.cart__lines.is-one { grid-template-columns: minmax(0, 1fr); padding-left: 12%; padding-right: 12%; }   /* one product: one big photo */
+.cl { display: block; padding: 0; border: 0; }
+.cl__img { position: relative; aspect-ratio: 4/5; background: #f0f0f0; border-radius: 0; overflow: hidden; }
+.cl__img .cl__remove { position: absolute; right: 8px; bottom: 8px; width: 34px; height: 34px; padding: 0; display: grid; place-items: center; background: #fff; color: #111; text-decoration: none; font-size: 0; border-radius: 2px; }
+.cl__img .cl__remove svg { width: 16px; height: 16px; }
+.cl__info { padding: 10px 6px 0; }
+.cl__info .cl__name { font-size: 12.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl__info .cl__var { font-size: 12px; margin-top: 2px; }
+.cl__info b { display: block; font-size: 12.5px; margin-top: 3px; letter-spacing: .04em; }
 .cl__img img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .cl__top { display: flex; justify-content: space-between; gap: 10px; }
 .cl__name { margin: 0; font-size: 14.5px; font-weight: 500; }
@@ -898,7 +905,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=a8d5d3729x"></script>
+<script src="/assets/catalog.js?v=906bd8050y"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1784,7 +1791,7 @@ body.is-custom-bag-page #gallery { display: none; }
     }
     if (DESIGNS.length && !state.design) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a design.'; designsEl.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }
     if (!state.size) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a size.'; $('sizes').scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); setTimeout(() => $('sizes').querySelector('.pdp-size:not([disabled])')?.focus({ preventScroll: true }), 400); return false; }
-    const line = { id: variantId(), name: PRODUCT.title, variant: [state.colour === 'default' ? '' : colourOf(state.colour).name, PRODUCT.noSize ? '' : sizeLabel(state.size), state.design || ''].filter(Boolean).join(' · '), image: (PRODUCT.imageColours ? GALLERY[COLOURS.findIndex(x => x.id === state.colour)] || GALLERY[0] : GALLERY[0]).src, price: UNIT_PRICE, currency: PRODUCT.currency, quantity: 1 };
+    const line = { id: variantId(), name: PRODUCT.title, variant: [state.colour === 'default' ? '' : colourOf(state.colour).name, PRODUCT.noSize ? '' : sizeLabel(state.size), state.design || ''].filter(Boolean).join(' · '), image: (PRODUCT.imageColours ? GALLERY[COLOURS.findIndex(x => x.id === state.colour)] || GALLERY[0] : GALLERY[0]).src, price: UNIT_PRICE, currency: PRODUCT.currency, quantity: 1, key: KEY };
     if (PRODUCT.needsBody) { line.id += `:${hw.h}x${hw.w}`; line.variant += (line.variant ? ' · ' : '') + `${hw.h} cm · ${hw.w} kg`; line.attributes = { 'Height (cm)': hw.h, 'Weight (kg)': hw.w }; }
     btn.disabled = true; btn.classList.add('is-busy');
     try { await BAG.add(line); msg.classList.add('is-ok'); msg.textContent = `Added — ${line.name}`; return true; }
@@ -2002,11 +2009,13 @@ body.is-custom-bag-page #gallery { display: none; }
     $('cartTitle').textContent = n ? `Your Cart (${n})` : 'Your Cart Is Empty.';
     cartEmpty.hidden = n > 0; cartSummary.hidden = n === 0;
     cartLines.innerHTML = '';
+    cartLines.classList.toggle('is-one', BAG.items.length === 1);
     BAG.items.forEach(it => {
       const li = document.createElement('li'); li.className = 'cl';
-      li.innerHTML = `<div class="cl__img"><img src="${it.image || ''}" alt="${it.name}"></div>
-        <div><div class="cl__top"><div><p class="cl__name">${it.name}</p><p class="cl__var">${it.variant || ''}</p></div><b>${typeof it.price === 'number' ? fmtMinor(toMinor(it.price) * it.quantity) : ''}</b></div>
-        <div class="cl__bottom"><button type="button" class="cl__remove">Remove</button></div></div>`;
+      // the product's mock-up (flat garment photo) when it has one, otherwise its first photo
+      const cp = it.key && CATALOG[it.key], mk = cp && cp.mockup ? (typeof cp.mockup === 'string' ? cp.mockup : cp.mockup.src) : '';
+      li.innerHTML = `<div class="cl__img"><img src="${mk || it.image || ''}" alt="${it.name}"><button type="button" class="cl__remove" aria-label="Remove ${it.name}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="cl__info"><p class="cl__name">${it.name}</p><p class="cl__var">${it.variant || ''}</p><b>${typeof it.price === 'number' ? fmtMinor(toMinor(it.price) * it.quantity) : ''}</b></div>`;
       // No quantity stepper — one piece per line; add the item again from its product page for a second one.
       li.querySelector('.cl__remove').addEventListener('click', () => { BAG.remove(it.id); announce(`${it.name} removed`); });
       cartLines.appendChild(li);
