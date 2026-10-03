@@ -136,6 +136,11 @@ a.pdp-header__btn { color: inherit; }
 .pdp-info { padding: 22px 16px 0; max-width: 640px; margin: 0 auto; }
 .pdp-summary__row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
 .pdp-summary__row { display: none; }
+.pdp-lookof { text-align: center; margin: 18px 0 4px; order: 4; }
+.pdp-lookof__pieces { margin: 0; font-size: 15px; letter-spacing: .04em; }
+.pdp-lookof__pieces a { color: #111; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.pdp-lookof__pieces span { margin: 0 6px; color: #8a8a8a; }
+.pdp-lookof__note { margin: 6px 0 0; font-size: 12.5px; color: #6f6f6f; font-style: italic; letter-spacing: .02em; }
 .pdp-info__title { margin: 0; font-size: 14px; font-weight: 400; letter-spacing: .04em; min-width: 0; line-height: 1.4; }
 .pdp-info__price { margin: 0; font-size: 14px; font-weight: 400; letter-spacing: .04em; flex: 0 0 auto; }
 .pdp-info__price-old { color: #8a8a8a; font-weight: 400; margin-right: 6px; }
@@ -905,7 +910,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=906bd8050y"></script>
+<script src="/assets/catalog.js?v=e4f78fc7cz"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1889,6 +1894,18 @@ body.is-custom-bag-page #gallery { display: none; }
   ================================================================== */
   $('detailsBody').innerHTML = '<ul>' + PRODUCT.details.map(d => `<li>${d}</li>`).join('') + '</ul>';
   $('descBody').textContent = PRODUCT.description;
+  /* SHOP THE LOOK sets: "Windbreaker & Shell Pants" — each piece links to its own page */
+  (function lookPieces() {
+    const old = document.getElementById('pdpLookOf'); if (old) old.remove();
+    const items = (PRODUCT.lookItems || []).filter(k => CATALOG[k]);
+    if (!items.length) return;
+    const nice = t => String(t).toLowerCase().replace(/(^|\s|-)\S/g, c => c.toUpperCase());
+    const links = items.map(k => `<a href="bymarccc-product.html?p=${encodeURIComponent(k)}">${nice(CATALOG[k].title)}</a>`).join(' <span>&amp;</span> ');
+    const el = document.createElement('div'); el.className = 'pdp-lookof'; el.id = 'pdpLookOf';
+    el.innerHTML = `<p class="pdp-lookof__pieces">${links}</p><p class="pdp-lookof__note">${items.length > 1 ? 'Styled together, offered together — the complete look at a privileged price.' : 'The complete look, styled together — the matching piece arrives soon.'}</p>`;
+    const sizes = document.getElementById('sizes'); if (sizes && sizes.parentNode) sizes.parentNode.insertBefore(el, sizes);
+    el.addEventListener('click', e => { const a = e.target.closest('a'); if (a && window.BYM_NAV && window.BYM_NAV.navigate) { e.preventDefault(); window.BYM_NAV.navigate(a.getAttribute('href')); } });
+  })();
   $('shipBody').textContent = PRODUCT.shipping || '';
   document.querySelectorAll('[data-acc]').forEach(btn => btn.addEventListener('click', () => {
     const open = btn.getAttribute('aria-expanded') === 'true';
@@ -3373,8 +3390,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     // ±10s seek within the current song, mirroring the video widget's vpBack/vpFwd — these
     // buttons no longer jump to the previous/next track (still reachable from the track list).
     const skipA = d => { if (!A.duration) return; A.currentTime = Math.max(0, Math.min(A.duration, A.currentTime + d)); aTime(); };
-    $('vpAPrev').addEventListener('click', () => skipA(-10));
-    $('vpANext').addEventListener('click', () => skipA(10));
+    $('vpAPrev').addEventListener('click', () => { A.currentTime = 0; if (A.paused) A.play().catch(() => {}); aTime(); });   // ⟲ same song from the start
+    $('vpANext').addEventListener('click', () => { const n = document.getElementById('miniNext'); if (n) n.click(); else if (window.BMP_NEXT) window.BMP_NEXT(); });   // next song
     $('vpAClose').addEventListener('click', () => { A.pause(); try { A.removeAttribute('src'); A.load(); } catch {} document.getElementById('miniClose')?.click(); clearNow(); vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; });
     // Apple-Music-style scrubber: drag anywhere on the bar
     const seekAt = cx => { const r = scrub.getBoundingClientRect(); const p = Math.min(1, Math.max(0, (cx - r.left) / r.width)); scrubFill.style.width = (p * 100) + '%'; if (A.duration) { aCur.textContent = fmtT(p * A.duration); aRem.textContent = '-' + fmtT(A.duration - p * A.duration); } return p; };
@@ -3863,6 +3880,11 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .bmp__row { display: flex; gap: 8px; align-items: stretch; }
 .bmp__now { flex: 1 1 auto; min-width: 0; height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 8px; }
 .bmp__now[hidden] { display: none; }
+.bmp__cats { flex: 1 1 auto; min-width: 0; height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 20px; padding: 0 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x proximity; }
+.bmp__cats::-webkit-scrollbar { display: none; }
+.bmp__cats[hidden] { display: none; }
+.bmp__cats button { flex: 0 0 auto; border: 0; background: none; padding: 6px 0; font: inherit; font-size: 12.5px; letter-spacing: .14em; color: #111; cursor: pointer; border-bottom: 1.5px solid transparent; scroll-snap-align: center; white-space: nowrap; }
+.bmp__cats button[aria-selected="true"] { border-bottom-color: #111; }
 .bmp__art { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 8px; object-fit: cover; background: #ddd; }
 .bmp__meta { flex: 1 1 auto; min-width: 0; line-height: 1.2; cursor: pointer; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; overflow: hidden; }   /* song on one line: Title Artist */
 .bmp__t { flex: 0 1 auto; min-width: 0; font-size: 14.5px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0; }
@@ -3892,13 +3914,28 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
 .bmp__it span { min-width: 0; flex: 1 1 auto; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bmp__it small { flex: 0 0 auto; font-size: 13px; color: #555; }
 .bmp__none { padding: 14px 12px; font-size: 14px; color: #555; }
-html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .vp-tab { display: none !important; }   /* the pill replaces the black floating card for music */
+/* music: the small white PiP everywhere; only the account page keeps the now-playing pill instead */
+body:not(.is-members) .bmp__now { display: none !important; }
+html.bmp-audio body.is-members .vp[data-mode="audio"], html.bmp-audio body.is-members .vp[data-mode="audio"] + .vp-tab { display: none !important; }
 @media (min-width: 900px) { .bmp { left: auto; right: 24px; width: 420px; } }
 @media print { .bmp { display: none; } }
+/* music PiP: very small, white + translucent like the bottom bar — title · ⟲ / play-pause / next (music video player unchanged) */
+.vp[data-mode="audio"] { width: clamp(170px, 46vw, 230px) !important; background: rgba(255,255,255,.78) !important; color: #111 !important; border-radius: 18px !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8);
+  box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.06) !important; }
+.vp[data-mode="audio"] .vp__audio { padding: 8px 10px 6px; }
+.vp[data-mode="audio"] .vp__atitle { color: #111; font-size: 12px; letter-spacing: 0; padding-right: 28px; }
+.vp[data-mode="audio"] .vp__ax { top: 5px; right: 7px; width: 22px; height: 22px; background: rgba(0,0,0,.07); color: #111; }
+.vp[data-mode="audio"] .vp__scrub, .vp[data-mode="audio"] #vpACur, .vp[data-mode="audio"] #vpARem { display: none; }
+.vp[data-mode="audio"] .vp__atimes { margin: 2px 0 0; padding: 2px 0; }
+.vp[data-mode="audio"] .vp__actr { gap: 18px; }
+.vp[data-mode="audio"] .vp__abtn { color: #111; }
+
 </style>
 <div class="bmp" id="bmp">
   <div class="bmp__res bmp__glass" id="bmpRes" role="listbox" aria-label="Search results"></div>
   <div class="bmp__row">
+    <div class="bmp__cats bmp__glass" id="bmpCats" hidden></div>
     <div class="bmp__now bmp__glass" id="bmpNow" hidden>
       <img class="bmp__art" id="bmpArt" alt="">
       <div class="bmp__meta" id="bmpMeta"><div class="bmp__t" id="bmpT">—</div><div class="bmp__a" id="bmpA"></div></div>
@@ -3915,6 +3952,8 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
 (() => {
   'use strict';
   const root = document.getElementById('bmp'); if (!root || root.dataset.on) return; root.dataset.on = '1';
+  const markPage = () => document.body.classList.toggle('is-members', /members\.html/.test(location.pathname));
+  markPage();
   const $ = id => document.getElementById(id);
   const A = () => document.getElementById('miniAudio');
   const now = $('bmpNow'), art = $('bmpArt'), T = $('bmpT'), AR = $('bmpA'), icon = $('bmpPlayIcon'), res = $('bmpRes'), q = $('bmpQ');
@@ -3952,6 +3991,7 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
   }
   $('bmpPlay').addEventListener('click', () => { const a = A(); if (!a) return; a.paused ? a.play().catch(() => {}) : a.pause(); });
   $('bmpNext').addEventListener('click', next);
+  window.BMP_NEXT = next;
   let bound = null;
   const bind = () => { const a = A(); if (!a || a === bound) return; bound = a; ['play', 'pause', 'ended', 'emptied', 'loadedmetadata', 'durationchange'].forEach(ev => a.addEventListener(ev, paint)); paint(); };
   /* ---- search: products (catalog) + songs (playlist) ---- */
@@ -3984,8 +4024,33 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
   window.BMP_OPEN = open;
   document.addEventListener('pointerdown', e => { if (root.classList.contains('is-search') && !root.contains(e.target)) close(); });
   /* ---- stay above the page's own bottom UI (Add to bag bar, bag pill, stylist button) ---- */
+  /* homepage: the bar shows the categories of the shop section in view (MEN by default) */
+  let catSec = null, catSig = '';
+  function cats() {
+    const box = $('bmpCats'), secs = ['shop', 'shopWomen'].map(id => document.getElementById(id)).filter(Boolean);
+    if (!box || !secs.length || innerWidth >= 900) { if (box) box.hidden = true; document.documentElement.classList.remove('bmp-cats'); return; }
+    const s1 = document.getElementById('play'); if (s1 && s1.getBoundingClientRect().bottom > innerHeight * 0.6) { box.hidden = true; return; }   // not in section 1
+    let sec = secs.find(x => { const r = x.getBoundingClientRect(); return r.top < innerHeight * 0.5 && r.bottom > innerHeight * 0.5; });
+    if (!sec) { const w = secs[1], r = w && w.getBoundingClientRect(); sec = r && r.top < innerHeight * 0.5 ? w : secs[0]; }
+    const tabs = [...sec.querySelectorAll('.shop__tabs .shop__tab')];
+    const sig = sec.id + '|' + tabs.map(t => t.dataset.key + (t.getAttribute('aria-selected') === 'true' ? '*' : '')).join(',');
+    if (sig !== catSig) {
+      const keep = catSec === sec ? box.scrollLeft : 0;
+      catSig = sig; catSec = sec;
+      box.innerHTML = tabs.map(t => `<button type="button" data-k="${t.dataset.key}" aria-selected="${t.getAttribute('aria-selected')}">${t.textContent}</button>`).join('');
+      box.scrollLeft = keep;
+    }
+    box.hidden = false; document.documentElement.classList.add('bmp-cats');
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('#bmpCats button'); if (!b || !catSec) return;
+    const t = catSec.querySelector(`.shop__tabs .shop__tab[data-key="${b.dataset.k}"]`); if (!t) return;
+    t.click(); catSig = '';
+    const r = catSec.getBoundingClientRect(); if (r.top > 10 || r.bottom < innerHeight * 0.5) window.scrollTo({ top: scrollY + r.top, behavior: 'smooth' });
+    setTimeout(() => { cats(); b.scrollIntoView({ inline: 'center', block: 'nearest' }); }, 60);
+  });
   function place() {
-    bind();
+    markPage(); bind(); cats();
     let off = 10;
     ['bar', 'bagPill'].map(id => document.getElementById(id)).concat([document.querySelector('.ai-launch')]).forEach(el => {
       if (!el || el.hidden) return; const cs = getComputedStyle(el); if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
@@ -3993,6 +4058,8 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
       const safe = parseFloat(getComputedStyle(root).getPropertyValue('--bmp-safe')) || 0;
       off = Math.max(off, innerHeight - r.top + 8 - safe);
     });
+    const pip = document.querySelector('.vp[data-mode="audio"]:not([hidden])');
+    if (pip && !pip.classList.contains('is-docked') && getComputedStyle(pip).display !== 'none') { const pr = pip.getBoundingClientRect(); if (pr.height && pr.bottom > innerHeight - off - 60 && pr.top < innerHeight) off = Math.max(off, innerHeight - pr.top + 8 - (parseFloat(getComputedStyle(root).getPropertyValue('--bmp-safe')) || 0)); }   // sits above the small music PiP
     root.style.setProperty('--bmp-b', Math.round(off) + 'px');
     // searching on a phone: sit right on top of the keyboard (the keyboard only shrinks the visual viewport)
     const vv = window.visualViewport;

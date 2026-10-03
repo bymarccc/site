@@ -1121,13 +1121,7 @@
 <style>
   .shop { background: #fff; color: #111; padding: clamp(28px, 5vw, 56px) 0 clamp(56px, 8vw, 110px); font-family: "Jost", "Helvetica Neue", Helvetica, Arial, sans-serif; }
   .shop__title--bold { font-weight: 700; font-size: 13px; letter-spacing: .3em; margin: 0 0 4px; }
-  /* phone: while a shop section fills the screen its category tabs sit at the very bottom, under the music pill */
-  @media (max-width: 899px) {
-    .shop.is-tabsdock .shop__tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 58; margin: 0; padding: 12px 16px calc(10px + env(safe-area-inset-bottom, 0px)); border-bottom: 0; border-top: 1px solid rgba(0,0,0,.06);
-      background: rgba(255,255,255,.82); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); }
-    .shop.is-tabsdock .shop__tabs .shop__tab { padding: 4px 0; }
-    .shop.is-tabsdock .shop__grid { padding-bottom: 70px; margin-top: var(--tabs-h, 0px); }   /* keeps the page from jumping when the tabs leave the flow */
-  }
+  @media (max-width: 899px) { .shop .shop__tabs { display: none; } .shop .shop__lookrow { margin: 4px 0 14px; } }   /* phone: categories live in the bottom bar */
   .shop__title--hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* MEN / WOMEN words removed from view (kept for screen readers/SEO) */
   .shop__title { margin: 0 0 14px; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; }
   .shop__subhead { grid-column: 1 / -1; margin: clamp(20px, 4vw, 34px) 0 14px; padding: 0 clamp(16px, 4vw, 48px); text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; color: #111; }
@@ -1315,7 +1309,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=906bd8050y"></script>
+<script src="/assets/catalog.js?v=e4f78fc7cz"></script>
 <script>
 (() => {
   'use strict';
@@ -4292,8 +4286,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     // ±10s seek within the current song, mirroring the video widget's vpBack/vpFwd — these
     // buttons no longer jump to the previous/next track (still reachable from the track list).
     const skipA = d => { if (!A.duration) return; A.currentTime = Math.max(0, Math.min(A.duration, A.currentTime + d)); aTime(); };
-    $('vpAPrev').addEventListener('click', () => skipA(-10));
-    $('vpANext').addEventListener('click', () => skipA(10));
+    $('vpAPrev').addEventListener('click', () => { A.currentTime = 0; if (A.paused) A.play().catch(() => {}); aTime(); });   // ⟲ same song from the start
+    $('vpANext').addEventListener('click', () => { const n = document.getElementById('miniNext'); if (n) n.click(); else if (window.BMP_NEXT) window.BMP_NEXT(); });   // next song
     $('vpAClose').addEventListener('click', () => { A.pause(); try { A.removeAttribute('src'); A.load(); } catch {} document.getElementById('miniClose')?.click(); clearNow(); vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; });
     // Apple-Music-style scrubber: drag anywhere on the bar
     const seekAt = cx => { const r = scrub.getBoundingClientRect(); const p = Math.min(1, Math.max(0, (cx - r.left) / r.width)); scrubFill.style.width = (p * 100) + '%'; if (A.duration) { aCur.textContent = fmtT(p * A.duration); aRem.textContent = '-' + fmtT(A.duration - p * A.duration); } return p; };
@@ -4966,6 +4960,11 @@ html.qv-lock, html.qv-lock body { overflow: hidden; }
 .bmp__row { display: flex; gap: 8px; align-items: stretch; }
 .bmp__now { flex: 1 1 auto; min-width: 0; height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 8px; }
 .bmp__now[hidden] { display: none; }
+.bmp__cats { flex: 1 1 auto; min-width: 0; height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 20px; padding: 0 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x proximity; }
+.bmp__cats::-webkit-scrollbar { display: none; }
+.bmp__cats[hidden] { display: none; }
+.bmp__cats button { flex: 0 0 auto; border: 0; background: none; padding: 6px 0; font: inherit; font-size: 12.5px; letter-spacing: .14em; color: #111; cursor: pointer; border-bottom: 1.5px solid transparent; scroll-snap-align: center; white-space: nowrap; }
+.bmp__cats button[aria-selected="true"] { border-bottom-color: #111; }
 .bmp__art { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 8px; object-fit: cover; background: #ddd; }
 .bmp__meta { flex: 1 1 auto; min-width: 0; line-height: 1.2; cursor: pointer; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; overflow: hidden; }   /* song on one line: Title Artist */
 .bmp__t { flex: 0 1 auto; min-width: 0; font-size: 14.5px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0; }
@@ -4995,13 +4994,28 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
 .bmp__it span { min-width: 0; flex: 1 1 auto; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bmp__it small { flex: 0 0 auto; font-size: 13px; color: #555; }
 .bmp__none { padding: 14px 12px; font-size: 14px; color: #555; }
-html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .vp-tab { display: none !important; }   /* the pill replaces the black floating card for music */
+/* music: the small white PiP everywhere; only the account page keeps the now-playing pill instead */
+body:not(.is-members) .bmp__now { display: none !important; }
+html.bmp-audio body.is-members .vp[data-mode="audio"], html.bmp-audio body.is-members .vp[data-mode="audio"] + .vp-tab { display: none !important; }
 @media (min-width: 900px) { .bmp { left: auto; right: 24px; width: 420px; } }
 @media print { .bmp { display: none; } }
+/* music PiP: very small, white + translucent like the bottom bar — title · ⟲ / play-pause / next (music video player unchanged) */
+.vp[data-mode="audio"] { width: clamp(170px, 46vw, 230px) !important; background: rgba(255,255,255,.78) !important; color: #111 !important; border-radius: 18px !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8);
+  box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.06) !important; }
+.vp[data-mode="audio"] .vp__audio { padding: 8px 10px 6px; }
+.vp[data-mode="audio"] .vp__atitle { color: #111; font-size: 12px; letter-spacing: 0; padding-right: 28px; }
+.vp[data-mode="audio"] .vp__ax { top: 5px; right: 7px; width: 22px; height: 22px; background: rgba(0,0,0,.07); color: #111; }
+.vp[data-mode="audio"] .vp__scrub, .vp[data-mode="audio"] #vpACur, .vp[data-mode="audio"] #vpARem { display: none; }
+.vp[data-mode="audio"] .vp__atimes { margin: 2px 0 0; padding: 2px 0; }
+.vp[data-mode="audio"] .vp__actr { gap: 18px; }
+.vp[data-mode="audio"] .vp__abtn { color: #111; }
+
 </style>
 <div class="bmp" id="bmp">
   <div class="bmp__res bmp__glass" id="bmpRes" role="listbox" aria-label="Search results"></div>
   <div class="bmp__row">
+    <div class="bmp__cats bmp__glass" id="bmpCats" hidden></div>
     <div class="bmp__now bmp__glass" id="bmpNow" hidden>
       <img class="bmp__art" id="bmpArt" alt="">
       <div class="bmp__meta" id="bmpMeta"><div class="bmp__t" id="bmpT">—</div><div class="bmp__a" id="bmpA"></div></div>
@@ -5018,6 +5032,8 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
 (() => {
   'use strict';
   const root = document.getElementById('bmp'); if (!root || root.dataset.on) return; root.dataset.on = '1';
+  const markPage = () => document.body.classList.toggle('is-members', /members\.html/.test(location.pathname));
+  markPage();
   const $ = id => document.getElementById(id);
   const A = () => document.getElementById('miniAudio');
   const now = $('bmpNow'), art = $('bmpArt'), T = $('bmpT'), AR = $('bmpA'), icon = $('bmpPlayIcon'), res = $('bmpRes'), q = $('bmpQ');
@@ -5055,6 +5071,7 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
   }
   $('bmpPlay').addEventListener('click', () => { const a = A(); if (!a) return; a.paused ? a.play().catch(() => {}) : a.pause(); });
   $('bmpNext').addEventListener('click', next);
+  window.BMP_NEXT = next;
   let bound = null;
   const bind = () => { const a = A(); if (!a || a === bound) return; bound = a; ['play', 'pause', 'ended', 'emptied', 'loadedmetadata', 'durationchange'].forEach(ev => a.addEventListener(ev, paint)); paint(); };
   /* ---- search: products (catalog) + songs (playlist) ---- */
@@ -5087,19 +5104,42 @@ html.bmp-audio .vp[data-mode="audio"], html.bmp-audio .vp[data-mode="audio"] + .
   window.BMP_OPEN = open;
   document.addEventListener('pointerdown', e => { if (root.classList.contains('is-search') && !root.contains(e.target)) close(); });
   /* ---- stay above the page's own bottom UI (Add to bag bar, bag pill, stylist button) ---- */
+  /* homepage: the bar shows the categories of the shop section in view (MEN by default) */
+  let catSec = null, catSig = '';
+  function cats() {
+    const box = $('bmpCats'), secs = ['shop', 'shopWomen'].map(id => document.getElementById(id)).filter(Boolean);
+    if (!box || !secs.length || innerWidth >= 900) { if (box) box.hidden = true; document.documentElement.classList.remove('bmp-cats'); return; }
+    const s1 = document.getElementById('play'); if (s1 && s1.getBoundingClientRect().bottom > innerHeight * 0.6) { box.hidden = true; return; }   // not in section 1
+    let sec = secs.find(x => { const r = x.getBoundingClientRect(); return r.top < innerHeight * 0.5 && r.bottom > innerHeight * 0.5; });
+    if (!sec) { const w = secs[1], r = w && w.getBoundingClientRect(); sec = r && r.top < innerHeight * 0.5 ? w : secs[0]; }
+    const tabs = [...sec.querySelectorAll('.shop__tabs .shop__tab')];
+    const sig = sec.id + '|' + tabs.map(t => t.dataset.key + (t.getAttribute('aria-selected') === 'true' ? '*' : '')).join(',');
+    if (sig !== catSig) {
+      const keep = catSec === sec ? box.scrollLeft : 0;
+      catSig = sig; catSec = sec;
+      box.innerHTML = tabs.map(t => `<button type="button" data-k="${t.dataset.key}" aria-selected="${t.getAttribute('aria-selected')}">${t.textContent}</button>`).join('');
+      box.scrollLeft = keep;
+    }
+    box.hidden = false; document.documentElement.classList.add('bmp-cats');
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('#bmpCats button'); if (!b || !catSec) return;
+    const t = catSec.querySelector(`.shop__tabs .shop__tab[data-key="${b.dataset.k}"]`); if (!t) return;
+    t.click(); catSig = '';
+    const r = catSec.getBoundingClientRect(); if (r.top > 10 || r.bottom < innerHeight * 0.5) window.scrollTo({ top: scrollY + r.top, behavior: 'smooth' });
+    setTimeout(() => { cats(); b.scrollIntoView({ inline: 'center', block: 'nearest' }); }, 60);
+  });
   function place() {
-    bind();
+    markPage(); bind(); cats();
     let off = 10;
-    let docked = null;
-    if (innerWidth < 900) document.querySelectorAll('#shop, #shopWomen').forEach(sec => { const r = sec.getBoundingClientRect(); const t = sec.querySelector('.shop__tabs'); if (t && !sec.classList.contains('is-tabsdock')) sec.style.setProperty('--tabs-h', (t.offsetHeight + parseFloat(getComputedStyle(t).marginBottom || 0)) + 'px'); const on = r.top < innerHeight * 0.35 && r.bottom > innerHeight * 0.6; sec.classList.toggle('is-tabsdock', on); if (on) docked = sec; });
-    else document.querySelectorAll('.shop.is-tabsdock').forEach(sec => sec.classList.remove('is-tabsdock'));
-    if (docked) { const t = docked.querySelector('.shop__tabs'); if (t) off = Math.max(off, t.getBoundingClientRect().height + 8 - (parseFloat(getComputedStyle(root).getPropertyValue('--bmp-safe')) || 0)); }
     ['bar', 'bagPill'].map(id => document.getElementById(id)).concat([document.querySelector('.ai-launch')]).forEach(el => {
       if (!el || el.hidden) return; const cs = getComputedStyle(el); if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
       const r = el.getBoundingClientRect(); if (!r.height || r.top >= innerHeight) return;
       const safe = parseFloat(getComputedStyle(root).getPropertyValue('--bmp-safe')) || 0;
       off = Math.max(off, innerHeight - r.top + 8 - safe);
     });
+    const pip = document.querySelector('.vp[data-mode="audio"]:not([hidden])');
+    if (pip && !pip.classList.contains('is-docked') && getComputedStyle(pip).display !== 'none') { const pr = pip.getBoundingClientRect(); if (pr.height && pr.bottom > innerHeight - off - 60 && pr.top < innerHeight) off = Math.max(off, innerHeight - pr.top + 8 - (parseFloat(getComputedStyle(root).getPropertyValue('--bmp-safe')) || 0)); }   // sits above the small music PiP
     root.style.setProperty('--bmp-b', Math.round(off) + 'px');
     // searching on a phone: sit right on top of the keyboard (the keyboard only shrinks the visual viewport)
     const vv = window.visualViewport;
