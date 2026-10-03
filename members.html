@@ -113,7 +113,7 @@
   .trk button.play .ic-pause{ display:none; } .trk button.play.is-playing .ic-play{ display:none; } .trk button.play.is-playing .ic-pause{ display:block; }
   .trk button.play .ic-play{ margin-left:2px; }
   .trk.is-on .n{ font-weight:600; }
-  .al-logo{ height:.72em; width:auto; vertical-align:baseline; margin-right:.22em; position:relative; top:.02em; }   /* original alien logo, cap height (same as an O) */
+  .al-logo{ height:1em; width:auto; vertical-align:-.12em; margin-right:.28em; }   /* original alien logo, cap height (same as an O) */
   .ytm-lock{ max-width:560px; border:1px solid var(--line); border-radius:14px; padding:18px 20px; background:var(--bg); }
   .ytm-lock b{ display:block; margin-bottom:6px; }
 </style>
@@ -196,7 +196,7 @@
   }
 
   /* ---------------- signed in ---------------- */
-  const SECTIONS = [['circle', 'CIRCLE'], ['orders', 'Orders and returns'], ['credits', 'Credits and refunds'], ['details', 'Details and security'], ['addresses', 'Address book'], ['wishlist', 'Wishlist'], ['playlist', '<img class="al-logo" src="/assets/img/alien-logo.png" alt="">Playlist'], ['ytm', 'My Playlist'], ['prefs', 'Communication preferences'], ['refer', 'Refer a friend']];
+  const SECTIONS = [['circle', 'CIRCLE'], ['playlist', '<img class="al-logo" src="/assets/img/alien-logo.png" alt="">Playlist'], ['orders', 'Orders and returns'], ['ytm', 'My Playlist'], ['details', 'Details and security'], ['addresses', 'Address book'], ['wishlist', 'Wishlist'], ['refer', 'Refer a friend']];
   function signedIn() {
     const t = P.tier;
     root.innerHTML = `<div class="ac" id="ac"><nav class="ac-nav" aria-label="Account">
