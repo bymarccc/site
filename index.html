@@ -2206,7 +2206,7 @@
     { id: 'nems-art', title: 'Nemzzz - Art', channel: '', duration: '1:49',
       src:   M + 'art.m4a',
       video: M + 'art.mp4', poster: M + 'art.jpg',
-      thumb: 'assets/img/thumb-art.jpg' },
+      thumb: 'assets/img/thumb-killin-em.jpg' },
     { id: 'dave-raindance', title: 'Dave - Raindance (ft. Tems)', channel: '', duration: '3:41',
       src:   M + 'raindance.m4a',
       video: M + 'raindance.mp4', poster: M + 'raindance.jpg',
@@ -2231,7 +2231,7 @@
     { id: 'sade-never-as-good', title: 'Sade - Never As Good As The First Time', channel: '', duration: '3:55',
       src:   M + 'never-as-good.m4a',
       video: M + 'never-as-good.mp4', poster: M + 'never-as-good.jpg',
-      thumb: 'assets/img/thumb-never-as-good.jpg' },
+      thumb: 'assets/img/thumb-sade-paradise.jpg' },
     { id: 'sade-love-is-found', title: 'Sade - Love Is Found', channel: '', duration: '4:11',
       src:   CLD + 'v1790595819/Sade_-_Love_Is_Found_Audio_1.mp3',
       thumb: 'assets/img/thumb-sade-paradise.jpg' },
@@ -2545,25 +2545,37 @@
     markCurrent();
     clearTimeout(marqT); marqT = setTimeout(marqueeNow, 700);
   }
-  /* Marquee: when the list stops scrolling, the row nearest the middle scrolls its (too long) title right → left, on a loop */
+  /* Marquee: the playing row's title always scrolls right → left on a loop; and when the list stops scrolling,
+     the row nearest the middle does the same (only titles too long for their box) */
   var marqT = 0, marqEl = null;
-  function stopMarquee() { if (!marqEl) return; const t = marqEl; marqEl = null; t.classList.remove('is-marq'); t.textContent = t.dataset.full || t.textContent; }
+  function startMarq(t) {
+    if (!t || t.classList.contains('is-marq')) return;
+    const full = t.textContent; if (t.scrollWidth <= t.clientWidth + 1) return;   // fits: nothing to scroll
+    t.dataset.full = full; t.classList.add('is-marq');
+    const mq = document.createElement('span'); mq.className = 'mq';
+    const a = document.createElement('span'); a.textContent = full; const b2 = a.cloneNode(true); b2.setAttribute('aria-hidden', 'true');
+    mq.append(a, b2); t.textContent = ''; t.appendChild(mq);
+    const w = a.getBoundingClientRect().width;   // one copy incl. its gap
+    mq.style.setProperty('--mqw', w + 'px'); mq.style.setProperty('--mqd', Math.max(5, w / 28).toFixed(2) + 's');
+  }
+  function endMarq(t) { if (!t || !t.classList.contains('is-marq')) return; t.classList.remove('is-marq'); t.textContent = t.dataset.full || t.textContent; }
+  const isCurTitle = t => t && t.closest('.track')?.getAttribute('aria-current') === 'true';
+  function stopMarquee() { if (!marqEl) return; const t = marqEl; marqEl = null; if (!isCurTitle(t)) endMarq(t); }
+  function marqueeCurrent() {
+    list.querySelectorAll('.track__title.is-marq').forEach(t => { if (t !== marqEl && !isCurTitle(t)) endMarq(t); });
+    list.querySelectorAll('.track[aria-current="true"] .track__title').forEach(startMarq);
+  }
   function marqueeNow() {
     const lr = list.getBoundingClientRect(); if (!lr.height) return;
     const mid = lr.top + lr.height / 2; let best = null, bd = 1e9;
     list.querySelectorAll('.track__title').forEach(t => { const r = t.getBoundingClientRect(); if (r.bottom < lr.top || r.top > lr.bottom) return; const d = Math.abs((r.top + r.bottom) / 2 - mid); if (d < bd) { bd = d; best = t; } });
-    if (!best || best === marqEl) return;
-    stopMarquee();
-    const full = best.textContent; if (best.scrollWidth <= best.clientWidth + 1) return;   // fits: nothing to scroll
-    best.dataset.full = full; best.classList.add('is-marq');
-    const mq = document.createElement('span'); mq.className = 'mq';
-    const a = document.createElement('span'); a.textContent = full; const b2 = a.cloneNode(true); b2.setAttribute('aria-hidden', 'true');
-    mq.append(a, b2); best.textContent = ''; best.appendChild(mq);
-    const w = a.getBoundingClientRect().width;   // one copy incl. its gap
-    mq.style.setProperty('--mqw', w + 'px'); mq.style.setProperty('--mqd', Math.max(5, w / 28).toFixed(2) + 's');
-    marqEl = best;
+    if (best !== marqEl) stopMarquee();
+    if (best) { startMarq(best); if (best.classList.contains('is-marq')) marqEl = best; }
+    marqueeCurrent();
   }
   list.addEventListener('scroll', () => { stopMarquee(); clearTimeout(marqT); marqT = setTimeout(marqueeNow, 450); }, { passive: true });
+  new MutationObserver(() => { clearTimeout(marqueeCurrent._t); marqueeCurrent._t = setTimeout(marqueeCurrent, 60); }).observe(list, { subtree: true, attributes: true, attributeFilter: ['aria-current'] });   // playing row changed → its title starts scrolling
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { clearTimeout(marqT); marqT = setTimeout(marqueeNow, 500); } }).observe(list);   // list shown (card flipped open)
   function markCurrent() {
     const vidCur = tab === 'video' && window.BYMARCCC_VP ? window.BYMARCCC_VP.current() : null;
     list.querySelectorAll('.track').forEach(b => {
@@ -2573,6 +2585,7 @@
       b.setAttribute('aria-current', (yt || local || vid) ? 'true' : 'false');
       b.classList.toggle('is-paused', yt ? !playing : (local ? audio.paused : (vid ? !window.BYMARCCC_VP.isPlaying() : false)));
     });
+    if (typeof marqueeCurrent === 'function') marqueeCurrent();
   }
   const tabItems = () => tab === 'video' ? playlist.filter(t => t.video) : playlist;
   function showPlaylist() { shown = { kind: 'playlist', items: tabItems() }; setStatus(shown.items.length ? '' : 'No music videos yet'); render(); }
