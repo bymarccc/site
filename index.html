@@ -2949,6 +2949,7 @@
   }
   function miniLoad(autoplay = true) {
     const t = miniQueue[mi]; if (!t) return;
+    mixCount++;
     miniItem = t;
     miniTitle.textContent = t.title; miniArtist.textContent = t.channel || '';
     miniNote.textContent = '';
@@ -3026,6 +3027,48 @@
     miniFill.style.width = p + '%'; miniCur.textContent = fmt(audio.currentTime);
     miniBar.setAttribute('aria-valuenow', Math.round(p));
   });
+  /* DJ mix: from the 3rd song on, the last ~12 s of a track keep playing on a "ghost" player and fade out
+     while the next track starts underneath and fades in. Only while the page is on screen (when the phone is
+     locked the normal track change is used). The outgoing tail fades through Web Audio (iPhone ignores
+     element.volume); the incoming track fades in where the browser allows volume changes. */
+  let mixCount = 0, mixing = false, mixCtx = null, mixGhost = null, mixFailSrc = '', mixSwitchAt = 0;
+  const MIX_S = 12;
+  function mixStop() { if (mixGhost) { try { mixGhost.pause(); mixGhost.removeAttribute('src'); mixGhost.load(); } catch {} } mixGhost = null; mixing = false; try { audio.volume = 1; } catch {} }
+  function mixStart() {
+    mixing = true;
+    const src = audio.currentSrc || audio.src, g = new Audio(); g.crossOrigin = 'anonymous'; g.preload = 'auto';
+    let gain = null;
+    try { mixCtx = mixCtx || new (window.AudioContext || window.webkitAudioContext)(); const n = mixCtx.createMediaElementSource(g); gain = mixCtx.createGain(); n.connect(gain); gain.connect(mixCtx.destination); mixCtx.resume().catch(() => {}); } catch { gain = null; }
+    mixGhost = g;
+    const fail = () => { if (mixGhost !== g) return; mixFailSrc = src; mixStop(); };
+    g.addEventListener('error', fail, { once: true });
+    g.addEventListener('loadedmetadata', () => { try { g.currentTime = audio.currentTime + 0.25; } catch {} g.play().catch(fail); }, { once: true });
+    g.addEventListener('playing', () => {
+      if (mixGhost !== g) return;
+      try { g.currentTime = audio.currentTime; } catch {}
+      const left = Math.max(3, (g.duration || audio.duration) - g.currentTime), t0 = performance.now();
+      try { audio.volume = 0.05; } catch {}
+      mixSwitchAt = performance.now(); miniStep(1);   // the real player (lock screen, UI, playlist) moves on to the next song
+      const tick = () => {
+        if (mixGhost !== g) return;
+        const k = Math.min(1, (performance.now() - t0) / (left * 1000));
+        const out = Math.cos(k * Math.PI / 2), inn = Math.sin(k * Math.PI / 2);   // equal-power crossfade
+        if (gain) gain.gain.value = out; else { try { g.volume = out; } catch {} }
+        try { audio.volume = Math.max(0.05, inn); } catch {}
+        if (k < 1 && !g.ended) requestAnimationFrame(tick); else mixStop();
+      };
+      requestAnimationFrame(tick);
+    }, { once: true });
+    g.src = src;
+  }
+  audio.addEventListener('timeupdate', () => {
+    if (mixing || repeat || document.hidden || audio.paused || miniQueue.length < 2 || mixCount < 2) return;
+    if (stopAtEnd && mi >= miniQueue.length - 1) return;
+    const d = audio.duration, left = d - audio.currentTime;
+    if (d > 45 && left <= MIX_S && left > 2 && (audio.currentSrc || audio.src) !== mixFailSrc) mixStart();
+  });
+  audio.addEventListener('pause', () => { if (mixGhost && performance.now() - mixSwitchAt > 1500) mixStop(); });   // ignore the pause fired by the track switch itself
+  document.addEventListener('visibilitychange', () => { if (document.hidden && mixGhost) mixStop(); });
   audio.addEventListener('error', () => {
     if (!miniItem) return;
     miniNote.textContent = 'This track couldn’t be loaded.';
