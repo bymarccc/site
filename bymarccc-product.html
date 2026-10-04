@@ -3901,6 +3901,13 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 .bmp > * { pointer-events: auto; }
 .bmp__glass { background: rgba(255,255,255,.74); -webkit-backdrop-filter: blur(22px) saturate(1.8); backdrop-filter: blur(22px) saturate(1.8); box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.7), 0 0 0 .5px rgba(0,0,0,.06); }
 .bmp__row { display: flex; gap: 8px; align-items: stretch; }
+/* Instagram-style dock: categories + search in ONE frosted pill; active category sits in a soft capsule */
+.bmp__row:has(> .bmp__cats:not([hidden])) { gap: 0; align-items: center; height: 46px; border-radius: 999px; pointer-events: auto; background: rgba(255,255,255,.62); -webkit-backdrop-filter: blur(24px) saturate(1.9); backdrop-filter: blur(24px) saturate(1.9); box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.75), 0 0 0 .5px rgba(0,0,0,.06); }
+.bmp__row:has(> .bmp__cats:not([hidden])) > .bmp__cats { height: 100%; background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; gap: 2px; padding: 0 4px 0 5px; }
+.bmp__row:has(> .bmp__cats:not([hidden])) > .bmp__sbtn { background: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; flex: 0 0 44px; width: 44px; height: 44px; margin: 0 2px 0 0; }
+.bmp__row:has(> .bmp__cats:not([hidden])) > .bmp__cats button { padding: 9px 12px; border: 0; border-radius: 999px; transition: background .2s; }
+.bmp__row:has(> .bmp__cats:not([hidden])) > .bmp__cats button[aria-selected="true"] { background: rgba(0,0,0,.075); }
+
 .bmp__now { flex: 1 1 auto; min-width: 0; height: 48px; border-radius: 999px; display: flex; align-items: center; gap: 12px; padding: 0 10px 0 8px; }
 .bmp__now[hidden] { display: none; }
 .bmp__cats { flex: 1 1 auto; min-width: 0; height: 43px; border-radius: 999px; display: flex; align-items: center; gap: 11px; padding: 0 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -4068,7 +4075,7 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
       box.scrollLeft = keep; var peek = catSec !== sec || !keep;
     }
     box.hidden = false; document.documentElement.classList.add('bmp-cats');
-    if (peek) { const last = box.lastElementChild; if (last) { const br = box.getBoundingClientRect(), lr = last.getBoundingClientRect(); if (lr.left > br.right - 7) box.scrollLeft = Math.round(lr.left - br.right + 7); } }   // shift left so the first letter of the last tab (SALES) peeks: hints the bar scrolls
+    if (peek) { const last = box.lastElementChild; if (last) { const br = box.getBoundingClientRect(), lr = last.getBoundingClientRect(); if (lr.left > br.right - 7) { const sel = box.querySelector('[aria-selected="true"]'); const cap = sel ? sel.getBoundingClientRect().left - br.left - 6 + box.scrollLeft : 1e9; box.scrollLeft = Math.max(0, Math.min(Math.round(lr.left - br.right + 7), Math.round(cap))); } } }   // shift left so the first letter of the last tab (SALES) peeks: hints the bar scrolls
   }
   document.addEventListener('click', e => {
     const b = e.target.closest && e.target.closest('#bmpCats button'); if (!b || !catSec) return;
