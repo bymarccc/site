@@ -2612,6 +2612,29 @@ async function acctProfile(db, email) {
   };
 }
 __name(acctProfile, "acctProfile");
+// OpenAI cut-out: GPT Image edit with a transparent background and high input fidelity (keeps faces/text/logos as close as possible)
+async function removeBgOpenAI(buf, type) {
+  if (!env("OPENAI_API_KEY")) return json(503, { error: "NOT_CONFIGURED" });
+  const prompt = "Remove the background completely and return only the main subject on a fully transparent background. Keep the subject exactly as it is: same pixels, colours, face, text, logos, edges and proportions. Do not add, redraw, restyle or crop anything.";
+  const buildForm = (model, fidelity) => {
+    const fd = new FormData();
+    fd.append("model", model); fd.append("prompt", prompt);
+    fd.append("image", new File([buf], "upload." + type.split("/")[1], { type }));
+    fd.append("background", "transparent"); fd.append("output_format", "png"); fd.append("quality", "medium"); fd.append("size", "auto"); fd.append("n", "1");
+    if (fidelity) fd.append("input_fidelity", "high");
+    return fd;
+  };
+  try {
+    const { out } = await tryOnEdit(buildForm, Date.now() + 9e4);
+    const b64 = out && out.data && out.data[0] && out.data[0].b64_json;
+    if (!b64) return json(502, { error: "UPSTREAM_FAILED" });
+    const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    return new Response(bin, { status: 200, headers: { "Content-Type": "image/png", "Cache-Control": "no-store" } });
+  } catch (e) {
+    return json(502, { error: "UPSTREAM_FAILED", detail: String(e && e.message || e).slice(0, 200) });
+  }
+}
+__name(removeBgOpenAI, "removeBgOpenAI");
 // POST /api/removebg — Picsart "Remove Background" for the bag customiser (key: PICSART_API_KEY in Cloudflare).
 // Body = the shopper's image (image/jpeg|png|webp, ≤ 8 MB). Returns the transparent PNG; 503 when not configured
 // so the page falls back to the in-browser remover.
@@ -2619,11 +2642,12 @@ async function removeBgApi(request) {
   if (request.method !== "POST") return json(405, { error: "Method not allowed" });
   if (!checkOrigin(request)) return json(403, { error: "Forbidden origin" });
   if (!rateLimit(request, 8)) return json(429, { error: "Too many requests. Please wait a moment." });
-  const key = env("PICSART_API_KEY"); if (!key) return json(503, { error: "NOT_CONFIGURED" });
+  const key = env("PICSART_API_KEY");
   const type = (request.headers.get("content-type") || "").split(";")[0].trim();
   if (!/^image\/(jpeg|png|webp)$/.test(type)) return json(415, { error: "Unsupported image type" });
   const buf = await request.arrayBuffer();
   if (!buf.byteLength || buf.byteLength > 8 * 1024 * 1024) return json(413, { error: "Image too large" });
+  if (!key) return removeBgOpenAI(buf, type);   // no Picsart key: OpenAI (OPENAI_API_KEY) does the cut-out
   const fd = new FormData();
   fd.append("image", new Blob([buf], { type }), "upload." + type.split("/")[1]);
   fd.append("output_type", "cutout"); fd.append("format", "PNG");
