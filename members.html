@@ -99,9 +99,13 @@
   .wl-grid .t{ font-size:12px; letter-spacing:.06em; text-transform:uppercase; margin-top:8px; } .wl-grid .p{ font-size:13px; color:var(--sub); }
   .wl-grid button{ border:0; background:none; padding:4px 0; font-size:12px; text-decoration:underline; cursor:pointer; color:var(--sub); }
   /* playlist */
-  .pl-tabs{ display:inline-flex; gap:8px; margin:0 0 20px; }
-  .pl-tabs button{ border:1px solid #111; background:#fff; border-radius:999px; padding:10px 18px; font-size:11px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; }
-  .pl-tabs button[aria-pressed="true"]{ background:#111; color:#fff; }
+  /* YouTube-Music style switch: headphones = music only, play button = music video */
+  .pl-tabs{ display:inline-flex; gap:4px; margin:0 0 20px; padding:4px; background:#f1f1ef; border-radius:999px; }
+  .pl-tabs button{ width:58px; height:40px; border:0; background:transparent; border-radius:999px; display:grid; place-items:center; color:#9a9a96; cursor:pointer; transition:background .2s, color .2s; }
+  .pl-tabs button svg{ width:24px; height:24px; display:block; }
+  .pl-tabs button[aria-pressed="true"]{ background:#fff; color:#111; box-shadow:0 1px 4px rgba(0,0,0,.12); }
+  .pl-tabs button[data-m="video"] svg path{ fill:#f1f1ef; }
+  .pl-tabs button[data-m="video"][aria-pressed="true"] svg path{ fill:#fff; }
   .trk{ display:grid; grid-template-columns:52px 1fr auto auto; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
   .trk img{ width:52px; height:52px; object-fit:cover; border-radius:8px; background:#eee; }
   .trk .n{ font-size:15px; } .trk .d{ font-size:12px; color:var(--sub); }
@@ -341,7 +345,7 @@
       <button class="play" data-play="${esc(t.id)}" aria-label="Play / pause"><svg class="ic-play" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.6v12.8c0 .8.9 1.3 1.6.9l10-6.4c.6-.4.6-1.4 0-1.8l-10-6.4C8.9 4.3 8 4.8 8 5.6z"/></svg><svg class="ic-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.3" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.3" fill="currentColor"/></svg></button>${inList ? `<button data-rm="${esc(t.id)}" aria-label="Remove from my playlist">−</button>` : `<button data-add="${esc(t.id)}" aria-label="Add to my playlist">+</button>`}</div>`;
     const render = () => {
       const list = mine.map(byId).filter(Boolean), rest = all.filter(t => !mine.includes(t.id) && (plMode === 'music' || t.video));
-      el.innerHTML = `<h2><img class="al-logo" src="/assets/img/alien-logo.png" alt="">Playlist</h2><div class="pl-tabs"><button data-m="music" aria-pressed="${plMode === 'music'}">Music</button><button data-m="video" aria-pressed="${plMode === 'video'}">Music video</button></div>
+      el.innerHTML = `<h2><img class="al-logo" src="/assets/img/alien-logo.png" alt="">Playlist</h2><div class="pl-tabs" role="group" aria-label="Music or music video"><button data-m="music" aria-label="Music" title="Music" aria-pressed="${plMode === 'music'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4.5" height="7" rx="1.8"/><rect x="16.5" y="14" width="4.5" height="7" rx="1.8"/></svg></button><button data-m="video" aria-label="Music video" title="Music video" aria-pressed="${plMode === 'video'}"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.5" y="5" width="19" height="14" rx="3.2"/><path d="M10 9.2v5.6l4.8-2.8z" fill="#fff"/></svg></button></div>
         <div>${list.length ? list.map(t => row(t, true)).join('') : '<p class="empty">Your playlist is empty</p><p>Add songs from the list below — they stay in your account on every device.</p>'}</div>
         ${list.length ? '<p style="margin-top:16px"><button class="btn btn--sm" id="plAll">Play my playlist</button></p>' : ''}
         <h4>All bymarccc songs</h4><div>${rest.map(t => row(t, false)).join('')}</div>`;
