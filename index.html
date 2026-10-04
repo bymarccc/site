@@ -1355,9 +1355,14 @@
       const pics = [...a.querySelectorAll('img')], bars = [...a.querySelectorAll('.shop__bars i')]; let i = 0;
       const show = n => { i = ((n % pics.length) + pics.length) % pics.length; pics.forEach((im, k) => im.classList.toggle('is-on', k === i)); bars.forEach((b, k) => b.classList.toggle('is-on', k === i)); };
       if (hover) { a.addEventListener('mouseenter', () => show(1)); a.addEventListener('mouseleave', () => show(0)); }
-      let d = null;
-      a.addEventListener('pointerdown', e => { d = { x: e.clientX, y: e.clientY, moved: false }; });
-      a.addEventListener('pointermove', e => { if (!d) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy)) { d.moved = true; show(dx < 0 ? i + 1 : i - 1); } });
+      // one-finger swipe only: a pinch-zoom (2 fingers) or a zoomed-in page never flips the photo, and it never wraps from the first photo to the last
+      let d = null, fingers = 0, lockUntil = 0;
+      const zoomed = () => (window.visualViewport ? visualViewport.scale : 1) > 1.05;
+      a.addEventListener('pointerdown', e => { fingers++; if (fingers > 1 || zoomed()) { d = null; lockUntil = Date.now() + 500; return; } if (Date.now() < lockUntil) return; d = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false }; });
+      a.addEventListener('pointermove', e => { if (!d || e.pointerId !== d.id || fingers > 1 || zoomed()) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { const n = dx < 0 ? i + 1 : i - 1; if (n < 0 || n >= pics.length) return; d.moved = true; show(n); } });
+      const fingerUp = () => { fingers = Math.max(0, fingers - 1); };
+      a.addEventListener('pointerup', fingerUp); a.addEventListener('pointercancel', fingerUp); a.addEventListener('pointerleave', e => { if (e.pointerType !== 'mouse') fingerUp(); });
+      a.addEventListener('touchstart', e => { if (e.touches.length > 1) { d = null; lockUntil = Date.now() + 500; } }, { passive: true });
       const end = () => { if (d && d.moved) { const block = ev => { ev.preventDefault(); a.removeEventListener('click', block, true); }; a.addEventListener('click', block, true); setTimeout(() => a.removeEventListener('click', block, true), 300); } d = null; };
       a.addEventListener('pointerup', end); a.addEventListener('pointercancel', end);
     }
@@ -1399,9 +1404,14 @@
       const pics = [...imgwrap.querySelectorAll('img')], bars = [...imgwrap.querySelectorAll('.sales__bars i')]; let i = 0;
       const show = n => { i = ((n % pics.length) + pics.length) % pics.length; pics.forEach((im, k) => im.classList.toggle('is-on', k === i)); bars.forEach((b, k) => b.classList.toggle('is-on', k === i)); };
       if (hover) { imgwrap.addEventListener('mouseenter', () => show(1)); imgwrap.addEventListener('mouseleave', () => show(0)); }
-      let d = null;
-      imgwrap.addEventListener('pointerdown', e => { d = { x: e.clientX, y: e.clientY, moved: false }; });
-      imgwrap.addEventListener('pointermove', e => { if (!d) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.abs(dx) > 24 && Math.abs(dx) > Math.abs(dy)) { d.moved = true; show(dx < 0 ? i + 1 : i - 1); } });
+      // one-finger swipe only: a pinch-zoom (2 fingers) or a zoomed-in page never flips the photo, and it never wraps from the first photo to the last
+      let d = null, fingers = 0, lockUntil = 0;
+      const zoomed = () => (window.visualViewport ? visualViewport.scale : 1) > 1.05;
+      imgwrap.addEventListener('pointerdown', e => { fingers++; if (fingers > 1 || zoomed()) { d = null; lockUntil = Date.now() + 500; return; } if (Date.now() < lockUntil) return; d = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false }; });
+      imgwrap.addEventListener('pointermove', e => { if (!d || e.pointerId !== d.id || fingers > 1 || zoomed()) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { const n = dx < 0 ? i + 1 : i - 1; if (n < 0 || n >= pics.length) return; d.moved = true; show(n); } });
+      const fingerUp = () => { fingers = Math.max(0, fingers - 1); };
+      imgwrap.addEventListener('pointerup', fingerUp); imgwrap.addEventListener('pointercancel', fingerUp); imgwrap.addEventListener('pointerleave', e => { if (e.pointerType !== 'mouse') fingerUp(); });
+      imgwrap.addEventListener('touchstart', e => { if (e.touches.length > 1) { d = null; lockUntil = Date.now() + 500; } }, { passive: true });
       const end = () => { if (d && d.moved) { const block = ev => { ev.preventDefault(); imgwrap.removeEventListener('click', block, true); }; imgwrap.addEventListener('click', block, true); setTimeout(() => imgwrap.removeEventListener('click', block, true), 300); } d = null; };
       imgwrap.addEventListener('pointerup', end); imgwrap.addEventListener('pointercancel', end);
     }
