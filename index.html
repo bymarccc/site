@@ -1152,6 +1152,8 @@
   .shop__soldout::before, .shop__soldout::after { content: ""; position: absolute; width: 12px; height: 12px; background: radial-gradient(circle at 0 0, transparent 11.5px, #fff 12px); pointer-events: none; }
   .shop__soldout::before { right: 0; bottom: 100%; }
   .shop__soldout::after { right: 100%; bottom: 0; }
+  .shop__card.is-soldout .shop__img img, .shop__card.is-soldout .shop__img video { opacity: .55; }
+  .shop__card.is-soldout .shop__meta { opacity: .5; }
   .reel__thumb .shop__soldout { font-size: 8px; padding: 5px 6px 4px 7px; border-radius: 8px 0 0 0; }
   .shop__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; opacity: 0; transition: opacity .35s cubic-bezier(.22,1,.36,1); }
   .shop__img img.is-on { opacity: 1; }
@@ -1345,7 +1347,7 @@
   function card(key, p, tab) {
     const look = (p.collections || []).includes('looks') && (tab === 'looks' || /^LOOK\s*\d/i.test(p.title || '')) && (p.lookNo ? 'LOOK ' + p.lookNo : ((p.title || '').match(/^LOOK\s*\d+/i) || [''])[0].toUpperCase());   // SHOP THE LOOK: "LOOK n" written vertically top-left, price only
     const imgs = look ? [p.lookCover || (p.gallery || [])[0]].filter(Boolean) : (p.cardGallery || p.gallery || []).slice(0, 7);   // up to 7 dashes — the product page's model photos; a product with 2 photos shows 2
-    const a = document.createElement('a'); a.className = 'shop__card'; a.href = 'bymarccc-product.html?p=' + key;
+    const a = document.createElement('a'); a.className = 'shop__card' + (p.soldOut ? ' is-soldout' : ''); a.href = 'bymarccc-product.html?p=' + key;
     a.innerHTML = `<span class="shop__img">${look ? `<span class="shop__newtag shop__looktag">${look}</span>` : newTag(key)}${scanFx(key)}${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}${imgs.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — view ' + (i + 1) : ''}" loading="lazy" decoding="async" class="${i === 0 ? 'is-on' : ''}">`).join('')}${imgs.length > 1 ? `<span class="shop__bars" aria-hidden="true">${imgs.map((_, i) => `<i class="${i === 0 ? 'is-on' : ''}"></i>`).join('')}</span>` : ''}</span>
       ${look ? '' : `<span class="shop__meta"><span class="shop__name">${p.title}</span>${typeof p.price === 'number' ? (typeof p.salePrice === 'number' ? `<span class="shop__price"><span class="shop__price--old">${fmt(p.price, p.currency)}</span><span class="shop__price--sale">${fmt(p.salePrice, p.currency)}</span></span>` : `<span class="shop__price">${fmt(p.price, p.currency)}</span>`) : ''}</span>`}`;
     if (imgs.length > 1) {
@@ -1652,6 +1654,7 @@
       }
       const feat = gender === 'women' && WOMEN_FEATURED[active];
       if (feat) items = [...feat.map(k => items.find(([x]) => x === k)).filter(Boolean), ...items.filter(([k]) => !feat.includes(k))];
+      items = [...items.filter(([, p]) => !p.soldOut), ...items.filter(([, p]) => p.soldOut)];   // SOLD OUT pieces always last
       const show = !all && items.length > LIMIT ? items.slice(0, LIMIT) : items;
       show.forEach(([k, p]) => grid.appendChild(card(k, p, active)));
       if (show.length < items.length) {
