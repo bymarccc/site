@@ -137,6 +137,14 @@ a.pdp-header__btn { color: inherit; }
 .pdp-summary__row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
 .pdp-summary__row { display: none; }
 .pdp-lookof { text-align: center; margin: 18px 0 4px; order: 4; }
+/* SHOP THE LOOK: one size row per piece (e.g. M jacket + S pants), all required */
+.pdp-looksizes { order: 4; display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 14px 0 4px; }
+.pdp-looksize { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.pdp-looksize__name { font-size: 15px; letter-spacing: .04em; color: #111; text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 1px; }
+span.pdp-looksize__name { text-decoration: none; }
+.pdp-lookof--note { margin-top: 10px; }
+.pdp-looksize .pdp-sizes { margin-top: 0; justify-content: center; }
+.pdp-looksizes.is-err .pdp-looksize:not(.is-done) .pdp-looksize__name { color: #c9002e; }
 .pdp-lookof__pieces { margin: 0; font-size: 15px; letter-spacing: .04em; }
 .pdp-lookof__pieces a { color: #111; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 .pdp-lookof__pieces span { margin: 0 6px; color: #8a8a8a; }
@@ -910,7 +918,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=620821cb1w"></script>
+<script src="/assets/catalog.js?v=332425d09x"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1813,8 +1821,10 @@ body.is-custom-bag-page #gallery { display: none; }
       return false;
     }
     if (DESIGNS.length && !state.design) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a design.'; designsEl.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }
+    if (window.__bymLookVariant && !state.size) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a size for each piece.'; const lb = $('lookSizes'); lb.classList.add('is-err'); lb.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }
     if (!state.size) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a size.'; $('sizes').scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); setTimeout(() => $('sizes').querySelector('.pdp-size:not([disabled])')?.focus({ preventScroll: true }), 400); return false; }
     const line = { id: variantId(), name: PRODUCT.title, variant: [state.colour === 'default' ? '' : colourOf(state.colour).name, PRODUCT.noSize ? '' : sizeLabel(state.size), state.design || ''].filter(Boolean).join(' · '), image: (PRODUCT.imageColours ? GALLERY[COLOURS.findIndex(x => x.id === state.colour)] || GALLERY[0] : GALLERY[0]).src, price: UNIT_PRICE, currency: PRODUCT.currency, quantity: 1, key: KEY };
+    if (window.__bymLookVariant) line.variant = window.__bymLookVariant();
     if (PRODUCT.needsBody) { line.id += `:${hw.h}x${hw.w}`; line.variant += (line.variant ? ' · ' : '') + `${hw.h} cm · ${hw.w} kg`; line.attributes = { 'Height (cm)': hw.h, 'Weight (kg)': hw.w }; }
     btn.disabled = true; btn.classList.add('is-busy');
     try { await BAG.add(line); msg.classList.add('is-ok'); msg.textContent = `Added — ${line.name}`; return true; }
@@ -1923,6 +1933,39 @@ body.is-custom-bag-page #gallery { display: none; }
     el.innerHTML = `<p class="pdp-lookof__pieces">${links}</p><p class="pdp-lookof__note">The complete look at a privileged price.</p>`;
     const sizes = document.getElementById('sizes'); if (sizes && sizes.parentNode) sizes.parentNode.insertBefore(el, sizes);
     el.addEventListener('click', e => { const a = e.target.closest('a'); if (a && window.BYM_NAV && window.BYM_NAV.navigate) { e.preventDefault(); window.BYM_NAV.navigate(a.getAttribute('href')); } });
+  })();
+  /* SHOP THE LOOK sizes: one S/M/L row under each piece (the client may wear M in the jacket and S in the pants) */
+  (function lookSizes() {
+    if (!(PRODUCT.collections || []).includes('looks')) return;
+    const nice = t => String(t).toLowerCase().replace(/(^|\s|-)\S/g, c => c.toUpperCase());
+    const rows = [];
+    (PRODUCT.lookItems || []).filter(k => CATALOG[k]).forEach(k => {
+      const p = CATALOG[k], sz = ((p.chart && p.chart.sizes) || []).map(x => x.size);
+      if (!sz.length || p.noSize || (p.chart && p.chart.category === 'one-size') || (p.collections || []).includes('accessories')) return;
+      rows.push({ name: nice(p.title), sizes: sz, href: 'bymarccc-product.html?p=' + encodeURIComponent(k) });
+    });
+    (PRODUCT.lookExtra || []).forEach(n => rows.push({ name: n, sizes: (SIZE_CHART.sizes || []).map(x => x.size) }));
+    if (!rows.length) return;
+    const picks = {};
+    const box = document.createElement('div'); box.className = 'pdp-looksizes'; box.id = 'lookSizes';
+    box.innerHTML = rows.map((r, i) => `<div class="pdp-looksize" data-r="${i}">${r.href ? `<a class="pdp-looksize__name" href="${r.href}">${r.name}</a>` : `<span class="pdp-looksize__name">${r.name}</span>`}<div class="pdp-sizes" role="radiogroup" aria-label="${r.name} size">${r.sizes.map(z => `<button type="button" class="pdp-size" role="radio" aria-checked="false" data-r="${i}" data-s="${z}">${z}</button>`).join('')}</div></div>`).join('');
+    const after = document.getElementById('pdpLookOf') || sizesEl;
+    after.parentNode.insertBefore(box, after.nextSibling);
+    sizesEl.hidden = true; if (sizesEl.previousElementSibling) sizesEl.previousElementSibling.hidden = true;
+    // piece name → its S M L → and under all of them "The complete look at a privileged price."
+    const lo = document.getElementById('pdpLookOf');
+    if (lo) { const pc = lo.querySelector('.pdp-lookof__pieces'), nt = lo.querySelector('.pdp-lookof__note'); if (pc) pc.hidden = true; if (nt) { const nb = document.createElement('div'); nb.className = 'pdp-lookof pdp-lookof--note'; nb.appendChild(nt); box.parentNode.insertBefore(nb, box.nextSibling); } lo.hidden = true; }
+    box.addEventListener('click', e => {
+      const a = e.target.closest('a.pdp-looksize__name'); if (a && window.BYM_NAV && window.BYM_NAV.navigate) { e.preventDefault(); window.BYM_NAV.navigate(a.getAttribute('href')); return; }
+      const b = e.target.closest('.pdp-size'); if (!b) return;
+      const i = +b.dataset.r; picks[i] = b.dataset.s;
+      box.querySelectorAll(`.pdp-size[data-r="${i}"]`).forEach(x => x.setAttribute('aria-checked', String(x === b)));
+      box.querySelector(`.pdp-looksize[data-r="${i}"]`).classList.add('is-done');
+      const all = rows.every((_, j) => picks[j]);
+      if (all) { box.classList.remove('is-err'); setSize(rows.map((_, j) => picks[j]).join('/')); }
+      else { state.size = null; }
+    });
+    window.__bymLookVariant = () => rows.map((r, j) => `${r.name} ${picks[j]}`).join(' · ');
   })();
   $('shipBody').textContent = PRODUCT.shipping || '';
   document.querySelectorAll('[data-acc]').forEach(btn => btn.addEventListener('click', () => {
