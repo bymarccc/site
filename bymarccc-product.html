@@ -1397,8 +1397,11 @@ body.is-custom-bag-page #gallery { display: none; }
     async function cbRemoveBackground(dataUrl) {
       try { return await cbRemoveBgPicsart(dataUrl); } catch (e) { console.warn('Picsart remove-bg unavailable, using in-browser remover:', e); }
       const mod = await cbLoadBgModule();
+      // small quantised model (~4x lighter than the default) so it also runs inside iPhone Safari's memory limit
       const blob = await mod.removeBackground(dataUrl, {
         publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal/dist/',
+        model: 'isnet_quint8',
+        device: 'cpu',
         output: { format: 'image/png', quality: 0.92 },
       });
       return new Promise((resolve, reject) => {
