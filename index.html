@@ -1147,7 +1147,12 @@
   /* Diesel-style vertical label on the photo */
   .shop__newtag { position: absolute; z-index: 2; top: 14px; left: 8px; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 8.8px; font-weight: 500; letter-spacing: .08em; line-height: 1; color: #111; pointer-events: none; white-space: nowrap; }
   @media (min-width: 900px) { .shop__newtag { top: 18px; left: 12px; font-size: 9.6px; } }   /* 20% smaller — quieter, more premium */
-  .shop__soldout { position: absolute; z-index: 2; top: 10px; left: 10px; background: #111; color: #fff; font-size: 10px; font-weight: 600; letter-spacing: .1em; padding: 5px 9px; border-radius: 3px; }
+  /* SOLD OUT: a white tab cut into the photo's bottom-right corner (concave corners via the two pseudo elements) */
+  .shop__soldout { position: absolute; z-index: 3; right: 0; bottom: 0; background: #fff; color: #111; font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 1; padding: 9px 11px 8px 13px; border-radius: 12px 0 0 0; }
+  .shop__soldout::before, .shop__soldout::after { content: ""; position: absolute; width: 12px; height: 12px; background: radial-gradient(circle at 0 0, transparent 11.5px, #fff 12px); pointer-events: none; }
+  .shop__soldout::before { right: 0; bottom: 100%; }
+  .shop__soldout::after { right: 100%; bottom: 0; }
+  .reel__thumb .shop__soldout { font-size: 8px; padding: 5px 6px 4px 7px; border-radius: 8px 0 0 0; }
   .shop__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; opacity: 0; transition: opacity .35s cubic-bezier(.22,1,.36,1); }
   .shop__img img.is-on { opacity: 1; }
 
@@ -1316,7 +1321,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=802800020t"></script>
+<script src="/assets/catalog.js?v=fc961b76du"></script>
 <script>
 (() => {
   'use strict';
