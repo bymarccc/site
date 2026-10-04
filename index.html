@@ -4015,8 +4015,16 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   }
   // Leaving native fullscreen (iPhone) → back to the mini player; resume if it was playing
   let fsWasPlaying = false;
-  video.addEventListener('webkitbeginfullscreen', () => { fsWasPlaying = !video.paused; });
-  video.addEventListener('webkitendfullscreen', () => { if (fsWasPlaying && !video.ended) video.play().catch(() => {}); });
+  // full screen carries its own sound (iPhone unmutes the video there): hand the song from the audio twin to the
+  // video itself, otherwise the twin and the video play together (double sound); give it back on exit
+  let fsOwn = false;
+  const fsTake = () => { if (fsOwn) return; fsOwn = true; const at = sndOn && !snd.paused ? snd.currentTime : null; pipOwn = true; sndOn = false; snd.pause(); video.muted = userMuted; if (at !== null) { try { video.currentTime = at; } catch {} } };
+  const fsGive = () => { if (!fsOwn) return; fsOwn = false; if (document.pictureInPictureElement === video || video.webkitPresentationMode === 'picture-in-picture') return; pipOwn = false; applySound(); if (!video.paused) sndPlay(); };
+  video.addEventListener('webkitbeginfullscreen', () => { fsWasPlaying = !video.paused; fsTake(); });
+  video.addEventListener('webkitendfullscreen', () => { fsGive(); if (fsWasPlaying && !video.ended) video.play().catch(() => {}); });
+  video.addEventListener('webkitpresentationmodechanged', () => { if (video.webkitPresentationMode === 'fullscreen') fsTake(); else if (video.webkitPresentationMode === 'inline') fsGive(); });
+  document.addEventListener('fullscreenchange', () => { const el = document.fullscreenElement; if (el && (el === video || el.contains(video))) fsTake(); else fsGive(); });
+  document.addEventListener('webkitfullscreenchange', () => { const el = document.webkitFullscreenElement; if (el && (el === video || el.contains(video))) fsTake(); else fsGive(); });
   const toggle = () => { if (video.paused) tryPlay(); else video.pause(); };
   /* --- YouTube-style controls: visible while paused; after a tap while playing, for 2.5s --- */
   const ppIcon = $('vpPPIcon'), btnPP = $('vpPP'), prog = $('vpProg');
