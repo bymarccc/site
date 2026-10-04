@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #565656;                 /* animated by JS, delayed after product move */
+    --bg: #6B2535;                 /* animated by JS, delayed after product move */
     --fg: #ffffff;                 /* interface color, swaps to dark on light bg */
     --fg-soft: rgba(255,255,255,.78);
     --fg-line: rgba(255,255,255,.95);
@@ -1323,7 +1323,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=fc961b76du"></script>
+<script src="/assets/catalog.js?v=67e0634a5v"></script>
 <script>
 (() => {
   'use strict';
@@ -1335,7 +1335,8 @@
   // also the order of the NEW COLLECTION tab (men + women)
   const NEW_LIST = ['m-pink-zip-hoodie', 'w-blue-zip-hoodie', 'm-blue-zip-hoodie', 'm-tech-contrast-jacket', 'm-tech-wide-pants', 'm-burgundy-hoodie', 'art-jeans', 'w-sporty-top-ecru', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-jeans', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag'];
   const NEW_COLLECTION = new Set(NEW_LIST);
-  const newTag = key => NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
+  const NEW_COLOR = new Set(['skinny']);   // vertical NEW COLOR tag (same type as NEW COLLECTION)
+  const newTag = key => NEW_COLOR.has(key) ? '<span class="shop__newtag">NEW COLOR</span>' : NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
   // Pinterest-style rainbow "scan" over the model (mask = the person cut out of the first photo)
   const SCAN_MASKS = { 'w-sporty-top': '/assets/img/home/scanmask-sporty-top.png', 'w-burgundy-long-sleeve': '/assets/img/home/scanmask-w-burgundy-long-sleeve.png', 'w-black-hoodie': '/assets/img/home/scanmask-w-black-hoodie.png', 'w-logo-leggings': '/assets/img/home/scanmask-w-logo-leggings.png', 'w-walking-art-blue-jeans': '/assets/img/home/scanmask-w-walking-art-blue-jeans.png', 'w-black-logo-windbreaker': '/assets/img/home/scanmask-w-black-logo-windbreaker.png', 'art-dept-bag': '/assets/img/home/scanmask-art-dept-bag.png', 'relaxed': '/assets/img/home/scanmask-relaxed.png', 'bandana-jeans': '/assets/img/home/scanmask-bandana-jeans.png', 'art-jeans': '/assets/img/home/scanmask-art-jeans.png' };
   const SCAN_SCROLL = new Set(['relaxed']);   // these follow the page scroll instead of looping (down = top→bottom, up = bottom→top)
@@ -1732,6 +1733,7 @@
      `tone` decides interface colour (white on dark, near-black on light).
   ------------------------------------------------------------------ */
   const PRODUCTS_SKINNY = [
+    { id: 'burgundy', name: 'Burgundy Zebra Patch Jeans', bg: '#6B2535', tone: 'dark', image: 'assets/img/zebra-skinny-burgundy.webp', price: 450, currency: 'RON' },
     { id: 'blue',   name: 'Blue Zebra Patch Jeans',   bg: '#057CA7', tone: 'dark', image: 'assets/img/zebra-skinny-blue.webp',   price: 450, currency: 'RON' },
     { id: 'red',    name: 'Red Zebra Patch Jeans',    bg: '#890712', tone: 'dark', image: 'assets/img/zebra-skinny-red.webp',    price: 450, currency: 'RON' },
     { id: 'pink',   name: 'Pink Zebra Patch Jeans',   bg: '#9B4178', tone: 'dark', image: 'assets/img/zebra-skinny-pink.webp',   price: 450, currency: 'RON' },
@@ -1743,6 +1745,7 @@
     { id: 'orange', name: 'Orange Zebra Patch Jeans', bg: '#BC5200', tone: 'dark', image: 'assets/img/zebra-skinny-orange.webp', price: 450, currency: 'RON' },
   ];
   const PRODUCTS_RELAXED = [
+    { id: 'burgundy', name: 'Burgundy Zebra Patch Jeans', bg: '#6B2535', tone: 'dark', image: 'assets/img/zebra-relaxed-burgundy.webp', price: 500, currency: 'RON' },
     { id: 'blue',   name: 'Blue Zebra Patch Jeans',   bg: '#057CA7', tone: 'dark', image: 'assets/img/zebra-relaxed-blue.webp',   price: 500, currency: 'RON' },
     { id: 'red',    name: 'Red Zebra Patch Jeans',    bg: '#890712', tone: 'dark', image: 'assets/img/zebra-relaxed-red.webp',    price: 500, currency: 'RON' },
     { id: 'pink',   name: 'Pink Zebra Patch Jeans',   bg: '#9B4178', tone: 'dark', image: 'assets/img/zebra-relaxed-pink.webp',   price: 500, currency: 'RON' },
@@ -1786,7 +1789,7 @@
   const section  = document.getElementById('zebra');
   const stage    = document.getElementById('stage');
   const track    = document.getElementById('track');
-  const START_ID = 'blue';   // first slide
+  const START_ID = 'burgundy';   // first slide (new colour)
   const nameEl   = document.getElementById('productName');
   const prevBtn  = document.getElementById('prev');
   const nextBtn  = document.getElementById('next');
