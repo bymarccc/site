@@ -2612,6 +2612,32 @@ async function acctProfile(db, email) {
   };
 }
 __name(acctProfile, "acctProfile");
+// POST /api/removebg — Picsart "Remove Background" for the bag customiser (key: PICSART_API_KEY in Cloudflare).
+// Body = the shopper's image (image/jpeg|png|webp, ≤ 8 MB). Returns the transparent PNG; 503 when not configured
+// so the page falls back to the in-browser remover.
+async function removeBgApi(request) {
+  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
+  if (!checkOrigin(request)) return json(403, { error: "Forbidden origin" });
+  if (!rateLimit(request, 8)) return json(429, { error: "Too many requests. Please wait a moment." });
+  const key = env("PICSART_API_KEY"); if (!key) return json(503, { error: "NOT_CONFIGURED" });
+  const type = (request.headers.get("content-type") || "").split(";")[0].trim();
+  if (!/^image\/(jpeg|png|webp)$/.test(type)) return json(415, { error: "Unsupported image type" });
+  const buf = await request.arrayBuffer();
+  if (!buf.byteLength || buf.byteLength > 8 * 1024 * 1024) return json(413, { error: "Image too large" });
+  const fd = new FormData();
+  fd.append("image", new Blob([buf], { type }), "upload." + type.split("/")[1]);
+  fd.append("output_type", "cutout"); fd.append("format", "PNG");
+  let r;
+  try { r = await fetch("https://api.picsart.io/tools/1.0/removebg", { method: "POST", headers: { "X-Picsart-API-Key": key, accept: "application/json" }, body: fd }); }
+  catch (e) { return json(502, { error: "UPSTREAM_UNREACHABLE" }); }
+  const j = await r.json().catch(() => null);
+  const out = j && j.data && j.data.url;
+  if (!r.ok || !out) return json(502, { error: "UPSTREAM_FAILED", status: r.status, detail: j && (j.message || j.detail || j.code) || null });
+  const img = await fetch(out).catch(() => null);
+  if (!img || !img.ok) return json(502, { error: "UPSTREAM_IMAGE_FAILED" });
+  return new Response(img.body, { status: 200, headers: { "Content-Type": "image/png", "Cache-Control": "no-store" } });
+}
+__name(removeBgApi, "removeBgApi");
 async function accountApi(request) {
   let db;
   try { db = await acctInit(); } catch (e) { return json(e.status || 500, { error: "ACCOUNTS_NOT_CONFIGURED" }); }
@@ -2869,7 +2895,8 @@ var ROUTES = {
   "cron-charge-installments": cronChargeInstallments,
   "geo": geoApi,
   "account": accountApi,
-  "account-admin": accountAdmin
+  "account-admin": accountAdmin,
+  "removebg": removeBgApi
 };
 async function onRequest(context) {
   const { request, env: env2 } = context;

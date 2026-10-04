@@ -1386,7 +1386,16 @@ body.is-custom-bag-page #gallery { display: none; }
       if (!cbBgModulePromise) cbBgModulePromise = import('https://cdn.jsdelivr.net/npm/@imgly/background-removal/dist/browser.mjs');
       return cbBgModulePromise;
     }
+    // Picsart (server, /api/removebg) first — best cut-out quality; falls back to the in-browser remover
+    async function cbRemoveBgPicsart(dataUrl) {
+      const blob = await (await fetch(dataUrl)).blob();
+      const r = await fetch('/api/removebg', { method: 'POST', headers: { 'Content-Type': blob.type || 'image/jpeg' }, body: blob });
+      if (!r.ok || !(r.headers.get('content-type') || '').startsWith('image/')) throw new Error('picsart ' + r.status);
+      const out = await r.blob();
+      return new Promise((resolve, reject) => { const fr = new FileReader(); fr.onload = () => resolve(fr.result); fr.onerror = () => reject(fr.error); fr.readAsDataURL(out); });
+    }
     async function cbRemoveBackground(dataUrl) {
+      try { return await cbRemoveBgPicsart(dataUrl); } catch (e) { console.warn('Picsart remove-bg unavailable, using in-browser remover:', e); }
       const mod = await cbLoadBgModule();
       const blob = await mod.removeBackground(dataUrl, {
         publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal/dist/',
