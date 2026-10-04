@@ -910,7 +910,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=67e0634a5v"></script>
+<script src="/assets/catalog.js?v=620821cb1w"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1089,13 +1089,19 @@ body.is-custom-bag-page #gallery { display: none; }
     mt.hidden = true;
   } else {
     mt.hidden = false;
-    const own = (CATALOG[KEY] || {}).model;   // product-specific model measurements win over the gender default
+    let own = (CATALOG[KEY] || {}).model;   // product-specific model measurements win over the gender default
+    // TOPS & JACKETS: one model per gender (women 177 cm & 52 kg, men 185 cm & 73 kg), wearing size M
+    const cols = PRODUCT.collections || [];
+    if (!cols.includes('looks') && (cols.includes('tops') || cols.includes('jackets'))) {
+      const ch = (PRODUCT.chart || []).map(String), sz = ch.includes('M') || !ch.length ? 'M' : (ch.find(c => /(^|-)M(-|$)/.test(c)) || 'M');
+      own = PRODUCT.gender === 'women' ? { height: 177, weight: 52, size: sz } : { height: 185, weight: 73, size: sz };
+    }
     mt.textContent = own && own.height && own.weight && own.size
-      ? `Model is ${own.height} cm and ${own.weight} kg, wearing size ${own.size}`
+      ? `Model is ${own.height} cm & ${own.weight} kg, wearing size ${own.size}`
       : own && own.size && !own.height ? `Model is wearing size ${own.size}`
       : PRODUCT.gender === 'women'
-        ? 'Model is 177 cm and 53 kg, wearing size XS-S'
-        : 'Model is 184 cm and 74 kg, wearing size M';
+        ? 'Model is 177 cm & 53 kg, wearing size XS-S'
+        : 'Model is 184 cm & 74 kg, wearing size M';
   }
   function layout(dx = 0, anim = true) {
     track.classList.toggle('no-anim', !anim || reduced.matches);
