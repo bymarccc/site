@@ -1339,7 +1339,7 @@
   .salerail__price b { color: #c8102e; font-weight: 600; }
   .salerail__price--plain { color: #111; font-weight: 400; }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=332425d09x"></script>
+<script src="/assets/catalog.js?v=202644mb"></script>
 <script>
 (() => {
   'use strict';
@@ -1349,7 +1349,7 @@
   const genderOf = p => p.genders || [p.gender || 'men'];
   // products marked NEW COLLECTION on their homepage card (vertical label, Diesel-style)
   // also the order of the NEW COLLECTION tab (men + women)
-  const NEW_LIST = ['m-pink-zip-hoodie', 'w-blue-zip-hoodie', 'm-blue-zip-hoodie', 'm-tech-contrast-jacket', 'm-tech-wide-pants', 'm-burgundy-hoodie', 'art-jeans', 'w-sporty-top-ecru', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-jeans', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag'];
+  const NEW_LIST = ['w-mini-bag-jeans-burgundy', 'w-mini-bag-jeans-black', 'm-pink-zip-hoodie', 'w-blue-zip-hoodie', 'm-blue-zip-hoodie', 'm-tech-contrast-jacket', 'm-tech-wide-pants', 'm-burgundy-hoodie', 'art-jeans', 'w-sporty-top-ecru', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-jeans', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag'];
   const NEW_COLLECTION = new Set(NEW_LIST);
   const NEW_COLOR = new Set(['skinny']);   // vertical NEW COLOR tag (same type as NEW COLLECTION)
   const newTag = key => NEW_COLOR.has(key) ? '<span class="shop__newtag">NEW COLOR</span>' : NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
