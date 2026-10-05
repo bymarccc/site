@@ -1126,7 +1126,11 @@
 <style>
   .shop { background: #fff; color: #111; padding: clamp(28px, 5vw, 56px) 0 clamp(56px, 8vw, 110px); font-family: "Jost", "Helvetica Neue", Helvetica, Arial, sans-serif; }
   .shop__title--bold { font-weight: 700; font-size: 13px; letter-spacing: .3em; margin: 0 0 4px; }
-  @media (max-width: 899px) { .shop .shop__tabs { display: none; } .shop .shop__lookrow { margin: 4px 0 14px; } }   /* phone: categories live in the bottom bar */
+  /* phone: SHOP THE LOOK on its own line, the categories on one row under it — the row sticks to the top while you scroll the products */
+  @media (max-width: 899px) {
+    .shop .shop__lookrow { margin: 4px 0 6px; }
+    .shop .shop__tabs { position: sticky; top: 0; z-index: 30; padding-top: 12px; margin-bottom: 16px; background: rgba(255,255,255,.94); -webkit-backdrop-filter: blur(14px) saturate(1.6); backdrop-filter: blur(14px) saturate(1.6); }
+  }
   .shop__title--hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* MEN / WOMEN words removed from view (kept for screen readers/SEO) */
   .shop__title { margin: 0 0 14px; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; }
   .shop__subhead { grid-column: 1 / -1; margin: clamp(20px, 4vw, 34px) 0 14px; padding: 0 clamp(16px, 4vw, 48px); text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; color: #111; }
@@ -1679,7 +1683,7 @@
     collections.forEach(c => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__tab'; b.setAttribute('role', 'tab'); b.dataset.key = c.key; b.textContent = c.label;
       b.setAttribute('aria-selected', String(c.key === active));
-      b.addEventListener('click', () => { active = c.key; section.querySelectorAll('.shop__tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.key === active))); render(); b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
+      b.addEventListener('click', () => { active = c.key; section.querySelectorAll('.shop__tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.key === active))); render(); { const tr = tabs.getBoundingClientRect(), gr = grid.getBoundingClientRect(); if (tr.top <= 2 && gr.top < tr.bottom) window.scrollTo({ top: scrollY + gr.top - tr.height - 8 }); } /* tabs stuck at the top: show the new category from its first product */  b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
       tabBtns.push(b);
       if (c.key === 'looks') { b.classList.add('shop__tab--look'); const row = document.createElement('div'); row.className = 'shop__lookrow'; row.appendChild(b); tabs.parentNode.insertBefore(row, tabs); }   // SHOP THE LOOK: its own small line between MEN/WOMEN and the other tabs
       else tabs.appendChild(b);
@@ -5209,6 +5213,7 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
   /* homepage: the bar shows the categories of the shop section in view (MEN by default) */
   let catSec = null, catSig = '';
   function cats() {
+    { const b0 = $('bmpCats'); if (b0) b0.hidden = true; document.documentElement.classList.remove('bmp-cats'); return; }   // categories moved back to the sticky row under SHOP THE LOOK
     const box = $('bmpCats'), secs = ['shop', 'shopWomen'].map(id => document.getElementById(id)).filter(Boolean);
     if (!box || !secs.length || innerWidth >= 900) { if (box) box.hidden = true; document.documentElement.classList.remove('bmp-cats'); return; }
     if (secs[0].getBoundingClientRect().top > innerHeight * 0.6) { box.hidden = true; return; }   // only from the MEN section on
