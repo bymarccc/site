@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png?v=3"><link rel="icon" type="image/png" sizes="96x96" href="/assets/icons/favicon-96.png?v=3"><link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/favicon-192.png?v=3"><link rel="shortcut icon" href="/favicon.ico?v=3"><link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=3">
+<meta charset="utf-8"><link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/bym-favicon-32.png?v=4"><link rel="icon" type="image/png" sizes="96x96" href="/assets/icons/bym-favicon-96.png?v=4"><link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/bym-favicon-192.png?v=4"><link rel="shortcut icon" href="/bym-favicon.ico?v=4"><link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/bym-apple-touch-icon.png?v=4">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>bymarccc — Custom-Made Fashion, Statement Denim & Logo Pieces</title>
 <meta name="description" content="bymarccc — custom-made fashion from Bucharest: hand-finished Zebra Patch denim, logo tops, leggings, hoodies, blazers and alien-logo bags. Made to order, shipped worldwide.">
@@ -1129,8 +1129,18 @@
   /* phone: SHOP THE LOOK on its own line, the categories on one row under it — the row sticks to the top while you scroll the products */
   @media (max-width: 899px) {
     .shop .shop__lookrow { margin: 4px 0 6px; }
-    .shop .shop__tabs { position: sticky; top: 0; z-index: 30; padding-top: 12px; margin-bottom: 16px; background: rgba(255,255,255,.94); -webkit-backdrop-filter: blur(14px) saturate(1.6); backdrop-filter: blur(14px) saturate(1.6); }
+    .shop .shop__pill { position: sticky; top: 8px; z-index: 30; display: flex; align-items: center; height: 46px; margin: 0 12px 16px; border-radius: 999px; background: rgba(255,255,255,.62); -webkit-backdrop-filter: blur(24px) saturate(1.9); backdrop-filter: blur(24px) saturate(1.9); box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.75), 0 0 0 .5px rgba(0,0,0,.06); }
+    .shop .shop__pill .shop__tabs { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 0; height: 46px; box-sizing: border-box; margin: 0; padding: 0 0 0 4px; border: 0; border-radius: 999px 0 0 999px; }
+    .shop .shop__tabs .shop__tab { padding: 9px 12px; border: 0; border-radius: 999px; }
+    .shop .shop__tabs .shop__tab[aria-selected="true"] { background: rgba(0,0,0,.075); }
+    .shop .shop__tabs .shop__tab:first-child { margin-left: 0; }
+    .shop .shop__tabs .shop__tab:last-child { margin-right: 4px; }
+    .shop .shop__psearch { flex: 0 0 44px; width: 44px; height: 44px; margin-right: 2px; display: grid; place-items: center; border: 0; padding: 0; border-radius: 999px; background: transparent; color: #111; cursor: pointer; }
+    .shop .shop__psearch svg { width: 19px; height: 19px; }
+    html.shop-pill body:not(.pdp) .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* search sits in the top pill while it's on screen */
   }
+  .shop__pill { display: contents; }
+  @media (min-width: 900px) { .shop__psearch { display: none; } }
   .shop__title--hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* MEN / WOMEN words removed from view (kept for screen readers/SEO) */
   .shop__title { margin: 0 0 14px; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; }
   .shop__subhead { grid-column: 1 / -1; margin: clamp(20px, 4vw, 34px) 0 14px; padding: 0 clamp(16px, 4vw, 48px); text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; color: #111; }
@@ -1683,11 +1693,13 @@
     collections.forEach(c => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__tab'; b.setAttribute('role', 'tab'); b.dataset.key = c.key; b.textContent = c.label;
       b.setAttribute('aria-selected', String(c.key === active));
-      b.addEventListener('click', () => { active = c.key; section.querySelectorAll('.shop__tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.key === active))); render(); { const tr = tabs.getBoundingClientRect(), gr = grid.getBoundingClientRect(); if (tr.top <= 2 && gr.top < tr.bottom) window.scrollTo({ top: scrollY + gr.top - tr.height - 8 }); } /* tabs stuck at the top: show the new category from its first product */  b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
+      b.addEventListener('click', () => { active = c.key; section.querySelectorAll('.shop__tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.key === active))); render(); { const tr = tabs.getBoundingClientRect(), gr = grid.getBoundingClientRect(); if (tr.top <= 10 && gr.top < tr.bottom) window.scrollTo({ top: scrollY + gr.top - tr.bottom - 8 }); } /* tabs stuck at the top: show the new category from its first product */  b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
       tabBtns.push(b);
       if (c.key === 'looks') { b.classList.add('shop__tab--look'); const row = document.createElement('div'); row.className = 'shop__lookrow'; row.appendChild(b); tabs.parentNode.insertBefore(row, tabs); }   // SHOP THE LOOK: its own small line between MEN/WOMEN and the other tabs
       else tabs.appendChild(b);
     });
+    { const sb = document.createElement('button'); sb.type = 'button'; sb.className = 'shop__psearch'; sb.setAttribute('aria-label', 'Search'); sb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5"/></svg>'; sb.addEventListener('click', () => window.BMP_OPEN && window.BMP_OPEN()); const pill = document.createElement('div'); pill.className = 'shop__pill'; tabs.parentNode.insertBefore(pill, tabs); pill.append(tabs, sb); }   /* phone: round search inside the top pill, on the right */
+    if ('IntersectionObserver' in window) { (window.__bymPill ||= new Map()); const io = new IntersectionObserver(es => { es.forEach(e => window.__bymPill.set(e.target, e.isIntersecting)); document.documentElement.classList.toggle('shop-pill', [...window.__bymPill.values()].some(Boolean)); }); io.observe(tabs.parentNode); }
     render();
   }
   mount(document.getElementById('shop'), COLLECTIONS, 'men');
