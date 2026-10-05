@@ -1019,7 +1019,7 @@
      SECTION 3 — Collections (Acne-style tabs + product grid), data from catalog.js
      ===================================================================== -->
 <section class="shop" id="shop" aria-label="bymarccc menswear collections" data-gender="men">
-  <h2 class="shop__title shop__title--bold">MEN</h2>
+  <h2 class="shop__title shop__title--bold shop__title--hidden">MEN</h2>
   <nav class="shop__tabs" role="tablist" aria-label="Menswear collections"></nav>
   <div class="shop__grid" role="tabpanel"></div>
 </section>
@@ -1113,7 +1113,7 @@
 })();
 </script>
 <section class="shop shop--women" id="shopWomen" aria-label="bymarccc womenswear collections" data-gender="women">
-  <h2 class="shop__title shop__title--bold">WOMEN</h2>
+  <h2 class="shop__title shop__title--bold shop__title--hidden">WOMEN</h2>
   <nav class="shop__tabs" role="tablist" aria-label="Womenswear collections"></nav>
   <div class="shop__grid" role="tabpanel"></div>
 </section>
@@ -1128,7 +1128,9 @@
   .shop__title--bold { font-weight: 700; font-size: 13px; letter-spacing: .3em; margin: 0 0 4px; }
   /* phone: SHOP THE LOOK on its own line, the categories on one row under it — the row sticks to the top while you scroll the products */
   @media (max-width: 899px) {
-    .shop .shop__lookrow { margin: 4px 0 6px; }
+    .shop .shop__lookrow { margin: 4px 0 14px; }
+    .shop .shop__lookrow .shop__tab--look { height: 40px; padding: 0 22px; border: 0; border-radius: 999px; background: rgba(255,255,255,.62); -webkit-backdrop-filter: blur(24px) saturate(1.9); backdrop-filter: blur(24px) saturate(1.9); box-shadow: 0 8px 28px rgba(0,0,0,.12), inset 0 0 0 .5px rgba(255,255,255,.75), 0 0 0 .5px rgba(0,0,0,.08); transition: background .2s, color .2s; }   /* SHOP THE LOOK: its own small pill */
+    .shop .shop__lookrow .shop__tab--look[aria-selected="true"] { background: #111; color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.22); }
     .shop .shop__pill { position: sticky; top: 8px; z-index: 30; display: flex; align-items: center; height: 46px; margin: 0 12px 16px; border-radius: 999px; background: rgba(255,255,255,.62); -webkit-backdrop-filter: blur(24px) saturate(1.9); backdrop-filter: blur(24px) saturate(1.9); box-shadow: 0 8px 28px rgba(0,0,0,.14), inset 0 0 0 .5px rgba(255,255,255,.75), 0 0 0 .5px rgba(0,0,0,.06); }
     .shop .shop__pill .shop__tabs { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 0; height: 46px; box-sizing: border-box; margin: 0; padding: 0 0 0 4px; border: 0; border-radius: 999px 0 0 999px; }
     .shop .shop__tabs .shop__tab { padding: 9px 12px; border: 0; border-radius: 999px; }
