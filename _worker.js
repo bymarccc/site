@@ -17,9 +17,13 @@ function checkOrigin(request) {
   // production. Setting ASSISTANT_ALLOWED_ORIGINS explicitly in Cloudflare still overrides this list.
   const allowed = configured.length ? configured : DEFAULT_ASSISTANT_ALLOWED_ORIGINS;
   const origin = request.headers.get("origin") || "";
+  if (!origin && isAppRequest(request)) return true;   // bymarccc iOS app: native requests carry no Origin (no browser, no CSRF)
   return allowed.includes(origin);
 }
 __name(checkOrigin, "checkOrigin");
+// bymarccc iOS app (React Native) — sends X-Bym-App: ios/<version>. Sessions travel as "Authorization: Bearer <token>".
+function isAppRequest(request) { return /^ios\/[0-9.]{1,20}$/.test(request.headers.get("x-bym-app") || ""); }
+__name(isAppRequest, "isAppRequest");
 var buckets = /* @__PURE__ */ new Map();
 function rateLimit(request, limitPerMin = Number(env("ASSISTANT_RATE_LIMIT_PER_MIN", "20"))) {
   const ip = (request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "anon").split(",")[0].trim();
@@ -267,6 +271,60 @@ async function checkoutCreate(request, origin) {
   }
 }
 __name(checkoutCreate, "checkoutCreate");
+// POST /api/app-pay — bymarccc iOS app checkout (Stripe PaymentSheet: card + Apple Pay).
+// Same prices, geo rules, account discounts, free shipping and store credit as checkoutCreate above; only the Stripe object
+// differs (a PaymentIntent the app confirms natively instead of a hosted Checkout page). The order then goes through
+// /api/order-submit with payment_intent_id → same e-mails, account record and GOATIFY forward as a site card order.
+//   { quote: true, items, customer }        → price breakdown only (no order number, nothing created)
+//   { items, customer, order_id }           → { clientSecret, publishableKey, order_id, ...breakdown }
+async function appPay(request) {
+  const g = stripeGuard(request);
+  if (g) return g;
+  if (!isAppRequest(request)) return json(403, { error: "Forbidden" });
+  const body = await readJson(request);
+  if (!body) return json(400, { error: "Invalid JSON" });
+  const items = Array.isArray(body.items) ? body.items.slice(0, 50) : [];
+  if (!items.length) return json(400, { error: "Empty bag" });
+  const c = body.customer || {};
+  const geoCC = geoCountryCode(c.country) || "RO";
+  const rule = geoRule(geoCC, await geoRates());
+  const currency = rule.cur.toLowerCase();
+  const actx = await acctCheckoutContext(request).catch(() => null);
+  const pct = actx ? actx.pct : 0;
+  let trusted = items;
+  try { trusted = await acctTrustedRon(items); } catch {}
+  const lines = trusted.map((it) => ({ unitMinor: Math.max(0, Math.round(acctApplyPct(geoPrice(it.price, rule), pct, rule.cur) * 100)), qty: Math.max(1, Math.min(99, Math.round(Number(it.quantity || 1)))) }));
+  const itemsTotalMinor = lines.reduce((a, l) => a + l.unitMinor * l.qty, 0);
+  const shipping = actx && actx.freeShip ? 0 : rule.ship;
+  const shippingMinor = shipping > 0 ? Math.round(shipping * 100) : 0;
+  const creditMinor = actx && actx.creditRon > 0 ? Math.min(itemsTotalMinor, Math.round(geoPrice(actx.creditRon, rule) * 100)) : 0;
+  const totalMinor = itemsTotalMinor + shippingMinor - creditMinor;
+  const breakdown = { currency: rule.cur, country: rule.cc, lines: lines.map((l) => ({ unit: l.unitMinor / 100, qty: l.qty })), subtotal: itemsTotalMinor / 100, shipping: shippingMinor / 100, credit: creditMinor / 100, total: totalMinor / 100, discountPct: pct, discountWhy: actx ? actx.why || "" : "", tier: actx ? actx.tierName : null };
+  if (body.quote) return json(200, breakdown);
+  if (totalMinor < 50) return json(400, { error: "Amount too small" });
+  for (const k of ["full_name", "email", "address", "city", "country"]) if (!String(c[k] || "").trim()) return json(400, { error: "Missing customer details" });
+  let order_id;
+  try { order_id = await assignOrderNumber(body.order_id, "card"); }
+  catch (e) { console.error("order number failed", String(e && e.message || e)); return json(503, { error: "ORDER_NUMBER_FAILED" }); }
+  const metadata = {
+    order_id, source: "ios-app",
+    full_name: String(c.full_name || "").slice(0, 200), phone: String(c.phone || "").slice(0, 60), address: String(c.address || "").slice(0, 200),
+    apartment: String(c.apartment || "").slice(0, 100), city: String(c.city || "").slice(0, 100), postal_code: String(c.postal_code || "").slice(0, 30),
+    country: String(c.country || "").slice(0, 60), billing: String(c.billing || "").slice(0, 60), items_summary: String(body.items_summary || "").slice(0, 480),
+    geo_cc: rule.cc, geo_cur: rule.cur, geo_fx: String(rule.fx), geo_ship: String(shipping)
+  };
+  if (actx) Object.assign(metadata, { acct_email: actx.email, acct_pct: String(pct), acct_why: actx.why || "", acct_voucher: actx.voucher ? String(actx.voucher) : "", acct_credit_minor: String(creditMinor), acct_credit_ron: String(creditMinor ? Math.min(actx.creditRon, Math.round(creditMinor / 100 / (rule.fx || 1) * 100) / 100) : 0) });
+  try {
+    const pi = await stripeRequest("payment_intents", {
+      method: "POST",
+      params: { amount: totalMinor, currency, automatic_payment_methods: { enabled: "true" }, receipt_email: String(c.email || "").slice(0, 200) || void 0, description: `bymarccc order ${order_id}`, metadata }
+    });
+    return json(200, { ...breakdown, order_id, clientSecret: pi.client_secret, paymentIntentId: pi.id, publishableKey: env("STRIPE_PUBLISHABLE_KEY") || null });
+  } catch (e) {
+    return json(e.status || 500, { error: "STRIPE_ERROR", detail: env("ASSISTANT_DEBUG") ? String(e.message) : void 0 });
+  }
+}
+__name(appPay, "appPay");
 // Order numbers — bymarccc-3120, bymarccc-3121, … assigned ONLY here, never in the browser. D1 binding ORDERS_DB.
 // The browser sends a temporary id (client_ref); the same client_ref always gets the same number (retries are safe).
 // n is an INTEGER PRIMARY KEY: SQLite gives each new row max(n)+1 inside the write, so two orders can never share a
@@ -1641,7 +1699,7 @@ function cleanOrder(b) {
     qty: Math.max(1, Math.min(99, Math.round(Number(it.quantity || it.qty || 1)))),
     price: Math.max(0, Math.round(Number(it.price || 0) * 100) / 100)
   })).filter((it) => it.name);
-  return { order_id: str(b.order_id, 60).replace(/[^A-Za-z0-9-]/g, ""), customer, items, lang: b.language === "ro" ? "ro" : "en", session_id: str(b.session_id, 200) };
+  return { order_id: str(b.order_id, 60).replace(/[^A-Za-z0-9-]/g, ""), customer, items, lang: b.language === "ro" ? "ro" : "en", session_id: str(b.session_id, 200), payment_intent_id: str(b.payment_intent_id, 200) };
 }
 __name(cleanOrder, "cleanOrder");
 function orderEmails(o, pay, totals, images = [], base = "https://bymarccc.com") {
@@ -1716,9 +1774,19 @@ async function orderSubmit(request) {
   let pay = "cod", totalOverride = null, acctInfo = { pct: 0, creditRon: 0, voucher: null, email: c.email };
   o.items = await acctTrustedRon(o.items.map((it, i) => ({ ...it, id: (b.items[i] && b.items[i].id) || "" }))).catch(() => o.items);
   o.items = o.items.map(({ id, ...it }) => it);
-  if (o.session_id) {
-    if (!/^cs_[a-zA-Z0-9_]+$/.test(o.session_id) || !env("STRIPE_SECRET_KEY")) return json(400, { error: "Invalid session" });
-    const data = await stripeRequest(`checkout/sessions/${encodeURIComponent(o.session_id)}`);
+  if (o.session_id || o.payment_intent_id) {
+    let data;
+    if (o.payment_intent_id) {
+      // iOS app (Stripe PaymentSheet): the PaymentIntent from /api/app-pay carries the same metadata as a Checkout Session
+      if (!/^pi_[a-zA-Z0-9_]+$/.test(o.payment_intent_id) || !env("STRIPE_SECRET_KEY")) return json(400, { error: "Invalid payment" });
+      const pi = await stripeRequest(`payment_intents/${encodeURIComponent(o.payment_intent_id)}`);
+      data = { payment_status: pi.status === "succeeded" ? "paid" : "unpaid", metadata: pi.metadata || {}, amount_total: pi.amount_received || pi.amount || 0, customer_email: pi.receipt_email || "" };
+      o.session_id = pi.id;   // GOATIFY payment reference
+      o.fromApp = true;
+    } else {
+      if (!/^cs_[a-zA-Z0-9_]+$/.test(o.session_id) || !env("STRIPE_SECRET_KEY")) return json(400, { error: "Invalid session" });
+      data = await stripeRequest(`checkout/sessions/${encodeURIComponent(o.session_id)}`);
+    }
     if (data.payment_status !== "paid" || (data.metadata?.order_id && data.metadata.order_id !== o.order_id)) return json(400, { error: "Not paid" });
     pay = "card"; totalOverride = (data.amount_total || 0) / 100;
     const md = data.metadata || {};
@@ -1775,7 +1843,7 @@ async function orderSubmit(request) {
   // GOATIFY: forward the accepted order (no-op unless GOATIFY_FORWARDING=on). Never changes the answer to the customer.
   try {
     const fo = { ...o, items: o.items.map((it, i) => ({ ...it, ...(chk.extras[i] || {}) })) };
-    const notes = [o.addToParent ? `ADD-ON to ${o.addToParent} — ship together in the same parcel.` : "", chk.notes, b.installments && pay === "card" ? "Pay in 2: first instalment paid by card, second charged automatically later." : ""].filter(Boolean).join("\n");
+    const notes = [o.fromApp ? "Placed in the bymarccc iOS app." : "", o.addToParent ? `ADD-ON to ${o.addToParent} — ship together in the same parcel.` : "", chk.notes, b.installments && pay === "card" ? "Pay in 2: first instalment paid by card, second charged automatically later." : ""].filter(Boolean).join("\n");
     const g = await forwardToGoatify(fo, { pay, totals: { sub: totals.sub, ship: totals.ship }, placedAt: new Date().toISOString(), notes, sourceUrl: CURRENT_ORIGIN ? CURRENT_ORIGIN + "/checkout.html" : void 0 }, (k) => env(k));
     if (!g.forwarded && g.reason !== "off") console.error("GOATIFY forward failed", JSON.stringify(g));
   } catch (e) { console.error("GOATIFY forward error", String(e && e.message || e)); }
@@ -2083,6 +2151,14 @@ async function geoInjectHtml(request, res, L) {
 }
 __name(geoInjectHtml, "geoInjectHtml");
 async function geoApi(request) {
+  // ?format=json — the same rules as data (iOS app): { visitor, rules: { CC: [name, currency, fx, shipping] } }
+  if (new URL(request.url).searchParams.get("format") === "json") {
+    const rates = await geoRates(), rules = {};
+    for (const k in GEO_COUNTRIES) { const g = geoRule(k, rates); rules[k] = [GEO_COUNTRIES[k][0], g.cur, +g.fx.toFixed(6), g.ship]; }
+    const w = geoRule("ZZ", rates); rules._ = ["", w.cur, +w.fx.toFixed(6), w.ship];
+    const visitor = String((request.cf && request.cf.country) || request.headers.get("cf-ipcountry") || "RO").toUpperCase();
+    return json(200, { visitor: rules[visitor] ? visitor : "_", rules });
+  }
   const js = await geoClientScript(request);
   return new Response(js, { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "private, no-cache" } });
 }
@@ -2499,10 +2575,16 @@ var acctNow = () => new Date().toISOString();
 var acctRand = (n) => { const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; const r = crypto.getRandomValues(new Uint8Array(n)); return [...r].map((x) => a[x % a.length]).join(""); };
 async function acctSha(s) { const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)); return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join(""); }
 __name(acctSha, "acctSha");
+// session token: the site's HttpOnly cookie, or (iOS app only) "Authorization: Bearer <token>"
+function acctRequestToken(request) {
+  if (isAppRequest(request)) { const m = /^Bearer\s+([A-Za-z0-9_-]{24,})$/.exec(request.headers.get("authorization") || ""); if (m) return m[1]; }
+  return readCookie(request, ACCT_COOKIE);
+}
+__name(acctRequestToken, "acctRequestToken");
 var acctCookie = (token, maxAge) => `${ACCT_COOKIE}=${token}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
 async function acctSessionEmail(request) {
   const db = acctDb(); if (!db) return null;
-  const token = readCookie(request, ACCT_COOKIE);
+  const token = acctRequestToken(request);
   if (!token || !/^[A-Za-z0-9_-]{24,}$/.test(token)) return null;
   try { await acctInit(); } catch { return null; }
   const r = await db.prepare("SELECT email, expires FROM acct_sessions WHERE token = ?1").bind(await acctSha(token)).first();
@@ -2711,10 +2793,11 @@ async function accountApi(request) {
     const token = b64(crypto.getRandomValues(new Uint8Array(30))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     await db.prepare("INSERT INTO acct_sessions (token, email, expires) VALUES (?1,?2,?3)").bind(await acctSha(token), email, Math.floor(Date.now() / 1e3) + ACCT_TTL).run();
     await db.prepare("DELETE FROM acct_sessions WHERE expires < ?1").bind(Math.floor(Date.now() / 1e3)).run().catch(() => {});
+    if (isAppRequest(request)) return json(200, { ok: true, profile: await acctProfile(db, email), token });
     return json(200, { ok: true, profile: await acctProfile(db, email) }, { "Set-Cookie": acctCookie(token, ACCT_TTL) });
   }
   if (action === "logout") {
-    const token = readCookie(request, ACCT_COOKIE);
+    const token = acctRequestToken(request);
     if (token) await db.prepare("DELETE FROM acct_sessions WHERE token = ?1").bind(await acctSha(token)).run().catch(() => {});
     return json(200, { ok: true }, { "Set-Cookie": acctCookie("", 0) });
   }
@@ -2913,6 +2996,7 @@ var ROUTES = {
   "members-me": membersMe,
   "checkout-create": checkoutCreate,
   "checkout-session": checkoutSession,
+  "app-pay": appPay,
   "geocode": geocodeAddress,
   "order-submit": orderSubmit,
   "goatify-mail": goatifyMail,
@@ -2961,7 +3045,7 @@ async function onRequest(context) {
   const handler = ROUTES[m[1]];
   if (!handler) return json(404, { error: "Unknown function" });
   setEnv(env2);
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": request.headers.get("origin") || "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type" } });
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": request.headers.get("origin") || "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Bym-App" } });
   if (m[1] === "health") return json(200, { ok: true });
   try {
     return await handler(request, url.origin);
