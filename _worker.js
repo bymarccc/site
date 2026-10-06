@@ -1631,6 +1631,38 @@ async function goatifyMail(request) {
   return json(200, { ok: true, id: r && r.id || null });
 }
 __name(goatifyMail, "goatifyMail");
+// POST /api/goatify-refund — GOATIFY asks for a card refund when a returned parcel is received (the Stripe key stays
+// here). Signed like /api/goatify-mail. Body: { reference: "cs_…" (Checkout Session sent with the order), amount (major
+// units, order currency), currency, idempotencyKey }. Same idempotencyKey → Stripe never refunds twice.
+async function goatifyRefund(request) {
+  if (request.method !== "POST") return json(405, { error: "Method not allowed" });
+  const secret = env("GOATIFY_SITE_SECRET");
+  if (!secret || !env("STRIPE_SECRET_KEY")) return json(503, { ok: false, error: "NOT_CONFIGURED" });
+  const raw = await request.text();
+  if (raw.length > 5000) return json(413, { ok: false, error: "Too large" });
+  const ts = request.headers.get("x-goatify-timestamp") || "", sig = String(request.headers.get("x-goatify-signature") || "").toLowerCase();
+  if (!/^\d{9,12}$/.test(ts) || Math.abs(Date.now() / 1e3 - Number(ts)) > 300) return json(401, { ok: false, error: "STALE" });
+  const want = await gHmacHex(secret, `${ts}.${raw}`);
+  let diff = want.length ^ sig.length; for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ (sig.charCodeAt(i) || 0);
+  if (diff) return json(401, { ok: false, error: "BAD_SIGNATURE" });
+  let b; try { b = JSON.parse(raw); } catch { return json(400, { ok: false, error: "Invalid JSON" }); }
+  const ref = String(b.reference || ""), key = String(b.idempotencyKey || "");
+  if (!/^cs_[A-Za-z0-9_]+$/.test(ref) || !/^[A-Za-z0-9._:-]{8,128}$/.test(key)) return json(400, { ok: false, error: "BAD_REQUEST" });
+  try {
+    const session = await stripeRequest(`checkout/sessions/${encodeURIComponent(ref)}`);
+    const pi = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+    if (!pi) return json(409, { ok: false, error: "NO_PAYMENT_ON_SESSION" });
+    if (b.currency && String(session.currency || "").toUpperCase() !== String(b.currency).toUpperCase()) return json(409, { ok: false, error: "CURRENCY_MISMATCH" });
+    const minor = Math.round(Number(b.amount) * 100);
+    if (!(minor > 0) || minor > (session.amount_total || 0)) return json(400, { ok: false, error: "BAD_AMOUNT" });
+    const refund = await stripeRequest("refunds", { method: "POST", params: { payment_intent: pi, amount: minor, metadata: { source: "goatify-return", order: String(b.order || "") } }, idempotencyKey: key });
+    return json(200, { ok: true, refundId: refund.id, status: refund.status });
+  } catch (e) {
+    console.error("goatify refund failed", ref, String(e && e.message || e));
+    return json(e && e.status >= 400 && e.status < 500 ? 409 : 502, { ok: false, error: String(e && e.message || "STRIPE_ERROR").slice(0, 160) });
+  }
+}
+__name(goatifyRefund, "goatifyRefund");
 function cleanOrder(b) {
   const str = (v, n) => String(v ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
   const c = b.customer || {};
@@ -2923,6 +2955,7 @@ var ROUTES = {
   "geocode": geocodeAddress,
   "order-submit": orderSubmit,
   "goatify-mail": goatifyMail,
+  "goatify-refund": goatifyRefund,
   "cron-charge-installments": cronChargeInstallments,
   "geo": geoApi,
   "account": accountApi,
