@@ -3006,6 +3006,7 @@
     miniNote.textContent = '';
     miniFill.style.width = '0%'; miniCur.textContent = '0:00'; miniDur.textContent = '0:00';
     audio.src = t.src;
+    if (t.start > 0) audio.addEventListener('loadedmetadata', () => { if (miniItem === t && audio.currentTime < t.start) { try { audio.currentTime = t.start; } catch {} } }, { once: true });   // `start`: skip the song's first seconds (intro trim)
     miniShow();
     if (autoplay) {
       if (player && playing) { try { player.pauseVideo(); } catch {} }   // one thing at a time
@@ -3078,12 +3079,12 @@
     miniFill.style.width = p + '%'; miniCur.textContent = fmt(audio.currentTime);
     miniBar.setAttribute('aria-valuenow', Math.round(p));
   });
-  /* DJ mix: from the 3rd song on, the last ~12 s of a track keep playing on a "ghost" player and fade out
+  /* DJ mix: the last ~7 s of a track keep playing on a "ghost" player and fade out
      while the next track starts underneath and fades in. Only while the page is on screen (when the phone is
      locked the normal track change is used). The outgoing tail fades through Web Audio (iPhone ignores
      element.volume); the incoming track fades in where the browser allows volume changes. */
   let mixCount = 0, mixing = false, mixCtx = null, mixGhost = null, mixFailSrc = '', mixSwitchAt = 0;
-  const MIX_S = 12;
+  const MIX_S = 7;   // last 7 s of a song blend into the first 7 s of the next
   function mixStop() { if (mixGhost) { try { mixGhost.pause(); mixGhost.removeAttribute('src'); mixGhost.load(); } catch {} } mixGhost = null; mixing = false; try { audio.volume = 1; } catch {} }
   function mixStart() {
     mixing = true;
@@ -3113,7 +3114,7 @@
     g.src = src;
   }
   audio.addEventListener('timeupdate', () => {
-    if (mixing || repeat || document.hidden || audio.paused || miniQueue.length < 2 || mixCount < 2) return;
+    if (mixing || repeat || document.hidden || audio.paused || miniQueue.length < 2) return;   // every song that plays to its end mixes into the next (a tap on another song still starts it clean)
     if (stopAtEnd && mi >= miniQueue.length - 1) return;
     const d = audio.duration, left = d - audio.currentTime;
     if (d > 45 && left <= MIX_S && left > 2 && (audio.currentSrc || audio.src) !== mixFailSrc) mixStart();
