@@ -2890,14 +2890,14 @@ async function accountApi(request) {
       if (!lines.length) { await db.prepare("DELETE FROM acct_ytm WHERE email = ?1").bind(email).run(); return json(200, { ytm: null }); }
       const urls = [];
       for (const raw of lines) {
-        let u; try { u = new URL(raw.slice(0, 500)); } catch { return json(400, { error: "Paste the full YouTube Music links (one per line)." }); }
-        if (!/(^|\.)(youtube\.com|youtu\.be)$/i.test(u.hostname) || u.protocol !== "https:") return json(400, { error: "Only YouTube Music links, please." });
+        let u; try { u = new URL(raw.slice(0, 500)); } catch { return json(400, { error: "Paste the full playlist links (one per line)." }); }
+        if (!/(^|\.)(youtube\.com|youtu\.be|music\.apple\.com|itunes\.apple\.com|spotify\.com|spotify\.link)$/i.test(u.hostname) || u.protocol !== "https:") return json(400, { error: "Only Apple Music, Spotify or YouTube Music links, please." });
         urls.push(u.href);
       }
       const joined = urls.join("\n");
       await db.prepare("INSERT INTO acct_ytm (email, url, status, updated_at) VALUES (?1,?2,'pending',?3) ON CONFLICT(email) DO UPDATE SET url = ?2, status = 'pending', updated_at = ?3").bind(email, joined, acctNow()).run();
       if (env("RESEND_API_KEY") && env("ORDER_EMAIL_FROM") && env("ORDER_NOTIFY_TO")) {
-        try { await resendSend({ from: env("ORDER_EMAIL_FROM"), to: env("ORDER_NOTIFY_TO").split(",").map((x) => x.trim()).filter(Boolean), reply_to: email, subject: `YouTube Music playlist — ${email}`, text: `${email} added YouTube Music links to connect:\n\n${joined}` }); } catch {}
+        try { await resendSend({ from: env("ORDER_EMAIL_FROM"), to: env("ORDER_NOTIFY_TO").split(",").map((x) => x.trim()).filter(Boolean), reply_to: email, subject: `Music playlist to add — ${email}`, text: `${email} added playlist links to add:\n\n${joined}` }); } catch {}
       }
     }
     const r = await db.prepare("SELECT url, status, updated_at FROM acct_ytm WHERE email = ?1").bind(email).first();
@@ -2956,7 +2956,7 @@ async function accountAdmin(request) {
     const out = [];
     for (const r of rows) {
       const sp = await acctSpend(db, r.email), tf = acctTierFor(sp.spend, sp.override), lim = YTM_LIMIT[tf.tier.id];
-      out.push({ email: r.email, name: r.name || "", phone: r.phone || "", tier: tf.tier.id, tierName: tf.tier.name, songLimit: lim === undefined ? 25 : lim, links: String(r.url || "").split("\n").filter(Boolean), status: r.status, requestedAt: r.updated_at, dueBy: new Date(new Date(r.updated_at).getTime() + 864e5).toISOString() });
+      out.push({ email: r.email, name: r.name || "", phone: r.phone || "", tier: tf.tier.id, tierName: tf.tier.name, songLimit: lim === undefined ? 25 : lim, links: String(r.url || "").split("\n").filter(Boolean).map((u) => ({ url: u, service: /spotify/i.test(u) ? "spotify" : /apple\.com/i.test(u) ? "apple" : "youtube" })), status: r.status, requestedAt: r.updated_at, dueBy: new Date(new Date(r.updated_at).getTime() + 864e5).toISOString() });
     }
     return json(200, { requests: out, pending: out.filter((x) => x.status === "pending").length, limits: YTM_LIMIT });
   }
