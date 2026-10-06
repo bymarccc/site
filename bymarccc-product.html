@@ -533,15 +533,20 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-designs .pdp-size { width: auto; min-width: 0; white-space: nowrap; height: 24px; padding: 0 10px; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; }
 .pdp-designs[hidden] { display: none; }
 /* BABY TOP family: the colours as small photos (SSENSE-style strip); each opens that colour, same design kept */
-.pdp-family { margin: 0 -16px 14px; }
+.pdp-family { margin: -14px -16px 10px; }
 .pdp-family[hidden] { display: none; }
-.pdp-family__label { display: flex; justify-content: center; gap: 6px; margin: 10px 0 8px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: #6f6f6f; }
+.pdp-family__label { display: flex; justify-content: center; gap: 6px; margin: 4px 0 0; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #6f6f6f; }
 .pdp-family__label b { color: #111; font-weight: 500; }
-.pdp-family__row { position: relative; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; padding: 0 calc(50% - 21px) 4px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.pdp-family__row { position: relative; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; padding: 0 calc(50% - 20px) 0; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
 .pdp-family__row::-webkit-scrollbar { display: none; }
-.pdp-family__row a { flex: 0 0 auto; width: 42px; display: block; text-decoration: none; padding-bottom: 5px; border-bottom: 1.5px solid transparent; scroll-snap-align: center; transition: opacity .2s; opacity: .55; }
-.pdp-family__row a img { display: block; width: 42px; height: 60px; object-fit: cover; object-position: 50% 30%; background: #f0f0f0; pointer-events: none; }
-.pdp-family__row a[aria-current="true"] { border-bottom-color: #111; opacity: 1; }
+.pdp-family__row > button { flex: 0 0 auto; width: 40px; display: block; padding: 0 0 4px; margin: 0; border: 0; border-radius: 0; background: none; border-bottom: 1.5px solid transparent; scroll-snap-align: center; transition: opacity .2s; opacity: .55; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pdp-family__row > button img { display: block; width: 40px; height: 56px; object-fit: cover; object-position: 50% 30%; background: #f0f0f0; pointer-events: none; }
+.pdp-family__row > button[aria-current="true"] { border-bottom-color: #111; opacity: 1; }
+/* baby tops: sizes sit in the middle of the second design row (LOGO · HOT GIRLS · XS-S · M-L · YACHT · ART), a bit bigger than the design pills */
+.pdp-designs.pdp-designs--mix { gap: 7px; margin-top: 6px; }
+.pdp-designs .pdp-drow { display: flex; justify-content: center; flex-wrap: nowrap; gap: 4px; width: 100%; align-items: center; }
+.pdp-designs--mix .pdp-size[data-d] { height: 24px; padding: 0 8px; font-size: 10px; letter-spacing: .03em; }
+.pdp-designs .pdp-size.pdp-size--mid { height: 28px; min-width: 0; padding: 0 10px; font-size: 11.5px; letter-spacing: .03em; border-radius: 8px; text-transform: none; margin: 0 2px; }
 @media (min-width: 900px) { .pdp-family { margin: 0 0 14px; } }
 
 .pdp-sizes[hidden], .pdp-swatches[hidden] { display: none; }
@@ -772,7 +777,7 @@ body.is-custom-bag-page #gallery { display: none; }
       <div class="pdp-label" hidden><span>COLOUR</span><span id="colourName">Grey</span></div>
       <div class="pdp-swatches" id="swatches" role="radiogroup" aria-label="Colour" hidden></div>
 
-      <div class="pdp-family" id="family" hidden><p class="pdp-family__label"><span>COLOUR</span><b id="familyName"></b></p><div class="pdp-family__row" id="familyRow"></div></div>
+      <div class="pdp-family" id="family" hidden><div class="pdp-family__row" id="familyRow"></div><p class="pdp-family__label"><span>COLOUR</span><b id="familyName"></b></p></div>
 
       <div class="pdp-label" id="designLabel" hidden><span>DESIGN</span><span id="designName">Select a design</span></div>
       <div class="pdp-sizes pdp-designs" id="designs" role="radiogroup" aria-label="Design" hidden></div>
@@ -1275,7 +1280,7 @@ body.is-custom-bag-page #gallery { display: none; }
   if (DESIGNS.length) {
     $('designLabel').hidden = false; designsEl.hidden = false;
     DESIGNS.forEach(dname => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-size'; b.setAttribute('role', 'radio'); b.dataset.d = dname; b.textContent = dname; b.addEventListener('click', () => { state.design = dname; emit(); const explicitIdx = designImageIndex(dname); if (explicitIdx !== null) goTo(explicitIdx); else if (PRODUCT.imageDesigns) goTo(DESIGNS.indexOf(dname)); }); designsEl.appendChild(b); });
-    state.listeners.add(() => { designsEl.querySelectorAll('.pdp-size').forEach(b => b.setAttribute('aria-checked', String(b.dataset.d === state.design))); $('designName').textContent = state.design || 'Select a design'; });
+    state.listeners.add(() => { designsEl.querySelectorAll('.pdp-size[data-d]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.d === state.design))); $('designName').textContent = state.design || 'Select a design'; });
   }
   /* BABY TOP family: SSENSE-style colour strip under the photo. Swiping it changes the big photo live (with a light tick),
      and when the finger stops the page becomes that colour — replacing the history entry, so Back still goes straight home. */
@@ -1288,13 +1293,22 @@ body.is-custom-bag-page #gallery { display: none; }
     BABY_FAMILY.forEach(([k, name]) => {
       const fp = CATALOG[k]; if (!fp) return;
       const g = (fp.gallery || [])[0]; const src = g && (g.src || g); if (!src) return;
-      const a = document.createElement('a'); a.href = 'bymarccc-product.html?p=' + k; a.setAttribute('aria-label', name); a.setAttribute('aria-current', String(k === KEY)); a.dataset.k = k; a.dataset.n = name;
+      const a = document.createElement('button'); a.type = 'button'; a.setAttribute('aria-label', name); a.setAttribute('aria-current', String(k === KEY)); a.dataset.k = k; a.dataset.n = name;
       a.innerHTML = `<img src="${src}" alt="" decoding="async">`;
       a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); center(a, true); });
       row.appendChild(a);
       if (k === KEY) $('familyName').textContent = name;
     });
     $('family').hidden = false;
+    // sizes in the middle of the 2nd design row
+    const dBtns = [...designsEl.querySelectorAll('.pdp-size[data-d]')], sBtns = [...sizesEl.querySelectorAll('.pdp-size[data-s]')];
+    if (dBtns.length >= 4 && sBtns.length && sBtns.length <= 3 && !sizesEl.hidden) {
+      const r1 = document.createElement('div'), r2 = document.createElement('div'); r1.className = r2.className = 'pdp-drow';
+      const tail = dBtns.slice(-4); r1.append(...dBtns.slice(0, -4));
+      sBtns.forEach(b => b.classList.add('pdp-size--mid'));
+      r2.append(tail[0], tail[1], ...sBtns, tail[2], tail[3]);
+      designsEl.classList.add('pdp-designs--mix'); designsEl.append(r1, r2); sizesEl.hidden = true; if (sizesEl.previousElementSibling) sizesEl.previousElementSibling.hidden = true;
+    } else if (!dBtns.length && sBtns.length) { /* white: no designs — sizes stay as they are */ }
     const items = [...row.children];
     const center = (a, smooth) => { const rr = row.getBoundingClientRect(), ar = a.getBoundingClientRect(); row.scrollTo({ left: row.scrollLeft + (ar.left + ar.width / 2) - (rr.left + rr.width / 2), behavior: smooth ? 'smooth' : 'auto' }); };
     const cur0 = items.find(a => a.dataset.k === KEY);
@@ -1328,7 +1342,7 @@ body.is-custom-bag-page #gallery { display: none; }
     }, { passive: true });
     items.forEach(a => { const fp = CATALOG[a.dataset.k]; const im = new Image(); im.src = photoOf(fp, state.design) || ''; });   // warm the photos
     const want = (new URLSearchParams(location.search).get('d') || '').toLowerCase();
-    if (want && DESIGNS.length) { const b = [...designsEl.querySelectorAll('.pdp-size')].find(x => x.dataset.d.toLowerCase() === want); if (b) setTimeout(() => b.click(), 0); }
+    if (want && DESIGNS.length) { const b = [...designsEl.querySelectorAll('.pdp-size[data-d]')].find(x => x.dataset.d.toLowerCase() === want); if (b) setTimeout(() => b.click(), 0); }
   })();
   const addBtn = $('addBtn'), barMsg = $('barMsg');
   function renderSelection() {
@@ -1336,7 +1350,7 @@ body.is-custom-bag-page #gallery { display: none; }
     $('colourName').textContent = c.name;
     swatches.querySelectorAll('.pdp-swatch').forEach(b => b.setAttribute('aria-checked', String(b.dataset.c === state.colour)));
     if (state.size && !isAvailable(state.colour, state.size)) state.size = null;
-    sizesEl.querySelectorAll('.pdp-size').forEach(b => { b.disabled = !isAvailable(state.colour, b.dataset.s); b.setAttribute('aria-checked', String(b.dataset.s === state.size)); });
+    document.querySelectorAll('.pdp-size[data-s]').forEach(b => { b.disabled = !isAvailable(state.colour, b.dataset.s); b.setAttribute('aria-checked', String(b.dataset.s === state.size)); });
     $('sizeName').textContent = state.size ? sizeLabel(state.size) : 'Select a size';
     if (PRODUCT.soldOut) { addBtn.textContent = 'SOLD OUT'; addBtn.disabled = true; addBtn.classList.add('is-soldout'); }
     else { addBtn.textContent = 'ADD TO BAG'; addBtn.disabled = false; addBtn.classList.remove('is-soldout'); }
