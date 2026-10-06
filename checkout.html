@@ -118,6 +118,19 @@
   .co-discount button.is-active{ background:var(--ink); color:#fff; cursor:pointer; }
   .co-totals{ font-size:13.5px; }
   .co-totals div{ display:flex; justify-content:space-between; padding:7px 0; color:#4a4a48; }
+  .co-totals div[hidden]{ display:none; }   /* Member −0% / Credit rows only when they apply */
+  /* bag on checkout = the cart drawer look: big photos, X on the photo, name / variant / price under it */
+  .co-items.co-items--cart{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px 8px; padding-bottom:18px; border-bottom:1px solid var(--line); }
+  .co-items--cart.is-one{ grid-template-columns:minmax(0,1fr); padding-left:12%; padding-right:12%; }
+  .co-cl__img{ position:relative; aspect-ratio:4/5; background:#f0f0f0; overflow:hidden; }
+  .co-cl__img img{ width:100%; height:100%; object-fit:contain; display:block; }
+  .co-cl__img span{ position:absolute; top:8px; left:8px; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--ink); color:#fff; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; }
+  .co-cl__rm{ position:absolute; right:8px; bottom:8px; width:34px; height:34px; padding:0; display:grid; place-items:center; border:0; background:#fff; color:#111; border-radius:2px; cursor:pointer; }
+  .co-cl__rm svg{ width:16px; height:16px; }
+  .co-cl__info{ padding:10px 6px 0; }
+  .co-cl__name{ display:block; font-size:12.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
+  .co-cl__var{ display:block; font-size:12px; color:var(--sub); margin-top:2px; }
+  .co-cl__price{ display:block; font-size:12.5px; font-weight:600; letter-spacing:.04em; margin-top:3px; }
   .co-totals .total{ border-top:1px solid var(--line); margin-top:4px; padding-top:14px; font-size:15px; font-weight:600; color:var(--ink); }
 
   /* ---------- thank you ---------- */
@@ -307,7 +320,6 @@
     <div class="co-totals">
       <div><span data-i18n="subtotal">Subtotal</span><span data-co-subtotal>0 RON</span></div>
       <div id="coDiscRow" hidden><span data-k>Member</span><span data-v>0</span></div>
-      <div id="coCreditRow" hidden><span>Credit</span><span data-v>0</span></div>
       <div><span data-i18n="shipping">Shipping</span><span data-co-shipping>20 RON</span></div>
       <div class="total"><span data-i18n="total">Total</span><span data-co-total>0 RON</span></div>
     </div>
@@ -544,6 +556,11 @@
 
   function itemHtml(it, editable){
     var q = it.quantity || 1;
+    if (editable) return '<li class="co-cl">' +
+      '<div class="co-cl__img">' + (it.image ? '<img src="' + esc(it.image) + '" alt="">' : '') + (q > 1 ? '<span>' + q + '</span>' : '') +
+        '<button type="button" class="co-cl__rm" data-rm="' + esc(it.id) + '" aria-label="' + t('remove') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+      '<div class="co-cl__info"><span class="co-cl__name">' + esc(it.name) + '</span>' + (it.variant ? '<span class="co-cl__var">' + esc(it.variant) + '</span>' : '') + '<span class="co-cl__price">' + fmt(lp(it.price || 0) * q) + '</span></div>' +
+    '</li>';
     return '<li class="co-item">' +
       '<div class="co-item__thumb">' + (it.image ? '<img src="' + esc(it.image) + '" alt="">' : '<img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">') + (q > 1 ? '<span>' + q + '</span>' : '') + '</div>' +
       '<div class="co-item__info"><span class="co-item__name">' + esc(it.name) + '</span>' + (it.variant ? '<span class="co-item__var">' + esc(it.variant) + '</span>' : '') +
@@ -552,7 +569,7 @@
     '</li>';
   }
   function renderBag(){
-    var list = $('coItems'); if (list) list.innerHTML = BAG.items.map(function(it){ return itemHtml(it, true); }).join('');
+    var list = $('coItems'); if (list) { list.classList.add('co-items--cart'); list.classList.toggle('is-one', BAG.items.length === 1); } if (list) list.innerHTML = BAG.items.map(function(it){ return itemHtml(it, true); }).join('');
     $('coEmpty').hidden = BAG.items.length > 0;
     document.querySelectorAll('[data-co-subtotal]').forEach(function(el){ el.textContent = fmt(BAG.subtotal()); });
     var dr = document.getElementById('coDiscRow'), cr = document.getElementById('coCreditRow'), dAmt = BAG.subtotal() - discSubtotal(), cAmt = creditFor();

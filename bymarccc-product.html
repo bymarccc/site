@@ -2173,7 +2173,7 @@ body.is-custom-bag-page #gallery { display: none; }
     cart.classList.remove('is-in'); backdrop.classList.remove('is-in'); cart.removeEventListener('keydown', cartTrap);
     setTimeout(() => { cart.hidden = true; backdrop.hidden = true; unlock(); setBar(true); (cartOpener || $('pdpBag')).focus({ preventScroll: true }); }, reduced.matches ? 0 : 450);
   }
-  $('pdpBag').addEventListener('click', openCart);
+  $('pdpBag').addEventListener('click', () => { const a = document.createElement('a'); a.href = 'checkout.html'; document.body.appendChild(a); a.click(); a.remove(); });   // bag icon → straight to checkout (no drawer, no extra CHECKOUT tap)
   $('cartClose').addEventListener('click', closeCart);
   backdrop.addEventListener('click', () => { if (!cart.hidden && qa.hidden) closeCart(); });
   document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!qa.hidden) closeQa(); else if (!cart.hidden) closeCart(); });
