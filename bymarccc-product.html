@@ -545,8 +545,14 @@ body.is-custom-bag-page #gallery { display: none; }
 /* baby tops: sizes sit in the middle of the second design row (LOGO · HOT GIRLS · XS-S · M-L · YACHT · ART), a bit bigger than the design pills */
 .pdp-designs.pdp-designs--mix { gap: 7px; margin-top: 6px; }
 .pdp-designs .pdp-drow { display: flex; justify-content: center; flex-wrap: nowrap; gap: 4px; width: 100%; align-items: center; }
-.pdp-designs--mix .pdp-size[data-d] { height: 24px; padding: 0 8px; font-size: 10px; letter-spacing: .03em; }
-.pdp-designs .pdp-size.pdp-size--mid { height: 28px; min-width: 0; padding: 0 10px; font-size: 11.5px; letter-spacing: .03em; border-radius: 8px; text-transform: none; margin: 0 2px; }
+.pdp-designs--mix .pdp-size[data-d] { height: 24px; padding: 0 7px; font-size: 10px; letter-spacing: .02em; }
+.pdp-designs .pdp-drow--sizes { display: grid; grid-template-columns: 1fr auto 1fr; gap: 4px; }
+.pdp-drow__l, .pdp-drow__m, .pdp-drow__r { display: flex; gap: 4px; align-items: center; }
+.pdp-drow__l { justify-content: flex-end; } .pdp-drow__r { justify-content: flex-start; } .pdp-drow__m { gap: 5px; margin: 0 3px; }
+.pdp-designs .pdp-size.pdp-size--mid { height: 32px; min-width: 0; padding: 0 13px; font-size: 13px; font-weight: 500; letter-spacing: .03em; border-radius: 9px; text-transform: none; border-color: #111; }
+.pdp-designs .pdp-size.pdp-size--mid[aria-checked="true"] { background: #111; color: #fff; }
+.pdp-sizemsg { width: 100%; margin: 2px 0 0; text-align: center; font-size: 12px; color: #c8102e; min-height: 0; }
+.pdp-sizemsg:empty { display: none; }
 @media (min-width: 900px) { .pdp-family { margin: 0 0 14px; } }
 
 .pdp-sizes[hidden], .pdp-swatches[hidden] { display: none; }
@@ -951,7 +957,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=224607mb"></script>
+<script src="/assets/catalog.js?v=288218iv"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1305,9 +1311,15 @@ body.is-custom-bag-page #gallery { display: none; }
     if (dBtns.length >= 4 && sBtns.length && sBtns.length <= 3 && !sizesEl.hidden) {
       const r1 = document.createElement('div'), r2 = document.createElement('div'); r1.className = r2.className = 'pdp-drow';
       const tail = dBtns.slice(-4); r1.append(...dBtns.slice(0, -4));
+      // ART on the far left, LOGO on the far right, the sizes exactly in the middle
+      const iA = tail.findIndex(b => /^art$/i.test(b.dataset.d)); if (iA > 0) tail.unshift(tail.splice(iA, 1)[0]);
+      const iL = tail.findIndex(b => /^logo$/i.test(b.dataset.d)); if (iL > -1 && iL < tail.length - 1) tail.push(tail.splice(iL, 1)[0]);
       sBtns.forEach(b => b.classList.add('pdp-size--mid'));
-      r2.append(tail[0], tail[1], ...sBtns, tail[2], tail[3]);
-      designsEl.classList.add('pdp-designs--mix'); designsEl.append(r1, r2); sizesEl.hidden = true; if (sizesEl.previousElementSibling) sizesEl.previousElementSibling.hidden = true;
+      const gl = document.createElement('span'), gm = document.createElement('span'), gr = document.createElement('span'); gl.className = 'pdp-drow__l'; gm.className = 'pdp-drow__m'; gr.className = 'pdp-drow__r';
+      gl.append(tail[0], tail[1]); gm.append(...sBtns); gr.append(tail[2], tail[3]); r2.classList.add('pdp-drow--sizes'); r2.append(gl, gm, gr);
+      const sm = document.createElement('p'); sm.className = 'pdp-sizemsg'; sm.id = 'sizeMsg'; sm.setAttribute('role', 'alert');
+      state.listeners.add(() => { if ((state.size && /size/.test(sm.textContent)) || (state.design && /design/.test(sm.textContent))) sm.textContent = ''; });
+      designsEl.classList.add('pdp-designs--mix'); designsEl.append(r1, r2, sm); sizesEl.hidden = true; if (sizesEl.previousElementSibling) sizesEl.previousElementSibling.hidden = true;
     } else if (!dBtns.length && sBtns.length) { /* white: no designs — sizes stay as they are */ }
     const items = [...row.children];
     const center = (a, smooth) => { const rr = row.getBoundingClientRect(), ar = a.getBoundingClientRect(); row.scrollTo({ left: row.scrollLeft + (ar.left + ar.width / 2) - (rr.left + rr.width / 2), behavior: smooth ? 'smooth' : 'auto' }); };
@@ -1925,8 +1937,10 @@ body.is-custom-bag-page #gallery { display: none; }
       hwOpen(hw.first); hw.first.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' });
       return false;
     }
+    if (DESIGNS.length && !state.design && $('sizeMsg')) { msg.textContent = ''; const sm = $('sizeMsg'); sm.textContent = 'Please select a design.'; sm.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }
     if (DESIGNS.length && !state.design) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a design.'; designsEl.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }
     if (window.__bymLookVariant && !state.size) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a size for each piece.'; const lb = $('lookSizes'); lb.classList.add('is-err'); lb.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }
+    if (!state.size && $('sizeMsg')) { msg.textContent = ''; const sm = $('sizeMsg'); sm.textContent = 'Please select a size.'; sm.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }   // baby tops: the hint sits right under XS-S / M-L
     if (!state.size) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a size.'; $('sizes').scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); setTimeout(() => $('sizes').querySelector('.pdp-size:not([disabled])')?.focus({ preventScroll: true }), 400); return false; }
     const line = { id: variantId(), name: PRODUCT.title, variant: [state.colour === 'default' ? '' : colourOf(state.colour).name, PRODUCT.noSize ? '' : sizeLabel(state.size), state.design || ''].filter(Boolean).join(' · '), image: (PRODUCT.imageColours ? GALLERY[COLOURS.findIndex(x => x.id === state.colour)] || GALLERY[0] : GALLERY[0]).src, price: UNIT_PRICE, currency: PRODUCT.currency, quantity: 1, key: KEY };
     if (window.__bymLookVariant) line.variant = window.__bymLookVariant();
@@ -2873,7 +2887,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     </button>
   </div>
   <div class="vp__audio" id="vpAudio">
-    <div class="vp__atitle" id="vpATitle">—</div><div class="vp__aartist" id="vpAArtist"></div>
+    <img class="vp__aart" id="vpAArt" alt="" decoding="async"><div class="vp__atitle" id="vpATitle">—</div><div class="vp__aartist" id="vpAArtist"></div>
     <button class="vp__ax" id="vpAClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <div class="vp__scrub" id="vpScrub" role="slider" aria-label="Seek"><i id="vpScrubFill"></i></div>
     <div class="vp__atimes">
@@ -3381,6 +3395,16 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const pipLeft = () => { if (!pipOwn || inPiP()) return; pipOwn = false; applySound(); if (!video.paused) sndPlay(); };
     video.addEventListener('webkitpresentationmodechanged', () => setTimeout(pipLeft, 50));
     video.addEventListener('leavepictureinpicture', () => setTimeout(pipLeft, 50));
+    // PiP's "back" button (top-right) must land in the small mini player, never in the huge native fullscreen (low-res there)
+    let pmPrev = video.webkitPresentationMode || 'inline', pipLeftAt = 0;
+    video.addEventListener('leavepictureinpicture', () => { pipLeftAt = Date.now(); });
+    video.addEventListener('webkitpresentationmodechanged', () => {
+      const m = video.webkitPresentationMode;
+      if (pmPrev === 'picture-in-picture' && m !== 'picture-in-picture') pipLeftAt = Date.now();
+      if (m === 'fullscreen' && Date.now() - pipLeftAt < 1500) setTimeout(() => { try { video.webkitSetPresentationMode('inline'); } catch {} try { if (video.webkitDisplayingFullscreen && video.webkitExitFullscreen) video.webkitExitFullscreen(); } catch {} }, 0);
+      pmPrev = m;
+    });
+    document.addEventListener('fullscreenchange', () => { if (document.fullscreenElement === video && Date.now() - pipLeftAt < 1500) document.exitFullscreen?.().catch(() => {}); });
   }
   tab.addEventListener('click', () => { if (!docked) open(); });   // docked: handled by the drag/tap logic above
 
@@ -3553,7 +3577,10 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   };
   const aMetaSet = (t, a) => { const h = a ? `<b>${esc(a)}</b> - ${esc(t)}` : esc(t || 'bymarccc'); aTitle.classList.remove('is-marq'); aTitle.innerHTML = h; aTitle.dataset.html = h; aTitle.dataset.txt = aTitle.textContent; aArtist.textContent = ''; requestAnimationFrame(aMarq); };
   setInterval(aMarq, 800);
-  const aMeta = () => { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || 'bymarccc', a = (document.getElementById('miniArtist')?.textContent || '').trim(); aMetaSet(t, a); };
+  const aArt = (t, a) => { const im = document.getElementById('vpAArt'); if (!im) return; const cur = document.querySelector('.track[aria-current="true"] .track__thumb'); let src = cur && cur.getAttribute('src');
+    if (!src) { const L = window.BYMARCCC_PLAYLIST || [], full = a ? a + ' - ' + t : t; const hit = L.find(x => x.title === full || x.title === t || (x.title || '').endsWith(' - ' + t)); src = hit && hit.thumb; }
+    src = src || 'assets/img/lockscreen-alien-sky-v2-512.jpg'; if (im.getAttribute('src') !== src) im.src = src; };
+  const aMeta = () => { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || 'bymarccc', a = (document.getElementById('miniArtist')?.textContent || '').trim(); aMetaSet(t, a); aArt(t, a); };
   const aUI = () => { const on = A && !A.paused && !A.ended; aPlayIcon.setAttribute('d', on ? ICON_PAUSE : ICON_PLAY); aPlay.setAttribute('aria-label', on ? 'Pause' : 'Play'); };
   const aTime = () => { if (!A || !A.duration) return; const p = A.currentTime / A.duration; if (!scrubbing) scrubFill.style.width = (p * 100) + '%'; aCur.textContent = fmtT(A.currentTime); aRem.textContent = '-' + fmtT(A.duration - A.currentTime); };
   if (A) {
@@ -3591,7 +3618,13 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       set('seekforward', null);
       set('seekto', d => { if (typeof d.seekTime === 'number') M().currentTime = d.seekTime; });
       set('nexttrack', () => bgPlay ? bgJump(1) : load(idx + 1, { autoplay: true })); set('previoustrack', () => bgPlay ? bgJump(-1) : load(idx - 1, { autoplay: true })); };
-    snd.addEventListener('play', () => { if (bgPlay) navigator.mediaSession.playbackState = 'playing'; });
+    snd.addEventListener('play', () => { if (bgPlay) { vMeta(); vHandlers(); navigator.mediaSession.playbackState = 'playing'; } });
+    snd.addEventListener('playing', () => { if (bgPlay) { vMeta(); vHandlers(); } });   // the twin took over (phone locked / site left): put the bymarccc artwork + title back on the lock screen
+    // locking the phone / leaving the site while a music video plays: re-assert the lock-screen info (iOS drops it when the source changes)
+    document.addEventListener('visibilitychange', () => { if (document.hidden && vp.dataset.mode === 'video' && (bgPlay || !video.paused)) { vMeta(); vHandlers(); navigator.mediaSession.playbackState = 'playing'; } });
+    // song finished in the background (locked phone / PiP / other app) → the next one starts by itself
+    snd.addEventListener('ended', () => { if (!bgPlay) return; load(idx + 1); try { snd.currentTime = 0; } catch {} snd.play().then(() => { vMeta(); vHandlers(); }).catch(() => {}); });
+    video.addEventListener('ended', () => { if (bgPlay) return; if (document.hidden || inPiP()) load(idx + 1, { autoplay: true }); });
     snd.addEventListener('pause', () => { if (bgPlay) navigator.mediaSession.playbackState = 'paused'; });
     video.addEventListener('play', () => { vMeta(); vHandlers(); navigator.mediaSession.playbackState = 'playing'; });
     video.addEventListener('pause', () => { if (!bgPlay && vp.dataset.mode === 'video') navigator.mediaSession.playbackState = 'paused'; });
@@ -4118,6 +4151,18 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
 .vp[data-mode="audio"] .vp__atimes { margin: 6px 0 0; padding: 3px 0; }
 .vp[data-mode="audio"] .vp__actr { gap: 6px; }   /* controls close together: free space left/right to grab and drag the PiP */
 .vp[data-mode="audio"] .vp__abtn { color: #111; }
+/* music PiP, premium: cover on the left of the (scrolling) title, small type, controls tucked up under it */
+.vp__aart { display: none; }
+.vp[data-mode="audio"] .vp__audio { display: grid; grid-template-columns: 30px minmax(0, 1fr); column-gap: 8px; align-items: center; padding: 9px 9px 6px; }
+.vp[data-mode="audio"] .vp__aart { display: block; grid-column: 1; grid-row: 1; width: 30px; height: 30px; border-radius: 6px; object-fit: cover; background: rgba(0,0,0,.06); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.vp[data-mode="audio"] .vp__atitle { grid-column: 2; grid-row: 1; font-size: 11px; font-weight: 500; letter-spacing: .01em; line-height: 1.25; padding-right: 22px; }
+.vp[data-mode="audio"] .vp__atitle b { font-weight: 600; }
+.vp[data-mode="audio"] .vp__aartist { display: none; }
+.vp[data-mode="audio"] .vp__atimes { grid-column: 1 / -1; grid-row: 2; margin: 2px 0 0; padding: 0; }
+.vp[data-mode="audio"] .vp__abtn { width: 32px; height: 32px; }
+.vp[data-mode="audio"] .vp__abtn svg { width: 15px; height: 15px; }
+.vp[data-mode="audio"] .vp__abtn--play svg { width: 17px; height: 17px; }
+.vp[data-mode="audio"] .vp__ax { top: 6px; right: 6px; width: 20px; height: 20px; }
 
 </style>
 <div class="bmp" id="bmp">

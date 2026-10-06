@@ -213,7 +213,7 @@
   @media (max-width:899px){ #coThankYou{ padding-bottom:96px; } }
   .co-ty__continue{ display:inline-flex; align-items:center; justify-content:center; height:48px; padding:0 28px; margin-top:28px; border-radius:999px; background:var(--ink); color:#fff; text-decoration:none; font:600 11px/1 inherit; letter-spacing:.2em; text-transform:uppercase; }
 </style>
-<script src="/assets/catalog.js?v=224607mb" defer></script>
+<script src="/assets/catalog.js?v=288218iv" defer></script>
 </head>
 <body>
 
@@ -1093,7 +1093,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     </button>
   </div>
   <div class="vp__audio" id="vpAudio">
-    <div class="vp__atitle" id="vpATitle">—</div><div class="vp__aartist" id="vpAArtist"></div>
+    <img class="vp__aart" id="vpAArt" alt="" decoding="async"><div class="vp__atitle" id="vpATitle">—</div><div class="vp__aartist" id="vpAArtist"></div>
     <button class="vp__ax" id="vpAClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <div class="vp__scrub" id="vpScrub" role="slider" aria-label="Seek"><i id="vpScrubFill"></i></div>
     <div class="vp__atimes">
@@ -1601,6 +1601,16 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const pipLeft = () => { if (!pipOwn || inPiP()) return; pipOwn = false; applySound(); if (!video.paused) sndPlay(); };
     video.addEventListener('webkitpresentationmodechanged', () => setTimeout(pipLeft, 50));
     video.addEventListener('leavepictureinpicture', () => setTimeout(pipLeft, 50));
+    // PiP's "back" button (top-right) must land in the small mini player, never in the huge native fullscreen (low-res there)
+    let pmPrev = video.webkitPresentationMode || 'inline', pipLeftAt = 0;
+    video.addEventListener('leavepictureinpicture', () => { pipLeftAt = Date.now(); });
+    video.addEventListener('webkitpresentationmodechanged', () => {
+      const m = video.webkitPresentationMode;
+      if (pmPrev === 'picture-in-picture' && m !== 'picture-in-picture') pipLeftAt = Date.now();
+      if (m === 'fullscreen' && Date.now() - pipLeftAt < 1500) setTimeout(() => { try { video.webkitSetPresentationMode('inline'); } catch {} try { if (video.webkitDisplayingFullscreen && video.webkitExitFullscreen) video.webkitExitFullscreen(); } catch {} }, 0);
+      pmPrev = m;
+    });
+    document.addEventListener('fullscreenchange', () => { if (document.fullscreenElement === video && Date.now() - pipLeftAt < 1500) document.exitFullscreen?.().catch(() => {}); });
   }
   tab.addEventListener('click', () => { if (!docked) open(); });   // docked: handled by the drag/tap logic above
 
@@ -1773,7 +1783,10 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   };
   const aMetaSet = (t, a) => { const h = a ? `<b>${esc(a)}</b> - ${esc(t)}` : esc(t || 'bymarccc'); aTitle.classList.remove('is-marq'); aTitle.innerHTML = h; aTitle.dataset.html = h; aTitle.dataset.txt = aTitle.textContent; aArtist.textContent = ''; requestAnimationFrame(aMarq); };
   setInterval(aMarq, 800);
-  const aMeta = () => { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || 'bymarccc', a = (document.getElementById('miniArtist')?.textContent || '').trim(); aMetaSet(t, a); };
+  const aArt = (t, a) => { const im = document.getElementById('vpAArt'); if (!im) return; const cur = document.querySelector('.track[aria-current="true"] .track__thumb'); let src = cur && cur.getAttribute('src');
+    if (!src) { const L = window.BYMARCCC_PLAYLIST || [], full = a ? a + ' - ' + t : t; const hit = L.find(x => x.title === full || x.title === t || (x.title || '').endsWith(' - ' + t)); src = hit && hit.thumb; }
+    src = src || 'assets/img/lockscreen-alien-sky-v2-512.jpg'; if (im.getAttribute('src') !== src) im.src = src; };
+  const aMeta = () => { const t = (document.getElementById('miniTitle')?.textContent || '').trim() || 'bymarccc', a = (document.getElementById('miniArtist')?.textContent || '').trim(); aMetaSet(t, a); aArt(t, a); };
   const aUI = () => { const on = A && !A.paused && !A.ended; aPlayIcon.setAttribute('d', on ? ICON_PAUSE : ICON_PLAY); aPlay.setAttribute('aria-label', on ? 'Pause' : 'Play'); };
   const aTime = () => { if (!A || !A.duration) return; const p = A.currentTime / A.duration; if (!scrubbing) scrubFill.style.width = (p * 100) + '%'; aCur.textContent = fmtT(A.currentTime); aRem.textContent = '-' + fmtT(A.duration - A.currentTime); };
   if (A) {
@@ -1811,7 +1824,13 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       set('seekforward', null);
       set('seekto', d => { if (typeof d.seekTime === 'number') M().currentTime = d.seekTime; });
       set('nexttrack', () => bgPlay ? bgJump(1) : load(idx + 1, { autoplay: true })); set('previoustrack', () => bgPlay ? bgJump(-1) : load(idx - 1, { autoplay: true })); };
-    snd.addEventListener('play', () => { if (bgPlay) navigator.mediaSession.playbackState = 'playing'; });
+    snd.addEventListener('play', () => { if (bgPlay) { vMeta(); vHandlers(); navigator.mediaSession.playbackState = 'playing'; } });
+    snd.addEventListener('playing', () => { if (bgPlay) { vMeta(); vHandlers(); } });   // the twin took over (phone locked / site left): put the bymarccc artwork + title back on the lock screen
+    // locking the phone / leaving the site while a music video plays: re-assert the lock-screen info (iOS drops it when the source changes)
+    document.addEventListener('visibilitychange', () => { if (document.hidden && vp.dataset.mode === 'video' && (bgPlay || !video.paused)) { vMeta(); vHandlers(); navigator.mediaSession.playbackState = 'playing'; } });
+    // song finished in the background (locked phone / PiP / other app) → the next one starts by itself
+    snd.addEventListener('ended', () => { if (!bgPlay) return; load(idx + 1); try { snd.currentTime = 0; } catch {} snd.play().then(() => { vMeta(); vHandlers(); }).catch(() => {}); });
+    video.addEventListener('ended', () => { if (bgPlay) return; if (document.hidden || inPiP()) load(idx + 1, { autoplay: true }); });
     snd.addEventListener('pause', () => { if (bgPlay) navigator.mediaSession.playbackState = 'paused'; });
     video.addEventListener('play', () => { vMeta(); vHandlers(); navigator.mediaSession.playbackState = 'playing'; });
     video.addEventListener('pause', () => { if (!bgPlay && vp.dataset.mode === 'video') navigator.mediaSession.playbackState = 'paused'; });
@@ -2332,6 +2351,18 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
 .vp[data-mode="audio"] .vp__atimes { margin: 6px 0 0; padding: 3px 0; }
 .vp[data-mode="audio"] .vp__actr { gap: 6px; }   /* controls close together: free space left/right to grab and drag the PiP */
 .vp[data-mode="audio"] .vp__abtn { color: #111; }
+/* music PiP, premium: cover on the left of the (scrolling) title, small type, controls tucked up under it */
+.vp__aart { display: none; }
+.vp[data-mode="audio"] .vp__audio { display: grid; grid-template-columns: 30px minmax(0, 1fr); column-gap: 8px; align-items: center; padding: 9px 9px 6px; }
+.vp[data-mode="audio"] .vp__aart { display: block; grid-column: 1; grid-row: 1; width: 30px; height: 30px; border-radius: 6px; object-fit: cover; background: rgba(0,0,0,.06); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.vp[data-mode="audio"] .vp__atitle { grid-column: 2; grid-row: 1; font-size: 11px; font-weight: 500; letter-spacing: .01em; line-height: 1.25; padding-right: 22px; }
+.vp[data-mode="audio"] .vp__atitle b { font-weight: 600; }
+.vp[data-mode="audio"] .vp__aartist { display: none; }
+.vp[data-mode="audio"] .vp__atimes { grid-column: 1 / -1; grid-row: 2; margin: 2px 0 0; padding: 0; }
+.vp[data-mode="audio"] .vp__abtn { width: 32px; height: 32px; }
+.vp[data-mode="audio"] .vp__abtn svg { width: 15px; height: 15px; }
+.vp[data-mode="audio"] .vp__abtn--play svg { width: 17px; height: 17px; }
+.vp[data-mode="audio"] .vp__ax { top: 6px; right: 6px; width: 20px; height: 20px; }
 
 </style>
 <div class="bmp" id="bmp">
