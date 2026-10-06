@@ -2526,6 +2526,9 @@ async function acctInit() {
     db.prepare("CREATE TABLE IF NOT EXISTS acct_wishlist (email TEXT NOT NULL, pkey TEXT NOT NULL, added_at TEXT NOT NULL, PRIMARY KEY (email, pkey))"),
     db.prepare("CREATE TABLE IF NOT EXISTS acct_playlist (email TEXT NOT NULL, track TEXT NOT NULL, added_at TEXT NOT NULL, PRIMARY KEY (email, track))"),
     db.prepare("CREATE TABLE IF NOT EXISTS acct_ytm (email TEXT PRIMARY KEY, url TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', updated_at TEXT NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_shared (id TEXT PRIMARY KEY, owner TEXT NOT NULL, invite TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_shared_members (sid TEXT NOT NULL, email TEXT NOT NULL, joined_at TEXT NOT NULL, PRIMARY KEY (sid, email))"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_shared_tracks (sid TEXT NOT NULL, track TEXT NOT NULL, added_by TEXT NOT NULL, added_at TEXT NOT NULL, PRIMARY KEY (sid, track))"),
     db.prepare("CREATE TABLE IF NOT EXISTS acct_orders (order_id TEXT PRIMARY KEY, email TEXT NOT NULL, created_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'placed', pay TEXT, currency TEXT, total_local REAL, ship_local REAL, total_ron REAL NOT NULL DEFAULT 0, discount_pct REAL DEFAULT 0, credit_ron REAL DEFAULT 0, items TEXT, ship_to TEXT)"),
     db.prepare("CREATE INDEX IF NOT EXISTS acct_orders_email ON acct_orders (email, created_at)"),
     db.prepare("CREATE TABLE IF NOT EXISTS acct_credits (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL, kind TEXT NOT NULL, amount_ron REAL NOT NULL DEFAULT 0, pct REAL NOT NULL DEFAULT 0, note TEXT, created_at TEXT NOT NULL, expires_at TEXT, used_order TEXT)"),
@@ -2782,7 +2785,7 @@ async function accountApi(request) {
   }
   if (action === "delete") {
     if (String(b.confirm || "") !== "DELETE") return json(400, { error: "Type DELETE to confirm." });
-    for (const t of ["acct_sessions", "acct_addresses", "acct_wishlist", "acct_playlist", "acct_codes"]) await db.prepare(`DELETE FROM ${t} WHERE email = ?1`).bind(email).run();
+    for (const t of ["acct_sessions", "acct_addresses", "acct_wishlist", "acct_playlist", "acct_codes", "acct_shared_members"]) await db.prepare(`DELETE FROM ${t} WHERE email = ?1`).bind(email).run();
     await db.prepare("DELETE FROM acct_customers WHERE email = ?1").bind(email).run();
     return json(200, { ok: true }, { "Set-Cookie": acctCookie("", 0) });
   }
@@ -2839,13 +2842,51 @@ async function accountApi(request) {
     const rows = (await db.prepare("SELECT track FROM acct_playlist WHERE email = ?1 ORDER BY added_at").bind(email).all()).results || [];
     return json(200, { playlist: rows.map((r) => r.track) });
   }
+  // Shared playlist ("Invite a friend"): one playlist several accounts listen to and add songs to
+  if (action === "shared") {
+    const clean = (t) => String(t || "").replace(/[^a-z0-9-]/gi, "").slice(0, 60);
+    const mine = async () => await db.prepare("SELECT s.id, s.owner, s.invite FROM acct_shared s JOIN acct_shared_members m ON m.sid = s.id WHERE m.email = ?1 ORDER BY m.joined_at DESC LIMIT 1").bind(email).first();
+    let sh = await mine();
+    if (request.method === "POST") {
+      if (b.join) {
+        const code = String(b.join).replace(/[^A-Z0-9]/gi, "").toUpperCase().slice(0, 20);
+        const t = await db.prepare("SELECT id FROM acct_shared WHERE invite = ?1").bind(code).first();
+        if (!t) return json(404, { error: "This invite link is not valid anymore." });
+        const n = await db.prepare("SELECT COUNT(*) AS n FROM acct_shared_members WHERE sid = ?1").bind(t.id).first();
+        const already = await db.prepare("SELECT 1 FROM acct_shared_members WHERE sid = ?1 AND email = ?2").bind(t.id, email).first();
+        if (!already && n && n.n >= 6) return json(400, { error: "This shared playlist is full (6 people)." });
+        if (sh && sh.id !== t.id) await db.prepare("DELETE FROM acct_shared_members WHERE sid = ?1 AND email = ?2").bind(sh.id, email).run();
+        await db.prepare("INSERT OR IGNORE INTO acct_shared_members (sid, email, joined_at) VALUES (?1,?2,?3)").bind(t.id, email, acctNow()).run();
+        sh = await mine();
+      } else if (b.create) {
+        if (!sh) {
+          const id = acctRand(12), inv = acctRand(10);
+          await db.prepare("INSERT INTO acct_shared (id, owner, invite, created_at) VALUES (?1,?2,?3,?4)").bind(id, email, inv, acctNow()).run();
+          await db.prepare("INSERT INTO acct_shared_members (sid, email, joined_at) VALUES (?1,?2,?3)").bind(id, email, acctNow()).run();
+          sh = await mine();
+        }
+      } else if (b.leave) {
+        if (sh) await db.prepare("DELETE FROM acct_shared_members WHERE sid = ?1 AND email = ?2").bind(sh.id, email).run();
+        sh = null;
+      } else if (sh && b.add) {
+        await db.prepare("INSERT OR IGNORE INTO acct_shared_tracks (sid, track, added_by, added_at) VALUES (?1,?2,?3,?4)").bind(sh.id, clean(b.add), email, acctNow()).run();
+      } else if (sh && b.remove) {
+        await db.prepare("DELETE FROM acct_shared_tracks WHERE sid = ?1 AND track = ?2").bind(sh.id, clean(b.remove)).run();
+      }
+    }
+    if (!sh) return json(200, { shared: null });
+    const mem = (await db.prepare("SELECT m.email, c.name FROM acct_shared_members m LEFT JOIN acct_customers c ON c.email = m.email WHERE m.sid = ?1 ORDER BY m.joined_at").bind(sh.id).all()).results || [];
+    const tr = (await db.prepare("SELECT track, added_by FROM acct_shared_tracks WHERE sid = ?1 ORDER BY added_at").bind(sh.id).all()).results || [];
+    const who = (e, n) => e === email ? "You" : ((n || "").trim().split(/\s+/)[0] || e.replace(/(.).+(@.+)/, "$1…$2"));
+    const nameOf = Object.fromEntries(mem.map((m) => [m.email, who(m.email, m.name)]));
+    const base = (CURRENT_ORIGIN || "https://bymarccc.com").replace(/\/$/, "");
+    return json(200, { shared: { owner: sh.owner === email, link: `${base}/members.html?join=${sh.invite}#ytm`, members: mem.map((m) => nameOf[m.email]), tracks: tr.map((t) => ({ id: t.track, by: nameOf[t.added_by] || "" })) } });
+  }
   // YouTube Music playlist link — the customer saves it here; we connect it by hand (status: pending → connected)
   if (action === "ytm") {
     if (request.method === "POST") {
       const lines = String(b.url || "").split(/[\s,]+/).map((x) => x.trim()).filter(Boolean).slice(0, 20);
       if (!lines.length) { await db.prepare("DELETE FROM acct_ytm WHERE email = ?1").bind(email).run(); return json(200, { ytm: null }); }
-      const sp = await acctSpend(db, email), tf = acctTierFor(sp.spend, sp.override);
-      if (tf.tier.id === "bronze") return json(403, { error: "My Playlist unlocks at CIRCLE Silver." });
       const urls = [];
       for (const raw of lines) {
         let u; try { u = new URL(raw.slice(0, 500)); } catch { return json(400, { error: "Paste the full YouTube Music links (one per line)." }); }

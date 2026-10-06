@@ -67,6 +67,14 @@
   .tier-head p{ margin:8px 0 0; font-size:16px; }
   .bar{ position:relative; height:28px; border-radius:999px; background:#f2f2f0; margin:0 auto; max-width:620px; }
   .bar i{ position:absolute; left:0; top:0; bottom:0; border-radius:999px; min-width:28px; transition:width .6s; }
+  .tb{ max-width:620px; margin:0 auto; }
+  .tb-bar{ display:flex; gap:4px; height:12px; }
+  .tb-seg{ position:relative; flex:1 1 0; border-radius:999px; background:#f2f2f0; overflow:hidden; }
+  .tb-seg i{ position:absolute; left:0; top:0; bottom:0; border-radius:999px; transition:width .8s cubic-bezier(.22,1,.36,1); }
+  .tb-marks{ display:flex; justify-content:space-between; margin-top:12px; font-size:12px; }
+  .tb-mark{ display:flex; flex-direction:column; align-items:center; gap:3px; width:25%; text-align:center; color:var(--sub); }
+  .tb-mark:first-child{ align-items:flex-start; text-align:left; } .tb-mark:last-child{ align-items:flex-end; text-align:right; }
+  .tb-mark b{ font-weight:500; font-size:13px; } .tb-dot{ width:9px; height:9px; border-radius:50%; }
   .bar-legend{ display:flex; justify-content:space-between; max-width:620px; margin:16px auto 0; text-align:center; font-size:14px; }
   .bar-legend b{ display:block; font-size:18px; font-weight:400; margin-bottom:2px; }
   .perks{ max-width:620px; margin:30px auto 0; border:1px solid var(--line); padding:20px 22px; }
@@ -120,6 +128,9 @@
   .al-logo{ height:1em; width:auto; vertical-align:-.12em; margin-right:.28em; }   /* original alien logo, cap height (same as an O) */
   .ytm-lock{ max-width:560px; border:1px solid var(--line); border-radius:14px; padding:18px 20px; background:var(--bg); }
   .ytm-lock b{ display:block; margin-bottom:6px; }
+  .sh-box{ max-width:560px; margin-top:34px; padding-top:26px; border-top:1px solid var(--line); }
+  .sh-box h3{ margin:0 0 8px; font-size:20px; font-weight:500; }
+  .sh-box .sh-who{ margin:0 0 14px; color:var(--sub); font-size:14px; }
 </style>
 <script src="/assets/catalog.js?v=288218iv" defer></script>
 </head>
@@ -227,19 +238,26 @@
     if (!first && matchMedia('(max-width:860px)').matches) window.scrollTo({ top: 0 });
   }
 
+  /* Bronze → Silver → Gold → Platinum in one bar: each stretch fills in its tier's colour; amounts in the visitor's own currency */
+  function tierBar(tiers, spend) {
+    const T = (tiers || []).slice().sort((a, b) => (a.min || 0) - (b.min || 0)); if (T.length < 2) return '';
+    const segs = T.slice(0, -1).map((x, i) => { const a = x.min || 0, b = T[i + 1].min || 1, f = Math.max(0, Math.min(1, (spend - a) / (b - a))); return `<span class="tb-seg"><i style="width:${(f * 100).toFixed(1)}%;background:${TIER_COL[x.id]}"></i></span>`; }).join('');
+    const marks = T.map(x => `<div class="tb-mark${spend >= (x.min || 0) ? ' is-on' : ''}"><span class="tb-dot" style="background:${spend >= (x.min || 0) ? TIER_COL[x.id] : '#e4e4e1'}"></span><b style="color:${TIER_COL[x.id]}">${esc(x.name)}</b><span>${money(x.min || 0)}</span></div>`).join('');
+    return `<div class="tb"><div class="tb-bar">${segs}</div><div class="tb-marks">${marks}</div></div>`;
+  }
   function secCircle(el) {
     const t = P.tier, n = P.next, tiers = P.tiers || [];
     const top = n ? n.min : Math.max(P.spend, 1), pct = Math.max(4, Math.min(100, P.spend / top * 100));
     const perks = [t.pct ? `${t.pct}% off everything, applied automatically at checkout` : 'Member prices as you move up the tiers', t.freeShip ? 'Free shipping & returns on every order' : 'Free shipping & returns from Silver', t.drops ? 'Early access to new drops' : 'Early access to drops from Gold', 'Your own playlist of bymarccc music and music videos'];
     el.innerHTML = `<h2>${esc(t.name)} Client</h2>
       <div class="tier-head"><div class="brand"><img class="al-logo" src="/assets/img/alien-logo.png" alt="">FAM<span style="color:${TIER_COL[t.id]}">${esc(t.name)}</span></div><p>${esc((P.name || '').split(' ')[0] || 'Hi')}, this is your progress so far</p></div>
-      <div class="bar"><i style="width:${pct}%;background:${TIER_COL[t.id]}"></i></div>
-      <div class="bar-legend"><div><b>${ronMoney(P.spend)}</b>Current</div><div><b>${n ? ronMoney(n.min) : '—'}</b>${n ? 'To ' + esc(n.name) : 'Top tier'}</div></div>
-      ${n ? `<p style="text-align:center;color:var(--sub);margin-top:16px">Spend ${ronMoney(P.toNext)} more to reach ${esc(n.name)} (${n.pct}% off). Your tier is for life.</p>` : ''}
+      ${tierBar(tiers, P.spend)}
+      <div class="bar-legend"><div><b>${money(P.spend)}</b>Current</div><div><b>${n ? money(n.min) : '—'}</b>${n ? 'To ' + esc(n.name) : 'Top tier'}</div></div>
+      ${n ? `<p style="text-align:center;color:var(--sub);margin-top:16px">Spend ${money(P.toNext)} more to reach ${esc(n.name)} (${n.pct}% off). Your tier is for life.</p>` : ''}
       <div class="perks"><h5>Your ${esc(t.name)} benefits</h5><ul>${perks.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
       <details class="what"><summary>What does this mean? ⌄</summary>
         <p style="color:var(--sub);font-size:14px">Your tier is based on everything you have ever spent with us (after discounts, without shipping; cancelled and returned orders don't count). It updates automatically after every order and never expires.</p>
-        <table class="tiers-table"><thead><tr><th>Tier</th><th>Total spend</th><th>Benefits</th></tr></thead><tbody>${tiers.map(x => `<tr><td><b style="color:${TIER_COL[x.id]}">${esc(x.name)}</b></td><td>${x.min ? ronMoney(x.min) : '0 RON'}</td><td>${[x.pct ? x.pct + '% off' : '', x.freeShip ? 'free shipping & returns' : '', x.drops ? 'early drops' : '', x.pct ? '' : 'welcome · your own playlist'].filter(Boolean).join(' & ')}</td></tr>`).join('')}</tbody></table>
+        <table class="tiers-table"><thead><tr><th>Tier</th><th>Total spend</th><th>Benefits</th></tr></thead><tbody>${tiers.map(x => `<tr><td><b style="color:${TIER_COL[x.id]}">${esc(x.name)}</b></td><td>${money(x.min || 0)}</td><td>${[x.pct ? x.pct + '% off' : '', x.freeShip ? 'free shipping & returns' : '', x.drops ? 'early drops' : '', x.pct ? '' : 'welcome · your own playlist'].filter(Boolean).join(' & ')}</td></tr>`).join('')}</tbody></table>
       </details>`;
   }
   async function secOrders(el) {
@@ -363,13 +381,8 @@
     };
     render();
   }
-  /* ---------- My Playlist (Silver and up): the customer's own YouTube Music playlist / songs — we connect them by hand ---------- */
+  /* ---------- My Playlist (every tier, Bronze included): the customer's own YouTube Music playlist / songs — we connect them by hand ---------- */
   async function secYtm(el) {
-    if (!P || !P.tier || P.tier.id === 'bronze') {
-      const sil = (P.tiers || []).find(x => x.id === 'silver'), need = sil ? Math.max(0, sil.min - (P.spend || 0)) : 0;
-      el.innerHTML = `<h2>My Playlist</h2><div class="ytm-lock"><b>Unlocks at Silver</b>Bring your own songs from YouTube Music to bymarccc. Available from Silver (${money(sil ? sil.min : 1500)} total spend)${need ? ` — ${money(need)} to go.` : '.'}</div>`;
-      return;
-    }
     let cur = null; try { cur = (await API('ytm')).ytm; } catch {}
     const render = msg => {
       el.innerHTML = `<h2>My Playlist</h2>
@@ -378,7 +391,9 @@
         <form id="ytF" style="max-width:560px"><div class="f"><label for="ytU">Links</label><textarea id="ytU" rows="4" inputmode="url" placeholder="https://music.youtube.com/playlist?list=…" style="width:100%;font:inherit;font-size:16px;padding:12px 14px;border:1px solid #c9c9c5;border-radius:6px;resize:vertical">${esc(cur ? cur.url : '')}</textarea></div>
         <p class="msg" id="ytMsg" role="alert">${msg ? esc(msg) : ''}</p>
         <button class="btn" type="submit">${cur ? 'Update' : 'Save'}</button>${cur ? ' <button class="btn btn--ghost btn--sm" type="button" id="ytDel">Remove</button>' : ''}</form>
-        ${cur ? `<p style="margin-top:18px">Status: <b>${cur.status === 'connected' ? 'Connected ✓' : 'Waiting to be connected'}</b>${cur.status === 'connected' ? '' : ' — we usually connect it within 1–2 days.'}</p>` : ''}`;
+        ${cur ? `<p style="margin-top:18px">Status: <b>${cur.status === 'connected' ? 'Connected ✓' : 'Waiting to be connected'}</b>${cur.status === 'connected' ? '' : ' — we usually connect it within 1–2 days.'}</p>` : ''}
+        <div id="shBox" class="sh-box"></div>`;
+      secShared(el.querySelector('#shBox'));
       el.querySelector('#ytF').addEventListener('submit', async e => {
         e.preventDefault(); const b = e.submitter || el.querySelector('#ytF button[type=submit]'); b.disabled = true;
         try { cur = (await API('ytm', { url: el.querySelector('#ytU').value })).ytm; render('Saved. We\'ll connect it soon.'); }
@@ -387,6 +402,44 @@
       const d = el.querySelector('#ytDel'); if (d) d.addEventListener('click', async () => { cur = (await API('ytm', { url: '' })).ytm; render('Removed.'); });
     };
     render('');
+  }
+  /* ---------- Shared playlist: "Invite a friend" → one playlist both accounts listen to and add songs to ---------- */
+  async function secShared(box) {
+    const all = (window.BYMARCCC_PLAYLIST || []).slice(), byId = id => all.find(t => t.id === id);
+    let sh = null, msg = '';
+    try { const j = sessionStorage.getItem('bym.join'); if (j) { sessionStorage.removeItem('bym.join'); sh = (await API('shared', { join: j })).shared; msg = 'You joined the shared playlist.'; } } catch (e) { msg = e.message; }
+    if (!sh) { try { sh = (await API('shared')).shared; } catch { box.innerHTML = ''; return; } }
+    const img = t => esc(t.thumb && !/^https/.test(t.thumb) ? '/' + t.thumb.replace(/^\//, '') : t.thumb || '');
+    const play = list => { const t = list[0]; if (!t) return; let A = document.getElementById('miniAudio'); if (!A) return;
+      if (window.BYMARCCC_VP && window.BYMARCCC_VP.pause) window.BYMARCCC_VP.pause();
+      ['miniTitle', 'miniArtist'].forEach(id => { if (!document.getElementById(id)) { const s = document.createElement('span'); s.id = id; s.hidden = true; document.body.appendChild(s); } });
+      const go = i => { const x = list[i]; if (!x) return; const p = String(x.title).split(' - '); document.getElementById('miniArtist').textContent = p.length > 1 ? p[0] : ''; document.getElementById('miniTitle').textContent = p.length > 1 ? p.slice(1).join(' - ') : x.title; A.src = x.src; A.play().catch(() => {}); A.onended = () => go(i + 1); };
+      go(0); };
+    const render = () => {
+      if (!sh) {
+        box.innerHTML = `<h3>Shared playlist</h3><p>Make one playlist with a friend — you both listen to it from your own account and you both can add songs.</p><button class="btn" id="shNew" type="button">Invite a friend</button><p class="msg" role="alert">${esc(msg)}</p>`;
+        box.querySelector('#shNew').addEventListener('click', async () => { try { sh = (await API('shared', { create: true })).shared; render(); share(); } catch (e) { msg = e.message; render(); } });
+        return;
+      }
+      const list = sh.tracks.map(x => Object.assign({ by: x.by }, byId(x.id))).filter(x => x.id), rest = all.filter(t => !sh.tracks.some(x => x.id === t.id));
+      box.innerHTML = `<h3>Shared playlist</h3><p class="sh-who">${sh.members.map(esc).join(' · ')}</p>
+        <div class="copy"><input id="shLink" value="${esc(sh.link)}" readonly><button class="btn" id="shInv" type="button">Invite a friend</button></div><p class="msg ok" id="shMsg" role="status">${esc(msg)}</p>
+        <div>${list.length ? list.map(t => `<div class="trk"><img src="${img(t)}" alt=""><div><div class="n">${esc(t.title)}</div><div class="d">${esc(t.duration || '')}${t.by ? ' · added by ' + esc(t.by) : ''}</div></div><button data-srm="${esc(t.id)}" aria-label="Remove from shared playlist">−</button></div>`).join('') : '<p class="empty">No songs yet — add the first one below.</p>'}</div>
+        ${list.length ? '<p style="margin-top:14px"><button class="btn btn--sm" id="shPlay" type="button">Play shared playlist</button></p>' : ''}
+        <h4>Add songs</h4><div>${rest.map(t => `<div class="trk"><img src="${img(t)}" alt=""><div><div class="n">${esc(t.title)}</div><div class="d">${esc(t.duration || '')}</div></div><button data-sadd="${esc(t.id)}" aria-label="Add to shared playlist">+</button></div>`).join('')}</div>
+        <p style="margin-top:16px"><button class="btn btn--ghost btn--sm" id="shLeave" type="button">Leave shared playlist</button></p>`;
+      box.querySelector('#shInv').addEventListener('click', share);
+      box.querySelectorAll('[data-sadd]').forEach(b => b.addEventListener('click', async () => { sh = (await API('shared', { add: b.dataset.sadd })).shared; msg = ''; render(); }));
+      box.querySelectorAll('[data-srm]').forEach(b => b.addEventListener('click', async () => { sh = (await API('shared', { remove: b.dataset.srm })).shared; msg = ''; render(); }));
+      const pl = box.querySelector('#shPlay'); if (pl) pl.addEventListener('click', () => play(list));
+      box.querySelector('#shLeave').addEventListener('click', async () => { if (!confirm('Leave this shared playlist?')) return; sh = (await API('shared', { leave: true })).shared; msg = ''; render(); });
+    };
+    const share = async () => {
+      if (!sh) return; const txt = 'Join my bymarccc playlist — we both listen and add songs:';
+      if (navigator.share) { try { await navigator.share({ title: 'bymarccc playlist', text: txt, url: sh.link }); return; } catch {} }
+      try { await navigator.clipboard.writeText(sh.link); const m = box.querySelector('#shMsg'); if (m) m.textContent = 'Link copied — send it to your friend.'; } catch { const i = box.querySelector('#shLink'); if (i) i.select(); }
+    };
+    render();
   }
   function secPrefs(el) {
     const p = P.prefs || {};
@@ -414,6 +467,7 @@
     });
   }
 
+  { const q = new URLSearchParams(location.search).get('join'); if (q) { try { sessionStorage.setItem('bym.join', q.replace(/[^A-Za-z0-9]/g, '').slice(0, 20)); } catch {} if (!location.hash) history.replaceState(null, '', location.pathname + '#ytm'); } }   // invite link → joined after sign-in, on My Playlist
   API('me').then(d => { load.hidden = true; root.hidden = false; P = d.profile; if (P) { mergeWishlist(); signedIn(); } else signedOut(); })
     .catch(() => { load.textContent = 'Accounts are not available right now. Please try again in a moment.'; });
 })();
