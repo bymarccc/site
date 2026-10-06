@@ -523,6 +523,16 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-designs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .pdp-designs .pdp-size { width: auto; min-width: 0; white-space: nowrap; height: 24px; padding: 0 10px; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; }
 .pdp-designs[hidden] { display: none; }
+/* BABY TOP family: the colours as small photos (SSENSE-style strip); each opens that colour, same design kept */
+.pdp-family { margin: 2px -16px 14px; }
+.pdp-family[hidden] { display: none; }
+.pdp-family__label { display: flex; justify-content: center; gap: 6px; margin: 0 0 8px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: #6f6f6f; }
+.pdp-family__label b { color: #111; font-weight: 500; }
+.pdp-family__row { display: flex; justify-content: center; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 0 16px 4px; }
+.pdp-family__row::-webkit-scrollbar { display: none; }
+.pdp-family__row a { flex: 0 0 auto; width: 44px; display: block; text-decoration: none; padding-bottom: 5px; border-bottom: 1.5px solid transparent; }
+.pdp-family__row a img { display: block; width: 44px; height: 62px; object-fit: cover; object-position: 50% 30%; background: #f0f0f0; }
+.pdp-family__row a[aria-current="true"] { border-bottom-color: #111; }
 
 .pdp-sizes[hidden], .pdp-swatches[hidden] { display: none; }
 
@@ -745,6 +755,8 @@ body.is-custom-bag-page #gallery { display: none; }
 
       <div class="pdp-label" hidden><span>COLOUR</span><span id="colourName">Grey</span></div>
       <div class="pdp-swatches" id="swatches" role="radiogroup" aria-label="Colour" hidden></div>
+
+      <div class="pdp-family" id="family" hidden><p class="pdp-family__label"><span>COLOUR</span><b id="familyName"></b></p><div class="pdp-family__row" id="familyRow"></div></div>
 
       <div class="pdp-label" id="designLabel" hidden><span>DESIGN</span><span id="designName">Select a design</span></div>
       <div class="pdp-sizes pdp-designs" id="designs" role="radiogroup" aria-label="Design" hidden></div>
@@ -1239,6 +1251,25 @@ body.is-custom-bag-page #gallery { display: none; }
     DESIGNS.forEach(dname => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-size'; b.setAttribute('role', 'radio'); b.dataset.d = dname; b.textContent = dname; b.addEventListener('click', () => { state.design = dname; emit(); const explicitIdx = designImageIndex(dname); if (explicitIdx !== null) goTo(explicitIdx); else if (PRODUCT.imageDesigns) goTo(DESIGNS.indexOf(dname)); }); designsEl.appendChild(b); });
     state.listeners.add(() => { designsEl.querySelectorAll('.pdp-size').forEach(b => b.setAttribute('aria-checked', String(b.dataset.d === state.design))); $('designName').textContent = state.design || 'Select a design'; });
   }
+  /* BABY TOP family (one product per colour): colour strip of photos; tapping a colour opens it with the same design selected */
+  (() => {
+    const FAMILY = [['w-white-baby-top-1', 'White'], ['w-pink-baby-top', 'Pink'], ['w-fuchsia-baby-top', 'Fuchsia'], ['w-blue-baby-top', 'Blue'], ['w-red-baby-top', 'Red'], ['w-white-baby-top', 'Black'], ['w-burgundy-baby-top', 'Burgundy']];
+    if (!FAMILY.some(([k]) => k === KEY)) return;
+    const row = $('familyRow'); if (!row) return;
+    FAMILY.forEach(([k, name]) => {
+      const fp = CATALOG[k]; if (!fp) return;
+      const g = (fp.cardGallery || fp.gallery || [])[0]; const src = g && (g.src || g); if (!src) return;
+      const a = document.createElement('a'); a.href = 'bymarccc-product.html?p=' + k; a.setAttribute('aria-label', name); a.setAttribute('aria-current', String(k === KEY)); a.dataset.k = k;
+      a.innerHTML = `<img src="${src}" alt="" loading="lazy" decoding="async">`;
+      row.appendChild(a);
+      if (k === KEY) $('familyName').textContent = name;
+    });
+    $('family').hidden = false;
+    state.listeners.add(() => row.querySelectorAll('a').forEach(a => { a.href = 'bymarccc-product.html?p=' + a.dataset.k + (state.design ? '&d=' + encodeURIComponent(state.design) : ''); }));   // keep the chosen design when switching colour
+    requestAnimationFrame(() => { const cur = row.querySelector('[aria-current="true"]'); if (cur && row.scrollWidth > row.clientWidth) row.scrollLeft = cur.offsetLeft - (row.clientWidth - cur.offsetWidth) / 2; });
+    const want = (new URLSearchParams(location.search).get('d') || '').toLowerCase();
+    if (want && DESIGNS.length) { const b = [...designsEl.querySelectorAll('.pdp-size')].find(x => x.dataset.d.toLowerCase() === want); if (b) setTimeout(() => b.click(), 0); }
+  })();
   const addBtn = $('addBtn'), barMsg = $('barMsg');
   function renderSelection() {
     const c = colourOf(state.colour);
