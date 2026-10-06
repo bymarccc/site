@@ -1218,6 +1218,7 @@
   .shop__all:hover, .shop__next:hover { background: #000; }
   .shop__loadmore { grid-column: 1 / -1; display: block; width: auto; margin: 28px auto 8px; padding: 16px 52px; border: 0; border-radius: 999px; background: #111; color: #fff; font: inherit; font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; cursor: pointer; }
   .shop__loadmore:hover { background: #000; }
+  #shopCustomize .shop__pill, #shopCustomize .shop__tabs { display: none !important; }   /* CUSTOMIZE has one tab (BAGS): no pill / search there */
   @media (max-width: 640px) { .shop__loadmore { width: 100%; padding: 16px 0; } }
   .shop__empty { grid-column: 1 / -1; padding: 48px 0; text-align: center; font-size: 13px; letter-spacing: .1em; color: #6f6f6f; }
   .shop__card:focus-visible { outline: 1.5px solid #111; outline-offset: 4px; }
@@ -1703,7 +1704,7 @@
       const show = !all && items.length > LIMIT ? items.slice(0, LIMIT) : items;
       show.forEach(([k, p]) => grid.appendChild(card(k, p, active)));
       if (show.length < items.length) {
-        const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__all'; b.textContent = 'LOAD MORE';
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__loadmore'; b.textContent = 'LOAD MORE';
         b.addEventListener('click', () => render(true));
         grid.appendChild(b);
       }
