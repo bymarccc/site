@@ -1781,7 +1781,13 @@ async function orderSubmit(request) {
     if (!g.forwarded && g.reason !== "off") console.error("GOATIFY forward failed", JSON.stringify(g));
   } catch (e) { console.error("GOATIFY forward error", String(e && e.message || e)); }
   let customerMail = "skipped";
-  if (c.email) { try { await resendSend({ from, to: [c.email], reply_to: env("ORDER_NOTIFY_TO").split(",")[0].trim() || void 0, subject: m.customer.subject, html: m.customer.html, text: m.customer.text }); customerMail = "sent"; } catch { customerMail = "failed"; } }
+  // Customer confirmation: retried (Resend allows ~2 requests/second and the shop e-mail went out just before), failures logged.
+  if (c.email) {
+    for (let attempt = 1; attempt <= 3 && customerMail !== "sent"; attempt++) {
+      try { await resendSend({ from, to: [c.email], reply_to: env("ORDER_NOTIFY_TO").split(",")[0].trim() || void 0, subject: m.customer.subject, html: m.customer.html, text: m.customer.text }); customerMail = "sent"; }
+      catch (e) { customerMail = "failed"; console.error("customer confirmation e-mail failed", o.order_id, attempt, String(e && e.message || e)); if (attempt < 3) await new Promise((r) => setTimeout(r, 1500 * attempt)); }
+    }
+  }
   return json(200, { ok: true, order_id: o.order_id, customerMail, recs: o.recs });
 }
 __name(orderSubmit, "orderSubmit");
