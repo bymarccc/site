@@ -1101,7 +1101,7 @@ body.is-custom-bag-page #gallery { display: none; }
     // TOPS & JACKETS: one model per gender (women 177 cm & 52 kg, men 185 cm & 73 kg), wearing size M
     const cols = PRODUCT.collections || [];
     if (!cols.includes('looks') && (cols.includes('tops') || cols.includes('jackets'))) {
-      const ch = (PRODUCT.chart || []).map(String), sz = ch.includes('M') || !ch.length ? 'M' : (ch.find(c => /(^|-)M(-|$)/.test(c)) || 'M');
+      const rc = (CATALOG[KEY] || {}).chart, pc = PRODUCT.chart, ch = (Array.isArray(rc) ? rc : Array.isArray(pc) ? pc : (pc && Array.isArray(pc.sizes) ? pc.sizes.map(x => x && x.size != null ? x.size : x) : [])).map(String), sz = ch.includes('M') || !ch.length ? 'M' : (ch.find(c => /(^|-)M(-|$)/.test(c)) || 'M');
       own = PRODUCT.gender === 'women' ? { height: 177, weight: 52, size: sz } : { height: 185, weight: 73, size: sz };
     }
     mt.textContent = own && own.height && own.weight && own.size
