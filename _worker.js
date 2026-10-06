@@ -2966,17 +2966,7 @@ async function accountAdmin(request) {
     await db.prepare("UPDATE acct_orders SET status = ?2 WHERE order_id = ?1").bind(String(b.order_id || ""), st).run();
     return json(200, { ok: true });
   }
-  if (!validEmail(email)) return json(400, { error: "Bad email" });
-  if (b.action === "ytm-status") {
-    const st = b.status === "connected" ? "connected" : "pending";
-    await db.prepare("UPDATE acct_ytm SET status = ?2, updated_at = ?3 WHERE email = ?1").bind(email, st, acctNow()).run();
-    return json(200, { ok: true, status: st });
-  }
-  if (b.action === "customer-orders") {
-    const rows = (await db.prepare("SELECT order_id, created_at, status, currency, total_local, total_ron, discount_pct, credit_ron FROM acct_orders WHERE email = ?1 ORDER BY created_at DESC LIMIT 200").bind(email).all()).results || [];
-    return json(200, { orders: rows.map((o) => ({ id: o.order_id, at: o.created_at, status: o.status, currency: o.currency, total: o.total_local, totalRon: o.total_ron, discountPct: o.discount_pct || 0, creditRon: o.credit_ron || 0 })) });
-  }
-  const ensure = async () => { const c = await db.prepare("SELECT 1 FROM acct_customers WHERE email = ?1").bind(email).first(); if (!c) await db.prepare("INSERT INTO acct_customers (email, name, created_at, ref_code, prefs) VALUES (?1,?2,?3,?4,?5)").bind(email, String(b.name || "").slice(0, 80), acctNow(), acctRand(7), JSON.stringify({ news: true, drops: true })).run(); };
+  // bulk import first: it carries its own e-mails (one per item), not b.email
   if (b.action === "import-spend-bulk") {
     let n = 0;
     for (const it of (Array.isArray(b.items) ? b.items : []).slice(0, 500)) {
@@ -2988,6 +2978,17 @@ async function accountAdmin(request) {
     }
     return json(200, { ok: true, imported: n });
   }
+  if (!validEmail(email)) return json(400, { error: "Bad email" });
+  if (b.action === "ytm-status") {
+    const st = b.status === "connected" ? "connected" : "pending";
+    await db.prepare("UPDATE acct_ytm SET status = ?2, updated_at = ?3 WHERE email = ?1").bind(email, st, acctNow()).run();
+    return json(200, { ok: true, status: st });
+  }
+  if (b.action === "customer-orders") {
+    const rows = (await db.prepare("SELECT order_id, created_at, status, currency, total_local, total_ron, discount_pct, credit_ron FROM acct_orders WHERE email = ?1 ORDER BY created_at DESC LIMIT 200").bind(email).all()).results || [];
+    return json(200, { orders: rows.map((o) => ({ id: o.order_id, at: o.created_at, status: o.status, currency: o.currency, total: o.total_local, totalRon: o.total_ron, discountPct: o.discount_pct || 0, creditRon: o.credit_ron || 0 })) });
+  }
+  const ensure = async () => { const c = await db.prepare("SELECT 1 FROM acct_customers WHERE email = ?1").bind(email).first(); if (!c) await db.prepare("INSERT INTO acct_customers (email, name, created_at, ref_code, prefs) VALUES (?1,?2,?3,?4,?5)").bind(email, String(b.name || "").slice(0, 80), acctNow(), acctRand(7), JSON.stringify({ news: true, drops: true })).run(); };
   if (b.action === "import-spend") { await ensure(); await db.prepare("UPDATE acct_customers SET spend_import = ?2 WHERE email = ?1").bind(email, Math.max(0, Number(b.spend_ron) || 0)).run(); return json(200, { ok: true }); }
   if (b.action === "credit") { await ensure(); await db.prepare("INSERT INTO acct_credits (email, kind, amount_ron, note, created_at, expires_at) VALUES (?1,?2,?3,?4,?5,?6)").bind(email, b.kind === "refund" ? "refund" : "credit", Math.max(0, Number(b.amount_ron) || 0), String(b.note || "").slice(0, 200), acctNow(), b.expires_at || null).run(); return json(200, { ok: true }); }
   if (b.action === "tier-override") { await ensure(); const t = ACCT_TIERS.find((x) => x.id === b.tier); await db.prepare("UPDATE acct_customers SET tier_override = ?2 WHERE email = ?1").bind(email, t ? t.id : null).run(); return json(200, { ok: true }); }
