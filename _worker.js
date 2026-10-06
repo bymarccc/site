@@ -2505,6 +2505,7 @@ __name(contentSitemapEntries, "contentSitemapEntries");
 // ---------------------------------------------------------------------------------------------
 var ACCT_COOKIE = "bym_acct";
 var ACCT_TTL = 60 * 60 * 24 * 180;
+var YTM_LIMIT = { bronze: 25, silver: 50, gold: 75, platinum: null };   // songs we connect per tier (null = unlimited)
 var ACCT_TIERS = [
   { id: "bronze", name: "Bronze", min: 0, pct: 0, freeShip: false, drops: false },
   { id: "silver", name: "Silver", min: 1500, pct: 10, freeShip: true, drops: false },
@@ -2900,7 +2901,8 @@ async function accountApi(request) {
       }
     }
     const r = await db.prepare("SELECT url, status, updated_at FROM acct_ytm WHERE email = ?1").bind(email).first();
-    return json(200, { ytm: r ? { url: r.url, status: r.status, updated: r.updated_at } : null });
+    const sp2 = await acctSpend(db, email), tf2 = acctTierFor(sp2.spend, sp2.override), lim = YTM_LIMIT[tf2.tier.id];
+    return json(200, { ytm: r ? { url: r.url, status: r.status, updated: r.updated_at } : null, limit: lim === undefined ? 25 : lim, tier: tf2.tier.name });
   }
   return json(400, { error: "Unknown action" });
 }
@@ -2919,6 +2921,8 @@ __name(accountRefRedirect, "accountRefRedirect");
 //   { action: "import-spend", email, spend_ron }    → spend from before accounts existed (counts toward the tier)
 //   { action: "credit", email, amount_ron, note, kind } → store credit / refund credit
 //   { action: "tier-override", email, tier }        → hold a customer at a minimum tier ("" clears)
+//   { action: "ytm-requests" }                      → YouTube Music playlists to connect (pending first), with song limit per tier
+//   { action: "ytm-status", email, status }          → pending | connected
 async function accountAdmin(request) {
   if (request.method !== "POST") return json(405, { error: "Method not allowed" });
   const secret = env("GOATIFY_SITE_SECRET");
@@ -2945,6 +2949,16 @@ async function accountAdmin(request) {
       out.push({ email: c.email, name: c.name, phone: c.phone, since: c.created_at, tier: tf.tier.id, tierName: tf.tier.name, discountPct: tf.tier.pct, spend12mRon: sp.spend, ordersTotal: (last && last.n) || 0, lastOrderAt: last && last.t, toNextTier: tf.toNext, nextTier: tf.next && tf.next.name, referredBy: c.referred_by, refCode: c.ref_code, tierOverride: c.tier_override, freeShip: tf.tier.freeShip, drops: tf.tier.drops, isNew: String(c.created_at || "") >= newSince, ytm: ytmBy[c.email] || null });
     }
     return json(200, { customers: out, tiers: ACCT_TIERS });
+  }
+  // GOATIFY: every customer who asked us to connect a YouTube Music playlist (newest first) + their song limit
+  if (b.action === "ytm-requests") {
+    const rows = (await db.prepare("SELECT y.email, y.url, y.status, y.updated_at, c.name, c.phone FROM acct_ytm y LEFT JOIN acct_customers c ON c.email = y.email ORDER BY CASE y.status WHEN 'pending' THEN 0 ELSE 1 END, y.updated_at DESC LIMIT 2000").all().catch(() => ({ results: [] }))).results || [];
+    const out = [];
+    for (const r of rows) {
+      const sp = await acctSpend(db, r.email), tf = acctTierFor(sp.spend, sp.override), lim = YTM_LIMIT[tf.tier.id];
+      out.push({ email: r.email, name: r.name || "", phone: r.phone || "", tier: tf.tier.id, tierName: tf.tier.name, songLimit: lim === undefined ? 25 : lim, links: String(r.url || "").split("\n").filter(Boolean), status: r.status, requestedAt: r.updated_at, dueBy: new Date(new Date(r.updated_at).getTime() + 864e5).toISOString() });
+    }
+    return json(200, { requests: out, pending: out.filter((x) => x.status === "pending").length, limits: YTM_LIMIT });
   }
   if (b.action === "order-status") {
     const st = String(b.status || "");
