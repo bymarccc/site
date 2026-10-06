@@ -488,8 +488,9 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-gallery.is-vert .pdp-gallery__slide { flex: 0 0 100%; width: 100%; }
 .pdp-gallery.is-vert .pdp-bars { display: flex; flex-direction: column; gap: 5px; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); z-index: 3; left: auto; bottom: auto; }
 .pdp-gallery.is-vert .pdp-bars i { width: 2px; height: 16px; }
-.pdp-gallery.is-vert .pdp-gallery__peek { position: absolute; inset: 0; z-index: 2; background: #fff; pointer-events: none; }
-.pdp-gallery.is-vert .pdp-gallery__peek img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.pdp-gallery__peek { position: absolute; inset: 0; z-index: 2; background: var(--gbg, #f0f0f0); pointer-events: none; }
+.pdp-gallery__peek[hidden] { display: none; }
+.pdp-gallery__peek img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 /* ---------- Wishlist sheet ---------- */
 .wl { position: fixed; inset: 0; z-index: 140; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.42); opacity: 0; transition: opacity .3s var(--ease); }
@@ -536,7 +537,7 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-family[hidden] { display: none; }
 .pdp-family__label { display: flex; justify-content: center; gap: 6px; margin: 10px 0 8px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: #6f6f6f; }
 .pdp-family__label b { color: #111; font-weight: 500; }
-.pdp-family__row { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; padding: 0 calc(50% - 21px) 4px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.pdp-family__row { position: relative; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; padding: 0 calc(50% - 21px) 4px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
 .pdp-family__row::-webkit-scrollbar { display: none; }
 .pdp-family__row a { flex: 0 0 auto; width: 42px; display: block; text-decoration: none; padding-bottom: 5px; border-bottom: 1.5px solid transparent; scroll-snap-align: center; transition: opacity .2s; opacity: .55; }
 .pdp-family__row a img { display: block; width: 42px; height: 60px; object-fit: cover; object-position: 50% 30%; background: #f0f0f0; pointer-events: none; }
@@ -617,6 +618,12 @@ body.is-custom-bag-page #gallery { display: none; }
 /* ---------- Mobile product-page layout: hide the Design/Size labels, center the size
    selector, and reorder title/price/reviews + accordions + info rows below it ---------- */
 @media (max-width: 899px) {
+  /* photo a bit shorter than the screen so the colours / options under it are always in view (room to swipe them);
+     the photo keeps its own ratio (contain) and the side space takes the photo's own background colour — no white frame */
+  .pdp-gallery { aspect-ratio: auto; height: min(150vw, calc(100svh - 205px)); background: var(--gbg, #f0f0f0); }
+  .pdp-gallery.has-family { height: min(150vw, calc(100svh - 255px)); }
+  .pdp-gallery__slide { background: var(--sbg, var(--gbg, #f0f0f0)); display: block; height: 100%; }
+  .pdp-gallery .pdp-gallery__slide img { width: 100%; height: 100%; max-height: 100%; object-fit: contain; }
   .pdp-info { display: flex; flex-direction: column; }
   .pdp-info > .pdp-label { display: none; }
   .pdp-info > .pdp-summary { order: 1; margin-top: 0; }
@@ -1111,6 +1118,9 @@ body.is-custom-bag-page #gallery { display: none; }
        loading them all up front is cheap and removes that failure mode entirely. */
     img.loading = 'eager'; img.decoding = 'async'; if (i === 0) img.fetchPriority = 'high';
     s.appendChild(img); track.appendChild(s);
+    // fill the space beside the photo with the photo's own background colour (sampled from its edge) — reads as one seamless photo
+    const sample = () => { try { const c = document.createElement('canvas'); c.width = c.height = 8; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, img.naturalWidth * .04, img.naturalHeight, 0, 0, 8, 8); const d = x.getImageData(0, 0, 8, 8).data; let r = 0, gg = 0, b = 0, n = 0; for (let k = 0; k < d.length; k += 4) { r += d[k]; gg += d[k + 1]; b += d[k + 2]; n++; } const col = `rgb(${Math.round(r / n)},${Math.round(gg / n)},${Math.round(b / n)})`; s.style.setProperty('--sbg', col); if (i === 0) gallery.style.setProperty('--gbg', col); } catch (e) {} };
+    if (img.complete && img.naturalWidth) sample(); else img.addEventListener('load', sample, { once: true });
   });
   const slides = [...track.children];
   /* Model info / "Fill in your height & weight" — set ONCE here, from the product's gender and
@@ -1157,6 +1167,7 @@ body.is-custom-bag-page #gallery { display: none; }
     } else if (PRODUCT.imageDesigns && DESIGNS[gi] && state.design !== DESIGNS[gi]) { state.design = DESIGNS[gi]; emit(); }
   }
   if (VERT) { gallery.classList.add('is-vert'); gallery.appendChild(bars); }
+  if (IN_FAMILY) gallery.classList.add('has-family');
   if (GALLERY.length < 2) { gallery.classList.add('is-single'); $('galPrev').hidden = true; $('galNext').hidden = true; }
   layout(0, false);
   /* Desktop (Pull&Bear-style): thumbnail strip beside the photo, and the size guide / details /
@@ -1285,9 +1296,10 @@ body.is-custom-bag-page #gallery { display: none; }
     });
     $('family').hidden = false;
     const items = [...row.children];
-    const center = (a, smooth) => row.scrollTo({ left: a.offsetLeft - (row.clientWidth - a.offsetWidth) / 2, behavior: smooth ? 'smooth' : 'auto' });
+    const center = (a, smooth) => { const rr = row.getBoundingClientRect(), ar = a.getBoundingClientRect(); row.scrollTo({ left: row.scrollLeft + (ar.left + ar.width / 2) - (rr.left + rr.width / 2), behavior: smooth ? 'smooth' : 'auto' }); };
     const cur0 = items.find(a => a.dataset.k === KEY);
-    requestAnimationFrame(() => { if (cur0) center(cur0, false); });
+    let ready = false; const init = () => { if (cur0) center(cur0, false); };
+    requestAnimationFrame(init); setTimeout(init, 250); setTimeout(() => { init(); ready = true; }, 600); window.addEventListener('load', init, { once: true });
     // light "tick" under the finger: iOS 18 Safari (switch checkbox) / Android (vibrate)
     const tickLbl = document.createElement('label'); tickLbl.setAttribute('aria-hidden', 'true'); tickLbl.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
     tickLbl.innerHTML = '<input type="checkbox" switch tabindex="-1">'; document.body.appendChild(tickLbl);
@@ -1299,7 +1311,7 @@ body.is-custom-bag-page #gallery { display: none; }
       if (k === KEY) { peek.hidden = true; return; }
       peek.hidden = false; peek.querySelector('img').src = photoOf(CATALOG[k], state.design);
     };
-    const centred = () => { const mid = row.scrollLeft + row.clientWidth / 2; let best = null, bd = 1e9; items.forEach(a => { const d = Math.abs(a.offsetLeft + a.offsetWidth / 2 - mid); if (d < bd) { bd = d; best = a; } }); return best; };
+    const centred = () => { const rr = row.getBoundingClientRect(), mid = rr.left + rr.width / 2; let best = null, bd = 1e9; items.forEach(a => { const ar = a.getBoundingClientRect(), d = Math.abs(ar.left + ar.width / 2 - mid); if (d < bd) { bd = d; best = a; } }); return best; };
     const settle = () => {
       const a = centred(); if (!a || going) return;
       if (a.dataset.k === KEY) { preview(KEY); return; }
@@ -1309,6 +1321,7 @@ body.is-custom-bag-page #gallery { display: none; }
       else location.replace(url);
     };
     row.addEventListener('scroll', () => {
+      if (!ready) return;
       const a = centred(); if (!a) return;
       if (a.dataset.k !== shown) { shown = a.dataset.k; tick(); preview(shown); $('familyName').textContent = a.dataset.n; items.forEach(x => x.setAttribute('aria-current', String(x === a))); }
       clearTimeout(timer); timer = setTimeout(settle, 220);
