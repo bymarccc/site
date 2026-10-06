@@ -271,7 +271,7 @@ __name(checkoutCreate, "checkoutCreate");
 // The browser sends a temporary id (client_ref); the same client_ref always gets the same number (retries are safe).
 // n is an INTEGER PRIMARY KEY: SQLite gives each new row max(n)+1 inside the write, so two orders can never share a
 // number. A seed row (n = 3119) makes the first real order bymarccc-3120. Without the binding the temporary id is kept.
-var ORDER_NO_START = 3120;
+var ORDER_NO_START = 3001;   // bymarccc-3001…: the same number as in GOATIFY (sent as orderNumber)
 var ORDER_NO_RE = /^bymarccc-\d{4,9}$/;
 var orderTableReady = null;
 var ordersDb = /* @__PURE__ */ __name(() => ENV.ORDERS_DB && typeof ENV.ORDERS_DB.prepare === "function" ? ENV.ORDERS_DB : null, "ordersDb");
@@ -1855,6 +1855,7 @@ function toGoatifyOrder(o, { pay, totals = null, siteKey = 'bymarccc', placedAt 
     items, subtotal: sub / 100, shipping: ship / 100, discount: 0, total: (sub + ship) / 100, currency: o.currency || 'RON',
     payment: pay === 'card' ? { method: 'card', status: 'paid', ...(o.session_id ? { reference: String(o.session_id).slice(0, 120) } : {}) } : { method: 'cod' },
     ...(gHttps(sourceUrl) ? { sourceUrl: gHttps(sourceUrl) } : {}), ...(notes ? { notes: String(notes).slice(0, 1000) } : {}), placedAt,
+    ...(/^bymarccc-\d{1,9}$/.test(String(o.order_id)) ? { orderNumber: Number(String(o.order_id).slice(9)) } : {}),
   };
 }
 
