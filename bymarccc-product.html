@@ -990,7 +990,14 @@ body.is-custom-bag-page #gallery { display: none; }
   const PRODUCT = Object.assign({ model: MODEL, reviews: REVIEWS, unavailable: [], details: [], collections: [], description: '' }, CATALOG[KEY] || CATALOG.skinny);
   // BABY TOP family (one product per colour): SSENSE-style page — photos swipe up/down, colours in a strip under the photo
   const BABY_FAMILY = [['w-white-baby-top-1', 'White'], ['w-pink-baby-top', 'Pink'], ['w-fuchsia-baby-top', 'Fuchsia'], ['w-blue-baby-top', 'Blue'], ['w-red-baby-top', 'Red'], ['w-white-baby-top', 'Black'], ['w-burgundy-baby-top', 'Burgundy']];
-  const IN_FAMILY = BABY_FAMILY.some(([k]) => k === KEY);
+  // ZIP SETS: the same SSENSE-style colour strip (Pink · Black · Grey) on the zip hoodies and pants
+  const FAMILIES = [BABY_FAMILY,
+    [['m-pink-zip-hoodie', 'Pink'], ['m-black-zip-hoodie', 'Black'], ['m-grey-zip-hoodie', 'Grey']],
+    [['w-pink-zip-hoodie', 'Pink'], ['w-black-zip-hoodie', 'Black'], ['w-grey-zip-hoodie', 'Grey']],
+    [['m-pink-pants', 'Pink'], ['m-black-pants', 'Black'], ['m-grey-pants', 'Grey']],
+    [['w-black-pants', 'Black'], ['w-grey-pants', 'Grey']]];
+  const FAMILY = FAMILIES.find(f => f.some(([k]) => k === KEY)) || [];
+  const IN_FAMILY = FAMILY.length > 0;
   const VERT = IN_FAMILY && !matchMedia('(min-width: 900px)').matches;
   // "Complete the Look" (hanger icon) is only offered on the Zebra Patch pieces that are
   // actually designed to be matched by colour; every other product hides the hanger entirely.
@@ -1310,7 +1317,7 @@ body.is-custom-bag-page #gallery { display: none; }
     const slug = v => String(v || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const photoOf = (fp, design) => { const g = fp.gallery || [], di = fp.designImages || {}, k = slug(design); const it = (k && di[k] != null && g[di[k]]) || g[0]; return it && (it.src || it); };
     const urlOf = k => 'bymarccc-product.html?p=' + k + (state.design ? '&d=' + encodeURIComponent(state.design) : '');
-    BABY_FAMILY.forEach(([k, name]) => {
+    FAMILY.forEach(([k, name]) => {
       const fp = CATALOG[k]; if (!fp) return;
       const g = (fp.gallery || [])[0]; const src = g && (g.src || g); if (!src) return;
       const a = document.createElement('button'); a.type = 'button'; a.setAttribute('aria-label', name); a.setAttribute('aria-current', String(k === KEY)); a.dataset.k = k; a.dataset.n = name;
