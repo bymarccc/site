@@ -200,6 +200,10 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-size { min-width: 52px; height: 32px; padding: 0 16px; border: 1px solid var(--line); background: #fff; border-radius: 10px; font-size: 13px; letter-spacing: .04em; }
 .pdp-size[aria-checked="true"] { background: #111; color: #fff; border-color: #111; }
 .pdp-size[disabled] { color: #bbb; text-decoration: line-through; cursor: default; }
+/* premium size buttons (same look as the baby-top sizes): black outline, a touch bigger */
+#sizes .pdp-size, .pdp-looksize .pdp-size { height: 36px; min-width: 50px; padding: 0 14px; border-color: #111; border-radius: 9px; font-size: 14px; font-weight: 500; letter-spacing: .03em; }
+#sizes .pdp-size[disabled], .pdp-looksize .pdp-size[disabled] { border-color: var(--line); }
+#sizes + .pdp-sizemsg { margin-top: 8px; order: 4; }
 .pdp-label { display: flex; justify-content: space-between; margin-top: 18px; font-size: 12px; letter-spacing: .12em; font-weight: 600; }
 .pdp-label span:last-child { font-weight: 400; letter-spacing: .02em; color: var(--muted); }
 
@@ -959,7 +963,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=288221sw"></script>
+<script src="/assets/catalog.js?v=288223tj"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1943,6 +1947,7 @@ body.is-custom-bag-page #gallery { display: none; }
     if (DESIGNS.length && !state.design && $('sizeMsg')) { msg.textContent = ''; const sm = $('sizeMsg'); sm.textContent = 'Please select a design.'; sm.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }
     if (DESIGNS.length && !state.design) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a design.'; designsEl.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }
     if (window.__bymLookVariant && !state.size) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a size for each piece.'; const lb = $('lookSizes'); lb.classList.add('is-err'); lb.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }
+    if (!state.size && !$('sizeMsg') && !$('sizes').hidden) { const sm = document.createElement('p'); sm.className = 'pdp-sizemsg'; sm.id = 'sizeMsg'; sm.setAttribute('role', 'alert'); $('sizes').after(sm); state.listeners.add(() => { if (state.size) sm.textContent = ''; }); }   // the size hint sits right under the sizes, not under ADD TO BAG
     if (!state.size && $('sizeMsg')) { msg.textContent = ''; const sm = $('sizeMsg'); sm.textContent = 'Please select a size.'; sm.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }   // baby tops: the hint sits right under XS-S / M-L
     if (!state.size) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a size.'; $('sizes').scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); setTimeout(() => $('sizes').querySelector('.pdp-size:not([disabled])')?.focus({ preventScroll: true }), 400); return false; }
     const line = { id: variantId(), name: PRODUCT.title, variant: [state.colour === 'default' ? '' : colourOf(state.colour).name, PRODUCT.noSize ? '' : sizeLabel(state.size), state.design || ''].filter(Boolean).join(' · '), image: (PRODUCT.imageColours ? GALLERY[COLOURS.findIndex(x => x.id === state.colour)] || GALLERY[0] : GALLERY[0]).src, price: UNIT_PRICE, currency: PRODUCT.currency, quantity: 1, key: KEY };
