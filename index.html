@@ -725,7 +725,7 @@
   .play { --obj-scale: 1; --card-w: min(59.4vw, 270px); --card-ratio: 0.86; }
   .play__stage { height: 100vh; height: 100svh; }
   .card { top: 45%; transform: translate(-50%, -50%); }
-  .obj { left: var(--mx); top: var(--my); width: var(--mw); --rot: var(--mr, 0deg); touch-action: pan-y; }   /* swiping over any object scrolls the page (left, right, bottom all free); long-press to drag */
+  .obj { left: var(--mx); top: var(--my); width: var(--mw); --rot: var(--mr, 0deg); }   /* objects drag with one finger again; the empty space between them scrolls the page */
   .obj[data-obj="tag"] { z-index: 3; }   /* the hang tag sits on top of the art jeans */
   .obj[data-obj="money"] { left: 50%; transform: translate3d(calc(-50% + var(--tx)), var(--ty), 0) rotate(var(--rot)) scale(var(--s)); }
   .clickme { top: 22px; left: 22px; font-size: 12px; padding: 7px 12px; }
@@ -2504,7 +2504,6 @@
       if (!d || e.pointerId !== d.id) return;
       const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
       if (!d.armed) {
-        if (e.pointerType === 'touch' && isMobile()) { if (Math.hypot(dx, dy) > 8) { clearTimeout(hold); d = null; } return; }   // phone: a quick swipe over an object scrolls the page; only a long-press picks it up
         if (Math.hypot(dx, dy) > 6) { clearTimeout(hold); d.armed = true; el.classList.add('is-armed'); }
         else return;   // hasn't moved enough yet — could still turn into a tap
       }
@@ -2552,7 +2551,7 @@
     // element (the same class of bug fixed elsewhere on this page for the PiP tab) — belt-and-braces block
     // it at the raw Touch Event level too, from the very first touch, so dragging any object (e.g. the CD)
     // can never scroll/jump the page to another section.
-    el.addEventListener('touchmove', e => { if (d && (d.armed || !isMobile())) e.preventDefault(); }, { passive: false });
+    el.addEventListener('touchmove', e => { if (d) e.preventDefault(); }, { passive: false });
     el.addEventListener('click', e => {
       if (dragged) { dragged = false; e.preventDefault(); return; }   // a drag / long press is not a tap
       if (el.dataset.track) { const sy = window.scrollY; miniToggle(el.dataset.track); requestAnimationFrame(() => window.scrollTo(0, sy)); setTimeout(() => window.scrollTo(0, sy), 150); }   // vinyl / CD play their own track — and never move the page
