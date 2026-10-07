@@ -725,7 +725,8 @@
   .play { --obj-scale: 1; --card-w: min(59.4vw, 270px); --card-ratio: 0.86; }
   .play__stage { height: 100vh; height: 100svh; }
   .card { top: 45%; transform: translate(-50%, -50%); }
-  .obj { left: var(--mx); top: var(--my); width: var(--mw); --rot: var(--mr, 0deg); }
+  .obj { left: var(--mx); top: var(--my); width: var(--mw); --rot: var(--mr, 0deg); touch-action: pan-y; }   /* swiping over any object scrolls the page (left, right, bottom all free); long-press to drag */
+  .obj[data-obj="tag"] { z-index: 3; }   /* the hang tag sits on top of the art jeans */
   .obj[data-obj="money"] { left: 50%; transform: translate3d(calc(-50% + var(--tx)), var(--ty), 0) rotate(var(--rot)) scale(var(--s)); }
   .clickme { top: 22px; left: 22px; font-size: 12px; padding: 7px 12px; }
   .card__back { padding: 12px 12px 10px; }
@@ -915,38 +916,38 @@
 
     <!-- Decorative draggable objects. --dx/--dy/--dw/--dr = desktop, --mx/--my/--mw/--mr = mobile -->
     <button class="obj" type="button" data-obj="cd" data-track="cd" aria-label="Play the CD (drag to move)"
-      style="--dx:12%; --dy:8%;  --dw:220px; --dr:-6deg;  --mx:0%;  --my:51%; --mw:88px;  --mr:8deg;">
+      style="--dx:12%; --dy:8%;  --dw:220px; --dr:-6deg;  --mx:-2.1%;  --my:43.8%; --mw:88px;  --mr:8deg;">
       <img src="/assets/img/home/9431d99c0f.webp" width="900" height="750" alt="" loading="lazy" decoding="async"></button>
 
     <button class="obj obj--vinyl" type="button" id="vinylDisc" data-obj="vinyl" data-track="vinyl" aria-label="Play WAGWAN by Central Cee (drag to move)"
-      style="--dx:68%; --dy:6%;  --dw:200px; --dr:0deg;   --mx:66%; --my:3%;  --mw:130px; --mr:0deg;">
+      style="--dx:68%; --dy:6%;  --dw:200px; --dr:0deg;   --mx:64.8%; --my:9.2%;  --mw:130px; --mr:0deg;">
       <img src="/assets/img/home/9320c50606.webp" width="1254" height="1254" alt="" loading="lazy" decoding="async">
       <span class="obj__playicon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
     </button>
 
     <button class="obj" type="button" data-obj="tag" aria-label="Drag: hang tag"
-      style="--dx:40%; --dy:4%;  --dw:89px; --dr:20deg;  --mx:48%; --my:13.5%;  --mw:63px;  --mr:15deg;">
+      style="--dx:40%; --dy:4%;  --dw:89px; --dr:20deg;  --mx:81.4%; --my:29.5%;  --mw:63px;  --mr:15deg;">
       <img src="/assets/img/home/2213519693.webp" width="510" height="900" alt="" loading="lazy" decoding="async"></button>
 
     <button class="obj" type="button" data-obj="passport" aria-label="Drag: bymarccc passport and boarding pass"
-      style="--dx:80%; --dy:40%; --dw:187px; --dr:0deg;   --mx:0%;  --my:27%; --mw:109px; --mr:-10deg;">
+      style="--dx:80%; --dy:40%; --dw:187px; --dr:0deg;   --mx:35.6%;  --my:2.3%; --mw:98px; --mr:-10deg;">
       <img src="/assets/img/home/ae38c6629c.webp" width="900" height="900" alt="" loading="lazy" decoding="async"></button>
 
     <button class="obj" type="button" data-obj="frame" aria-label="Drag: framed portrait"
-      style="--dx:4%;  --dy:26%; --dw:360px; --dr:0deg;   --mx:-12%; --my:72.5%; --mw:158px; --mr:0deg;">
+      style="--dx:4%;  --dy:26%; --dw:360px; --dr:0deg;   --mx:-10.2%; --my:62.5%; --mw:158px; --mr:0deg;">
       <img src="/assets/img/home/0970fb315a.webp" width="900" height="669" alt="" loading="lazy" decoding="async"></button>
 
     <button class="obj" type="button" data-obj="artjeans" aria-label="Drag: art-print jeans"
-      style="--dx:19%; --dy:58%; --dw:222px; --dr:-8deg;  --mx:70%; --my:31.5%; --mw:182px; --mr:-8deg;">
+      style="--dx:19%; --dy:58%; --dw:222px; --dr:-8deg;  --mx:62.8%; --my:38%; --mw:182px; --mr:-8deg;">
       <img src="/assets/img/home/682b52a35e.webp" width="600" height="900" alt="" loading="lazy" decoding="async"></button>
 
     <button class="obj" type="button" data-obj="bag" aria-label="Drag: bymarccc illustrated bag"
-      style="--dx:65%; --dy:66%; --dw:286px; --dr:5deg;   --mx:-3.5%;  --my:3%;  --mw:182px; --mr:0deg;">
+      style="--dx:65%; --dy:66%; --dw:286px; --dr:5deg;   --mx:-9.6%;  --my:7.7%;  --mw:200px; --mr:0deg;">
       <img src="/assets/img/home/043ce3733c.webp" width="900" height="730" alt="" loading="lazy" decoding="async"></button>
 
 
     <button class="obj" type="button" data-obj="money" aria-label="Drag: bag of money"
-      style="--dx:2%;  --dy:74%; --dw:221px; --dr:0deg;   --mx:41%; --my:72%; --mw:134px;  --mr:0deg;">
+      style="--dx:2%;  --dy:74%; --dw:221px; --dr:0deg;   --mx:41%; --my:74.2%; --mw:134px;  --mr:0deg;">
       <img src="/assets/img/home/299e20c649.webp" width="900" height="900" alt="" loading="lazy" decoding="async"></button>
 
     <!-- Central flip card -->
@@ -2501,6 +2502,7 @@
       if (!d || e.pointerId !== d.id) return;
       const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
       if (!d.armed) {
+        if (e.pointerType === 'touch' && isMobile()) { if (Math.hypot(dx, dy) > 8) { clearTimeout(hold); d = null; } return; }   // phone: a quick swipe over an object scrolls the page; only a long-press picks it up
         if (Math.hypot(dx, dy) > 6) { clearTimeout(hold); d.armed = true; el.classList.add('is-armed'); }
         else return;   // hasn't moved enough yet — could still turn into a tap
       }
@@ -2548,7 +2550,7 @@
     // element (the same class of bug fixed elsewhere on this page for the PiP tab) — belt-and-braces block
     // it at the raw Touch Event level too, from the very first touch, so dragging any object (e.g. the CD)
     // can never scroll/jump the page to another section.
-    el.addEventListener('touchmove', e => { if (d) e.preventDefault(); }, { passive: false });
+    el.addEventListener('touchmove', e => { if (d && (d.armed || !isMobile())) e.preventDefault(); }, { passive: false });
     el.addEventListener('click', e => {
       if (dragged) { dragged = false; e.preventDefault(); return; }   // a drag / long press is not a tap
       if (el.dataset.track) { const sy = window.scrollY; miniToggle(el.dataset.track); requestAnimationFrame(() => window.scrollTo(0, sy)); setTimeout(() => window.scrollTo(0, sy), 150); }   // vinyl / CD play their own track — and never move the page
