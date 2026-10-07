@@ -1333,6 +1333,8 @@
   #shopWomen .shop__img { aspect-ratio: 1212 / 1816; }
   #shopWomen .shop__img img { object-position: 50% 50%; }
   .salerail .shop__img { aspect-ratio: 1212 / 1816; touch-action: pan-x pan-y pinch-zoom; }   /* the shop grid's pan-y blocked finger swiping on the rail */
+  .salerail .shop__img.is-multi { touch-action: pan-y pinch-zoom; }   /* sideways swipe on a multi-photo card flips its photos; past the last one it moves the rail */
+  .salegrid__card .shop__img.is-multi img:not(.is-on) { opacity: 0; }
   .salerail__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-top: 10px; font-size: 12.5px; letter-spacing: .04em; line-height: 1.35; }
   .salerail__name { text-transform: uppercase; }
   .salerail__price { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; }
@@ -1363,7 +1365,7 @@
   const genderOf = p => p.genders || [p.gender || 'men'];
   // products marked NEW COLLECTION on their homepage card (vertical label, Diesel-style)
   // also the order of the NEW COLLECTION tab (men + women)
-  const NEW_LIST = ['m-pink-pants', 'w-pink-zip-hoodie', 'w-mini-bag-jeans-burgundy', 'w-mini-bag-jeans-black', 'm-pink-zip-hoodie', 'w-blue-zip-hoodie', 'm-blue-zip-hoodie', 'm-tech-contrast-jacket', 'm-tech-wide-pants', 'm-burgundy-hoodie', 'art-jeans', 'w-sporty-top-ecru', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-jeans', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag'];
+  const NEW_LIST = ['m-pink-pants', 'w-pink-zip-hoodie', 'w-mini-bag-jeans-burgundy', 'w-mini-bag-jeans-black', 'm-pink-zip-hoodie', 'w-blue-zip-hoodie', 'm-blue-zip-hoodie', 'm-tech-contrast-jacket', 'm-tech-wide-pants', 'm-burgundy-hoodie','w-sporty-top-ecru', 'w-sporty-top', 'w-white-logo-windbreaker', 'w-black-logo-windbreaker', 'w-burgundy-long-sleeve', 'w-logo-vest', 'w-burgundy-baby-top', 'w-muse-blazer', 'w-delulu-blazer-2', 'w-logo-flare-jeans', 'w-logo-flare-leggings', 'w-logo-leggings', 'w-white-shoulder-bag', 'w-burgundy-shoulder-bag', 'w-logo-bag'];
   const NEW_COLLECTION = new Set(NEW_LIST);
   const NEW_COLOR = new Set(['skinny']);   // vertical NEW COLOR tag (same type as NEW COLLECTION)
   const newTag = key => NEW_COLOR.has(key) ? '<span class="shop__newtag">NEW COLOR</span>' : NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
@@ -1492,10 +1494,30 @@
     const words = p.title.split(' '), cut = p.nameBreak || words.length - 1; const name = mini ? p.title : words.length > 1 ? `${words.slice(0, cut).join(' ')}<br>${words.slice(cut).join(' ')}` : p.title;
     const card = document.createElement(link ? 'a' : 'article'); card.className = 'sales__card salegrid__card';
     if (link) card.href = 'bymarccc-product.html?p=' + key;   // MEN → DENIM rails: the card opens the product page (no quick add)
-    card.innerHTML = `<span class="shop__img">${link ? newTag(key) : sizeTag(size, key) || newTag(key)}<img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on"><button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
+    const multi = link ? (p.cardGallery || p.gallery || []).slice(0, 7) : [];   // MEN → DENIM rails: several photos + dashes, swipe through them right on the homepage
+    const pics = multi.length > 1 ? multi.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — ' + (i + 1) : ''}" loading="lazy" decoding="async"${i ? '' : ' class="is-on"'}>`).join('') + `<span class="shop__bars">${multi.map((_, i) => `<i${i ? '' : ' class="is-on"'}></i>`).join('')}</span>` : `<img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on">`;
+    card.innerHTML = `<span class="shop__img${multi.length > 1 ? ' is-multi' : ''}">${link ? newTag(key) : sizeTag(size, key) || newTag(key)}${pics}<button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
       <span class="salerail__meta"><span class="salerail__name">${name}</span>${typeof p.price === 'number' ? `<span class="salerail__price">${onSale ? `<s>${fmt(p.price, p.currency)}</s><b>${fmt(p.salePrice, p.currency)}</b>` : `<span class="salerail__price--plain">${fmt(p.price, p.currency)}</span>`}</span>` : ''}</span>`;
     const add = card.querySelector('.salegrid__add');
-    if (link) { add.remove(); return card; }
+    if (link) {
+      add.remove();
+      const box = card.querySelector('.shop__img.is-multi');
+      if (box) {
+        const ims = [...box.querySelectorAll('img')], bars = [...box.querySelectorAll('.shop__bars i')]; let i = 0, d = null;
+        const show = n => { i = n; ims.forEach((im, k) => im.classList.toggle('is-on', k === i)); bars.forEach((b, k) => b.classList.toggle('is-on', k === i)); };
+        box.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' || !e.isPrimary) return; d = { x: e.clientX, y: e.clientY, done: false }; });
+        box.addEventListener('pointermove', e => {
+          if (!d || d.done) return; const dx = e.clientX - d.x, dy = e.clientY - d.y;
+          if (Math.abs(dx) < 30 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+          d.done = true; const n = dx < 0 ? i + 1 : i - 1;
+          if (n >= 0 && n < ims.length) show(n);
+          else { const tr = card.closest('.sales__track'); if (tr) tr.scrollBy({ left: (dx < 0 ? 1 : -1) * card.getBoundingClientRect().width, behavior: 'smooth' }); }   // past the first/last photo: move the rail instead
+          const block = ev => { ev.preventDefault(); ev.stopPropagation(); }; card.addEventListener('click', block, { capture: true, once: true }); setTimeout(() => card.removeEventListener('click', block, { capture: true }), 400);
+        });
+        const end = () => { d = null; }; box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+      }
+      return card;
+    }
     add.addEventListener('click', async () => {
       const store = window.BYMARCCC && window.BYMARCCC.bag; if (!store) return;
       await store.add({ id: `${p.id}:default:${size}`, name: p.title, variant: size ? 'Size ' + size : '', image: img.src, price: chargePrice, currency: p.currency, quantity: 1 });
