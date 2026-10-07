@@ -1707,7 +1707,7 @@
         const duo = items.filter(([, p]) => p.saleDuo);   // a small shared swipeable row for a fixed group of items (e.g. Black Leather Jacket + Embroidered Cross Turtleneck)
         if (rail.length || duo.length) {
           const section = document.createElement('div'); section.className = 'sales__section sales__section--men'; grid.appendChild(section);
-          if (rail.length) mountSalesSlider(section, rail, { compact: true, rail: true, mini: true }); // the size-40 pieces first: one sliding row of shop-sized cards + scroll bar
+          if (rail.length) mountSalesSlider(section, rail, { compact: true, rail: true }); // the size-40 pieces first: one sliding row of shop-sized cards + scroll bar
           const rest = standalone.concat(duo);   // then every other sale piece, 2 per row; 6 shown, the rest behind LOAD MORE
           if (rest.length) {
             const sWrap = document.createElement('div'); sWrap.className = 'sales__standalone'; sWrap.style.marginTop = '28px'; section.appendChild(sWrap);
