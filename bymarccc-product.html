@@ -65,6 +65,7 @@ a.pdp-header__btn { color: inherit; }
 .pdp-gallery__track.no-anim { transition: none; }
 .pdp-gallery__slide { flex: 0 0 100%; height: 100%; display: grid; place-items: center; padding: 0; }
 .pdp-gallery__slide img { width: 100%; height: 100%; object-fit: contain; display: block; -webkit-user-drag: none; will-change: transform; transform-origin: center center; }
+.pdp-gallery__slide.is-cover img { object-fit: cover; }
 .pdp-gallery__arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border: 0; background: transparent; display: grid; place-items: center; z-index: 3; }
 .pdp-gallery__arrow svg { width: 22px; height: 22px; }
 .pdp-gallery__arrow--prev { left: 6px; } .pdp-gallery__arrow--next { right: 6px; }
@@ -635,6 +636,7 @@ body.is-custom-bag-page #gallery { display: none; }
   .pdp-gallery.has-family { height: min(150vw, calc(100svh - 255px)); }
   .pdp-gallery__slide { background: var(--sbg, var(--gbg, #f0f0f0)); display: block; height: 100%; }
   .pdp-gallery .pdp-gallery__slide img { width: 100%; height: 100%; max-height: 100%; object-fit: contain; }
+  .pdp-gallery .pdp-gallery__slide.is-cover img { object-fit: cover; }
   .pdp-info { display: flex; flex-direction: column; }
   .pdp-info > .pdp-label { display: none; }
   .pdp-info > .pdp-summary { order: 1; margin-top: 0; }
@@ -1128,6 +1130,7 @@ body.is-custom-bag-page #gallery { display: none; }
        a handful of photos look "stuck" on a blank frame. These are small product photos, so
        loading them all up front is cheap and removes that failure mode entirely. */
     img.loading = 'eager'; img.decoding = 'async'; if (i === 0) img.fetchPriority = 'high';
+    if (g.fit === 'cover' || /-charm-/.test(g.src)) s.classList.add('is-cover');   // close-ups fill the frame (zoomed in), no side bars
     s.appendChild(img); track.appendChild(s);
     // fill the space beside the photo with the photo's own background colour (sampled from its edge) — reads as one seamless photo
     const sample = () => { try { const c = document.createElement('canvas'); c.width = c.height = 8; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, img.naturalWidth * .04, img.naturalHeight, 0, 0, 8, 8); const d = x.getImageData(0, 0, 8, 8).data; let r = 0, gg = 0, b = 0, n = 0; for (let k = 0; k < d.length; k += 4) { r += d[k]; gg += d[k + 1]; b += d[k + 2]; n++; } const col = `rgb(${Math.round(r / n)},${Math.round(gg / n)},${Math.round(b / n)})`; s.style.setProperty('--sbg', col); if (i === 0) gallery.style.setProperty('--gbg', col); } catch (e) {} };
