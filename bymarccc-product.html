@@ -963,7 +963,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=288226sc"></script>
+<script src="/assets/catalog.js?v=288227wp"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -2049,7 +2049,7 @@ body.is-custom-bag-page #gallery { display: none; }
   ================================================================== */
   $('detailsBody').innerHTML = '<ul>' + PRODUCT.details.map(d => `<li>${d}</li>`).join('') + '</ul>';
   $('descBody').textContent = PRODUCT.description;
-  /* SHOP THE LOOK sets: "Windbreaker & Shell Pants" — each piece links to its own page */
+  /* SHOP THE LOOK sets: "Windbreaker & Wind Pants" — each piece links to its own page */
   (function lookPieces() {
     const old = document.getElementById('pdpLookOf'); if (old) old.remove();
     const items = (PRODUCT.lookItems || []).filter(k => CATALOG[k]);
