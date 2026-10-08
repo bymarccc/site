@@ -205,7 +205,7 @@ body.is-custom-bag-page #gallery { display: none; }
 #sizes .pdp-size[disabled] { border-color: var(--line); }
 /* SHOP THE LOOK: the pieces side by side, each name in small premium caps with its sizes as small pills underneath (same pills as the HOT GIRLS / MUSE / ART designs) */
 .pdp-looksizes { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 10px 30px; }
-.pdp-looktitle { flex: 0 0 100%; margin: 0 0 2px; text-align: center; white-space: nowrap; font-size: clamp(10px, 3.1vw, 12.5px); font-style: italic; font-weight: 600; letter-spacing: .02em; color: #111; }
+.pdp-looktitle { flex: 0 0 100%; margin: 0 0 2px; text-align: center; white-space: nowrap; font-size: clamp(10px, 3.1vw, 12.5px); font-style: italic; font-weight: 500; letter-spacing: .02em; color: #111; }
 .pdp-looktitle a.pdp-looksize__name { display: inline; min-height: 0; font: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .pdp-looktitle__and { font-weight: 400; color: #6f6f6f; margin: 0 2px; }
 .pdp-looksize > .pdp-looksize__name { display: none; }
@@ -974,7 +974,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261008g"></script>
+<script src="/assets/catalog.js?v=288230lj"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -2090,7 +2090,7 @@ body.is-custom-bag-page #gallery { display: none; }
     (PRODUCT.lookItems || []).filter(k => CATALOG[k]).forEach(k => {
       const p = CATALOG[k], sz = ((p.chart && p.chart.sizes) || []).map(x => x.size);
       if (!sz.length || p.noSize || (p.chart && p.chart.category === 'one-size') || (p.collections || []).includes('accessories')) return;
-      rows.push({ name: nice(p.title), sizes: sz, href: 'bymarccc-product.html?p=' + encodeURIComponent(k) });
+      const dz = (PRODUCT.lookDesign || {})[k]; rows.push({ name: (PRODUCT.lookNames || {})[k] || nice(p.title), sizes: sz, href: 'bymarccc-product.html?p=' + encodeURIComponent(k) + (dz ? '&d=' + encodeURIComponent(dz) : '') });
     });
     (PRODUCT.lookExtra || []).forEach(n => rows.push({ name: n, sizes: (SIZE_CHART.sizes || []).map(x => x.size) }));
     if (!rows.length) return;
@@ -2099,7 +2099,7 @@ body.is-custom-bag-page #gallery { display: none; }
     box.innerHTML = rows.map((r, i) => `<div class="pdp-looksize" data-r="${i}">${r.href ? `<a class="pdp-looksize__name" href="${r.href}">${r.name}</a>` : `<span class="pdp-looksize__name">${r.name}</span>`}<div class="pdp-sizes" role="radiogroup" aria-label="${r.name} size">${r.sizes.map(z => `<button type="button" class="pdp-size" role="radio" aria-checked="false" data-r="${i}" data-s="${z}">${z}</button>`).join('')}</div></div>`).join('');
     // one small line on top: "Piece 1 and Piece 2" (each name links to its page); the sizes sit under each half
     const tl = document.createElement('p'); tl.className = 'pdp-looktitle';
-    tl.innerHTML = rows.map(r => r.href ? `<a class="pdp-looksize__name" href="${r.href}">${r.name}</a>` : `<span>${r.name}</span>`).join(' <span class="pdp-looktitle__and">and</span> ');
+    tl.innerHTML = rows.map(r => r.href ? `<a class="pdp-looksize__name" href="${r.href}">${r.name}</a>` : `<span>${r.name}</span>`).join(' <span class="pdp-looktitle__and">&amp;</span> ');
     box.insertBefore(tl, box.firstChild);
     const after = document.getElementById('pdpLookOf') || sizesEl;
     after.parentNode.insertBefore(box, after.nextSibling);
