@@ -1260,6 +1260,13 @@ body.is-custom-bag-page #gallery { display: none; }
     if (!drag.axis) { if (Math.hypot(dx, dy) < 6) return; drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; }
     if (VERT && drag.axis === 'x') { e.preventDefault(); return; }   // vertical gallery: a sideways swipe also flips the photo (on release)
     if (drag.axis !== (VERT ? 'y' : 'x')) return;
+    /* vertical gallery: past the LAST photo the finger scrolls the page down to the colours / sizes / details,
+       and above the FIRST photo (when the page is scrolled) it scrolls the page back up — the photos never trap the page */
+    if (VERT && (drag.page || (gi === GALLERY.length - 1 && dy < 0) || (gi === 0 && dy > 0 && scrollY > 0))) {
+      if (!drag.page) { drag.page = true; drag.py = e.clientY; drag.pv = 0; drag.pt = performance.now(); layout(); }
+      const step = e.clientY - drag.py, now = performance.now(); drag.pv = step / Math.max(1, now - drag.pt); drag.pt = now; drag.py = e.clientY;
+      window.scrollBy(0, -step); e.preventDefault(); return;
+    }
     /* Rubber-band resistance at the first/last image — no sliding past a real boundary into a blank frame. */
     let ddx = VERT ? dy : dx;
     if (gi === 0 && ddx > 0) ddx *= 0.35;
@@ -1279,11 +1286,12 @@ body.is-custom-bag-page #gallery { display: none; }
     }
     if (e && panDrag && e.pointerId === panDrag.id) { panDrag = null; if (zoomScale <= 1.05) resetZoom(true); }
     if (!drag || (e && e.pointerId !== drag.id)) return;
+    if (drag.page) { let v = -drag.pv * 16; drag = null; const glide = () => { if (Math.abs(v) < 0.5) return; window.scrollBy(0, v); v *= 0.92; requestAnimationFrame(glide); }; if (!reduced.matches) requestAnimationFrame(glide); return; }   // a little momentum after a page scroll from the gallery
     const sideV = VERT && drag.axis === 'x';
     const dx = sideV ? (e ? e.clientX : drag.x0) - drag.x0 : VERT ? (drag.y ?? drag.y0) - drag.y0 : drag.x - drag.x0, v = dx / Math.max(1, performance.now() - drag.t), axis = drag.axis; drag = null;
     if (sideV) { if (dx < -40 || v < -0.4) goTo(Math.min(gi + 1, GALLERY.length - 1)); else if (dx > 40 || v > 0.4) goTo(Math.max(gi - 1, 0)); else layout(); return; }
     if (axis !== (VERT ? 'y' : 'x')) return;
-    if (VERT && gi === GALLERY.length - 1 && (dx < -60 || v < -0.4)) { layout(); const f = $('family'); if (f) window.scrollTo({ top: f.getBoundingClientRect().top + scrollY - 80, behavior: 'smooth' }); return; }   // past the last photo: on to the colours / details
+    if (VERT && gi === GALLERY.length - 1 && dx < 0) { layout(); return; }
     if (dx < -60 || v < -0.4) goTo(gi + 1); else if (dx > 60 || v > 0.4) goTo(gi - 1); else layout();
   };
   gallery.addEventListener('pointerup', endDrag); gallery.addEventListener('pointercancel', endDrag);
