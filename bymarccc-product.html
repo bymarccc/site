@@ -1360,7 +1360,9 @@ body.is-custom-bag-page #gallery { display: none; }
     const items = [...row.children];
     const center = (a, smooth) => { const rr = row.getBoundingClientRect(), ar = a.getBoundingClientRect(); row.scrollTo({ left: row.scrollLeft + (ar.left + ar.width / 2) - (rr.left + rr.width / 2), behavior: smooth ? 'smooth' : 'auto' }); };
     const cur0 = items.find(a => a.dataset.k === KEY);
-    let ready = false; const init = () => { if (cur0) center(cur0, false); };
+    // open straight on this product's colour: jump the strip there instantly and only react to scrolls the finger makes
+    let ready = false, user = false; const init = () => { if (!cur0 || user) return; const rr = row.getBoundingClientRect(), ar = cur0.getBoundingClientRect(); row.style.scrollSnapType = 'none'; row.scrollLeft += (ar.left + ar.width / 2) - (rr.left + rr.width / 2); row.style.scrollSnapType = ''; };
+    ['touchstart', 'pointerdown', 'wheel'].forEach(ev => row.addEventListener(ev, () => { user = true; }, { passive: true }));
     requestAnimationFrame(init); setTimeout(init, 250); setTimeout(() => { init(); ready = true; }, 600); window.addEventListener('load', init, { once: true });
     // light "tick" under the finger: iOS 18 Safari (switch checkbox) / Android (vibrate)
     const tickLbl = document.createElement('label'); tickLbl.setAttribute('aria-hidden', 'true'); tickLbl.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
@@ -1383,7 +1385,7 @@ body.is-custom-bag-page #gallery { display: none; }
       else location.replace(url);
     };
     row.addEventListener('scroll', () => {
-      if (!ready) return;
+      if (!ready || !user) return;
       const a = centred(); if (!a) return;
       if (a.dataset.k !== shown) { shown = a.dataset.k; tick(); preview(shown); $('familyName').textContent = a.dataset.n; items.forEach(x => x.setAttribute('aria-current', String(x === a))); }
       clearTimeout(timer); timer = setTimeout(settle, 220);
