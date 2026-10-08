@@ -1338,6 +1338,8 @@
   /* sliding rails (men SALES, SKINNY / RELAXED JEANS): cards exactly the size of the regular shop cards (e.g. Zebra Patch Jeans) — they were a bit bigger */
   .shop .salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - clamp(10px, 2vw, 20px)) / 2); }
   @media (min-width: 900px) { .shop .salerail .sales__card { width: calc((min(100vw, 1320px) - 2 * clamp(16px, 4vw, 48px) - 4 * clamp(10px, 2vw, 20px)) / 5); } }
+  /* phone: shop rails (SKINNY / RELAXED JEANS…) line up exactly with the shop grid above — same left edge, same gap, so the cards look as big as Zebra Patch */
+  @media (max-width: 899px) { .shop .salerail .sales__wrap { padding: 0; } .shop .salerail .sales__track { padding: 2px 0 6px; scroll-padding: 0; gap: clamp(10px, 2vw, 20px); } }
   /* women: shorter photos (3:4 instead of 2:3) — the tall 2:3 frames looked too big/long there */
   #shopWomen .shop__img { aspect-ratio: 1212 / 1816; }
   #shopWomen .shop__img img { object-position: 50% 50%; }
@@ -1364,7 +1366,7 @@
     .shop .salerail--mini .sales__progress { margin-top: 14px; }
   }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=20261009a"></script>
+<script src="/assets/catalog.js?v=20261009b"></script>
 <script>
 (() => {
   'use strict';
@@ -1505,7 +1507,7 @@
     const words = p.title.split(' '), cut = p.nameBreak || words.length - 1; const name = mini ? p.title : words.length > 1 ? `${words.slice(0, cut).join(' ')}<br>${words.slice(cut).join(' ')}` : p.title;
     const card = document.createElement(link ? 'a' : 'article'); card.className = 'sales__card salegrid__card';
     if (link) card.href = 'bymarccc-product.html?p=' + key;   // MEN → DENIM rails: the card opens the product page (no quick add)
-    const multi = [];   // MEN → DENIM rails: one photo per card — a sideways swipe moves the rail to the next product (it no longer flips photos)
+    const multi = link ? (p.gallery || []).slice(0, 8) : [];   // MEN → DENIM rails: multi-photo cards get the dashes; a swipe flips the photos, past the last one it moves the rail
     const pics = multi.length > 1 ? multi.map((g, i) => `<img src="${g.src}" width="${g.w}" height="${g.h}" alt="${p.title}${i ? ' — ' + (i + 1) : ''}" loading="lazy" decoding="async"${i ? '' : ' class="is-on"'}>`).join('') + `<span class="shop__bars">${multi.map((_, i) => `<i${i ? '' : ' class="is-on"'}></i>`).join('')}</span>` : `<img src="${img.src}" width="${img.w}" height="${img.h}" alt="${p.title}" loading="lazy" decoding="async" class="is-on">`;
     card.innerHTML = `<span class="shop__img${multi.length > 1 ? ' is-multi' : ''}">${link ? newTag(key) : sizeTag(size, key) || newTag(key)}${pics}<button class="salegrid__add" type="button" aria-label="Add ${p.title} to bag">ADD TO BAG</button></span>
       <span class="salerail__meta"><span class="salerail__name">${name}</span>${typeof p.price === 'number' ? `<span class="salerail__price">${onSale ? `<s>${fmt(p.price, p.currency)}</s><b>${fmt(p.salePrice, p.currency)}</b>` : `<span class="salerail__price--plain">${fmt(p.price, p.currency)}</span>`}</span>` : ''}</span>`;
