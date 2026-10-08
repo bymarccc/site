@@ -1195,6 +1195,11 @@
   .scanfx--scroll::before { transform: translateY(calc(var(--sp, 0) * 560%)); will-change: transform; }
   .shop__img:has(img.is-on:not(:first-of-type)) .scanfx { display: none; }
   @media (prefers-reduced-motion: reduce) { .scanfx { display: none; } }
+  .shop__subs { grid-column: 1 / -1; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 0 0 4px; margin: -4px 0 2px; justify-content: flex-start; }
+  .shop__subs::-webkit-scrollbar { display: none; }
+  @media (min-width: 900px) { .shop__subs { justify-content: center; } }
+  .shop__sub { flex: 0 0 auto; height: 28px; padding: 0 13px; border: 1px solid #e2e2df; border-radius: 999px; background: #fff; color: #111; font: inherit; font-size: 10.5px; font-weight: 500; letter-spacing: .14em; cursor: pointer; }
+  .shop__sub.is-on { background: #111; color: #fff; border-color: #111; }
   .shop__bars { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 4px; }
   .shop__bars i { display: block; flex: 1 1 0; max-width: 18px; min-width: 4px; height: 2px; background: rgba(17,17,17,.28); border-radius: 1px; transition: background .25s; }
   .shop__bars i.is-on { background: #111; }
@@ -1371,8 +1376,8 @@
   const NEW_COLOR = new Set(['skinny']);   // vertical NEW COLOR tag (same type as NEW COLLECTION)
   const newTag = key => NEW_COLOR.has(key) ? '<span class="shop__newtag">NEW COLOR</span>' : NEW_COLLECTION.has(key) ? '<span class="shop__newtag">NEW COLLECTION</span>' : '';
   // Pinterest-style rainbow "scan" over the model (mask = the person cut out of the first photo)
-  const SCAN_MASKS = { 'w-sporty-top': '/assets/img/home/scanmask-sporty-top.png', 'w-burgundy-long-sleeve': '/assets/img/home/scanmask-w-burgundy-long-sleeve.png', 'w-black-hoodie': '/assets/img/home/scanmask-w-black-hoodie.png', 'w-logo-leggings': '/assets/img/home/scanmask-w-logo-leggings.png', 'w-walking-art-blue-jeans': '/assets/img/home/scanmask-w-walking-art-blue-jeans.png', 'w-black-logo-windbreaker': '/assets/img/home/scanmask-w-black-logo-windbreaker.png', 'relaxed': '/assets/img/home/scanmask-relaxed.png', 'bandana-jeans': '/assets/img/home/scanmask-bandana-jeans.png', 'art-jeans': '/assets/img/home/scanmask-art-jeans.png', 'w-pink-zip-hoodie': '/assets/img/home/scanmask-w-pink-zip-hoodie.png', 'w-blue-zip-hoodie': '/assets/img/home/scanmask-w-blue-zip-hoodie.png', 'w-mini-bag-jeans-burgundy': '/assets/img/home/scanmask-w-mini-bag-jeans-burgundy.png', 'w-mini-bag-jeans-black': '/assets/img/home/scanmask-w-mini-bag-jeans-black.png', 'w-sporty-top-ecru': '/assets/img/home/scanmask-w-sporty-top-ecru.png', 'w-black-pants': '/assets/img/home/scanmask-w-black-pants.png', 'w-logo-flare-leggings': '/assets/img/home/scanmask-w-logo-flare-leggings.png', 'w-white-logo-windbreaker': '/assets/img/home/scanmask-w-white-logo-windbreaker.png', 'w-burgundy-shoulder-bag': '/assets/img/home/scanmask-w-burgundy-shoulder-bag.png', 'w-logo-bag': '/assets/img/home/scanmask-w-logo-bag.png' };
-  const SCAN_A = [0, 3, 4], SCAN_B = [1, 2, 5], SCAN_POS = { tops: SCAN_A, bottoms: SCAN_B, jackets: SCAN_A, accessories: SCAN_B };   // WOMEN: the rainbow scan alternates by tab — cards 1·4·5, then 2·3·6, then 1·4·5 …
+  const SCAN_MASKS = { 'w-sporty-top': '/assets/img/home/scanmask-sporty-top.png', 'w-burgundy-long-sleeve': '/assets/img/home/scanmask-w-burgundy-long-sleeve.png', 'w-black-hoodie': '/assets/img/home/scanmask-w-black-hoodie.png', 'w-logo-leggings': '/assets/img/home/scanmask-w-logo-leggings.png', 'w-walking-art-blue-jeans': '/assets/img/home/scanmask-w-walking-art-blue-jeans.png', 'w-black-logo-windbreaker': '/assets/img/home/scanmask-w-black-logo-windbreaker.png', 'relaxed': '/assets/img/home/scanmask-relaxed.png', 'bandana-jeans': '/assets/img/home/scanmask-bandana-jeans.png', 'art-jeans': '/assets/img/home/scanmask-art-jeans.png', 'w-pink-zip-hoodie': '/assets/img/home/scanmask-w-pink-zip-hoodie.png', 'w-blue-zip-hoodie': '/assets/img/home/scanmask-w-blue-zip-hoodie.png', 'w-mini-bag-jeans-burgundy': '/assets/img/home/scanmask-w-mini-bag-jeans-burgundy.png', 'w-mini-bag-jeans-black': '/assets/img/home/scanmask-w-mini-bag-jeans-black.png', 'w-sporty-top-ecru': '/assets/img/home/scanmask-w-sporty-top-ecru.png', 'w-black-pants': '/assets/img/home/scanmask-w-black-pants.png', 'w-logo-flare-leggings': '/assets/img/home/scanmask-w-logo-flare-leggings.png', 'w-white-logo-windbreaker': '/assets/img/home/scanmask-w-white-logo-windbreaker.png', 'w-burgundy-shoulder-bag': '/assets/img/home/scanmask-w-burgundy-shoulder-bag.png', 'w-logo-bag': '/assets/img/home/scanmask-w-logo-bag.png', 'w-lace-jean': '/assets/img/home/scanmask-w-lace-jean.png', 'w-transparent-jean': '/assets/img/home/scanmask-w-transparent-jean.png', 'w-black-zip-hoodie': '/assets/img/home/scanmask-w-black-zip-hoodie.png', 'w-grey-zip-hoodie': '/assets/img/home/scanmask-w-grey-zip-hoodie.png', 'w-grey-pants': '/assets/img/home/scanmask-w-grey-pants.png', 'w-black-long-sleeve': '/assets/img/home/scanmask-w-black-long-sleeve.png', 'w-white-long-sleeve': '/assets/img/home/scanmask-w-white-long-sleeve.png', 'w-black-tee': '/assets/img/home/scanmask-w-black-tee.png', 'w-blue-baby-top': '/assets/img/home/scanmask-w-blue-baby-top.png', 'w-fuchsia-baby-top': '/assets/img/home/scanmask-w-fuchsia-baby-top.png', 'w-burgundy-baby-top': '/assets/img/home/scanmask-w-burgundy-baby-top.png', 'w-no-bra-tank-top': '/assets/img/home/scanmask-w-no-bra-tank-top.png', 'w-pink-baby-top': '/assets/img/home/scanmask-w-pink-baby-top.png', 'w-red-baby-top': '/assets/img/home/scanmask-w-red-baby-top.png', 'w-white-baby-top': '/assets/img/home/scanmask-w-white-baby-top.png', 'w-white-baby-top-1': '/assets/img/home/scanmask-w-white-baby-top-1.png', 'w-white-hoodie': '/assets/img/home/scanmask-w-white-hoodie.png', 'w-white-tee': '/assets/img/home/scanmask-w-white-tee.png', 'w-hg-delulu-blazer': '/assets/img/home/scanmask-w-hg-delulu-blazer.png', 'w-delulu-blazer-2': '/assets/img/home/scanmask-w-delulu-blazer-2.png', 'w-muse-blazer': '/assets/img/home/scanmask-w-muse-blazer.png', 'w-delulu-pardesiu': '/assets/img/home/scanmask-w-delulu-pardesiu.png', 'w-logo-vest': '/assets/img/home/scanmask-w-logo-vest.png', 'w-white-shoulder-bag': '/assets/img/home/scanmask-w-white-shoulder-bag.png', 'w-logo-flare-jeans': '/assets/img/home/scanmask-w-logo-flare-jeans.png' };
+  const SCAN_A = [0, 3, 4], SCAN_B = [1, 2, 5], SCAN_START = { tops: 0, bottoms: 1, jackets: 0, accessories: 1 };   // WOMEN: rainbow scan on cards 1·4·5 of every group of 6, then 2·3·6 of the next 6, then 1·4·5 … (TOPS/JACKETS start with 1·4·5, BOTTOMS/ACCESSORIES with 2·3·6)
   const SCAN_SCROLL = new Set(['relaxed']);   // these follow the page scroll instead of looping (down = top→bottom, up = bottom→top)
   const scanFx = key => SCAN_MASKS[key] ? `<span class="scanfx${SCAN_SCROLL.has(key) ? ' scanfx--scroll' : ''}" style="--m:url(${SCAN_MASKS[key]});--fit:contain" aria-hidden="true"></span>` : '';
   // men SALES: the piece's only size, written vertically in the photo's top-left corner (same type as NEW COLLECTION)
@@ -1654,8 +1659,10 @@
     let active = collections[0].key;
     const LIMIT = matchMedia('(min-width: 900px)').matches ? 10 : 6;   // desktop: 2 rows of 5, then LOAD MORE
     const tabBtns = [];
+    let sub = 'all', subFor = null;   // TOPS → HOODIES · T-SHIRTS · … sub-filter (resets when the tab changes)
     const render = (all = false) => {
       grid.innerHTML = '';
+      if (subFor !== active) { sub = 'all'; subFor = active; }
       grid.classList.remove('shop__grid--sales');
       let items = Object.entries(CATALOG).filter(([, p]) => genderOf(p).includes(gender) && (p.collections || []).includes(active));
       { const HIDE_HOME = new Set(['w-white-baby-top-1', 'w-pink-baby-top', 'w-fuchsia-baby-top', 'w-blue-baby-top', 'w-red-baby-top']); items = items.filter(([k]) => !HIDE_HOME.has(k)); }   // baby tops: only BLACK on the homepage — every colour is on its product page
@@ -1723,12 +1730,23 @@
         }
         mountSalesSlider(grid, items); return;
       }
+      if (active === 'tops') {
+        const SUBS = [['hoodies', 'HOODIES', /hoodie/i], ['tees', 'T-SHIRTS', /\btee\b|t-?shirt/i], ['baby', 'BABY TOPS', /baby top/i], ['long', 'LONG SLEEVES', /long sleeve|sporty/i], ['tanks', 'TANKS', /tank|vest/i]];
+        const subOf = p => (SUBS.find(([, , re]) => re.test(p.title || '')) || [])[0];
+        const avail = SUBS.filter(([k]) => items.some(([, p]) => subOf(p) === k));
+        if (avail.length > 1) {
+          const bar = document.createElement('div'); bar.className = 'shop__subs';
+          [['all', 'ALL'], ...avail].forEach(([k, label]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__sub' + (k === sub ? ' is-on' : ''); b.textContent = label; b.addEventListener('click', () => { if (sub === k) return; sub = k; render(); }); bar.appendChild(b); });
+          grid.appendChild(bar);
+          if (sub !== 'all') items = items.filter(([, p]) => subOf(p) === sub);
+        }
+      }
       const feat = gender === 'women' && WOMEN_FEATURED[active];
       if (feat) items = [...feat.map(k => items.find(([x]) => x === k)).filter(Boolean), ...items.filter(([k]) => !feat.includes(k))];
       items = [...items.filter(([, p]) => !p.soldOut), ...items.filter(([, p]) => p.soldOut)];   // SOLD OUT pieces always last
       const show = !all && items.length > LIMIT ? items.slice(0, LIMIT) : items;
       show.forEach(([k, p]) => grid.appendChild(card(k, p, active)));
-      if (gender === 'women' && SCAN_POS[active]) [...grid.querySelectorAll(':scope > .shop__card')].forEach((c, i) => { if (!SCAN_POS[active].includes(i)) c.querySelectorAll('.scanfx').forEach(x => x.remove()); });
+      if (gender === 'women' && active in SCAN_START) [...grid.querySelectorAll(':scope > .shop__card')].forEach((c, i) => { const pat = (Math.floor(i / 6) + SCAN_START[active]) % 2 ? SCAN_B : SCAN_A; if (!pat.includes(i % 6)) c.querySelectorAll('.scanfx').forEach(x => x.remove()); });
       if (show.length < items.length) {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__loadmore'; b.textContent = 'LOAD MORE';
         b.addEventListener('click', () => render(true));
