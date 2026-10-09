@@ -1386,7 +1386,7 @@
   const SCAN_A = [0, 3, 4], SCAN_B = [1, 2, 5], SCAN_START = { tops: 0, bottoms: 1, jackets: 0, accessories: 1 };   // WOMEN: rainbow scan on cards 1·4·5 of every group of 6, then 2·3·6 of the next 6, then 1·4·5 … (TOPS/JACKETS start with 1·4·5, BOTTOMS/ACCESSORIES with 2·3·6)
   const SCAN_SCROLL = new Set(['relaxed']);   // these follow the page scroll instead of looping (down = top→bottom, up = bottom→top)
   const SCAN_FULL = new Set(['w-walking-art-blue-jeans', 'w-logo-leggings']);   // flat product shots (no model): the rainbow runs over the whole card, not the garment's outline
-  const scanFx = key => SCAN_MASKS[key] ? `<span class="scanfx${SCAN_SCROLL.has(key) ? ' scanfx--scroll' : ''}${SCAN_FULL.has(key) ? ' scanfx--full' : ''}" style="--m:url(${SCAN_MASKS[key]});--fit:contain" aria-hidden="true"></span>` : '';
+  const scanFx = key => !(SCAN_MASKS[key] || (CATALOG[key] && genderOf(CATALOG[key]).includes('women'))) ? '' : `<span class="scanfx scanfx--full${SCAN_SCROLL.has(key) ? ' scanfx--scroll' : ''}" aria-hidden="true"></span>`;   // rainbow scan over the whole photo frame (no silhouette mask) — looks right on any photo
   // men SALES: the piece's only size, written vertically in the photo's top-left corner (same type as NEW COLLECTION)
   // trial: on these 3 the size is written horizontally (Ksubi-style), so Mark can compare with the vertical one
   const SIZE_FLAT = new Set();   // trial over: every SALES size is the small vertical tag
