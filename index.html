@@ -1367,7 +1367,7 @@
     .shop .salerail--mini .sales__progress { margin-top: 14px; }
   }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=20261009r"></script>
+<script src="/assets/catalog.js?v=20261009s"></script>
 <script>
 (() => {
   'use strict';
@@ -1736,6 +1736,13 @@
           return;
         }
         mountSalesSlider(grid, items); return;
+      }
+      if (active === 'bottoms' && gender === 'women') {   // women BOTTOMS → PANTS · DENIM (tapping the chosen one again shows all)
+        const DENIM_X = new Set(['w-butterfly-embroidery-1', 'w-art-dept-3']); const bsub = (k, p) => /jean|denim/i.test(p.title || '') || DENIM_X.has(k) ? 'denim' : 'pants';
+        const bar = document.createElement('div'); bar.className = 'shop__subs';
+        [['pants', 'PANTS'], ['denim', 'DENIM']].forEach(([k, label]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__sub' + (k === sub ? ' is-on' : ''); b.textContent = label; b.addEventListener('click', () => { sub = sub === k ? 'all' : k; render(); }); bar.appendChild(b); });
+        grid.appendChild(bar);
+        if (sub !== 'all') items = items.filter(([k, p]) => bsub(k, p) === sub);
       }
       if (active === 'tops') {
         const W = gender === 'women';
