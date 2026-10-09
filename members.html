@@ -147,7 +147,7 @@
   .sh-box h3{ margin:0 0 8px; font-size:20px; font-weight:500; }
   .sh-box .sh-who{ margin:0 0 14px; color:var(--sub); font-size:14px; }
 </style>
-<script src="/assets/catalog.js?v=20261010y" defer></script>
+<script src="/assets/catalog.js?v=20261010z" defer></script>
 </head>
 <body>
 
@@ -179,6 +179,7 @@
   const CAT = () => (window.BYMARCCC_CATALOG && window.BYMARCCC_CATALOG.CATALOG) || {};
   const qs = new URLSearchParams(location.search);
   let P = null;   // profile
+  const NEXT = (() => { const n = qs.get('next') || ''; return /^\/(?!\/)[\w\-./?=&%]*$/.test(n) ? n : ''; })();   // back to the members-only product after sign-in
 
   /* ---------------- signed out: e-mail → code ---------------- */
   function signedOut() {
@@ -217,7 +218,7 @@
     $('acVerify').addEventListener('submit', async e => {
       e.preventDefault(); $('acMsg2').textContent = '';
       const b = $('acVerify').querySelector('button[type=submit]'); b.disabled = true;
-      try { const d = await API('verify', { email, code: $('acCode').value, ref }); P = d.profile; await mergeWishlist(); signedIn(); }
+      try { const d = await API('verify', { email, code: $('acCode').value, ref }); P = d.profile; await mergeWishlist(); if (NEXT) { location.assign(NEXT); return; } signedIn(); }
       catch (err) { $('acMsg2').textContent = err.message; } finally { b.disabled = false; }
     });
     $('acCode').addEventListener('input', () => { if ($('acCode').value.replace(/\D/g, '').length === 6) $('acVerify').requestSubmit(); });
@@ -513,7 +514,7 @@
   }
 
   { const q = new URLSearchParams(location.search).get('join'); if (q) { try { sessionStorage.setItem('bym.join', q.replace(/[^A-Za-z0-9]/g, '').slice(0, 20)); } catch {} if (!location.hash) history.replaceState(null, '', location.pathname + '#ytm'); } }   // invite link → joined after sign-in, on My Playlist
-  API('me').then(d => { load.hidden = true; root.hidden = false; P = d.profile; if (P) { mergeWishlist(); signedIn(); } else signedOut(); })
+  API('me').then(d => { load.hidden = true; root.hidden = false; P = d.profile; if (P && NEXT) { location.assign(NEXT); return; } if (P) { mergeWishlist(); signedIn(); } else signedOut(); })
     .catch(() => { load.textContent = 'Accounts are not available right now. Please try again in a moment.'; });
 })();
 </script>

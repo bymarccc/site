@@ -995,7 +995,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261010y"></script>
+<script src="/assets/catalog.js?v=20261010z"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1017,8 +1017,8 @@ body.is-custom-bag-page #gallery { display: none; }
   const BABY_FAMILY = [['w-white-baby-top-1', 'White'], ['w-pink-baby-top', 'Pink'], ['w-fuchsia-baby-top', 'Fuchsia'], ['w-blue-baby-top', 'Blue'], ['w-red-baby-top', 'Red'], ['w-white-baby-top', 'Black'], ['w-burgundy-baby-top', 'Burgundy']];
   // ZIP SETS: the same SSENSE-style colour strip (Pink · Black · Grey) on the zip hoodies and pants
   const FAMILIES = [BABY_FAMILY,
-    [['m-pink-zip-hoodie', 'Pink'], ['m-black-zip-hoodie', 'Black'], ['m-grey-zip-hoodie', 'Grey']],
-    [['w-pink-zip-hoodie', 'Pink'], ['w-black-zip-hoodie', 'Black'], ['w-grey-zip-hoodie', 'Grey']],
+    [['m-burgundy-zip-hoodie', 'Burgundy'], ['m-red-zip-hoodie', 'Red'], ['m-pink-zip-hoodie', 'Pink'], ['m-black-zip-hoodie', 'Black'], ['m-grey-zip-hoodie', 'Grey']],
+    [['w-burgundy-zip-hoodie', 'Burgundy'], ['w-red-zip-hoodie', 'Red'], ['w-pink-zip-hoodie', 'Pink'], ['w-black-zip-hoodie', 'Black'], ['w-grey-zip-hoodie', 'Grey']],
     [['m-pink-pants', 'Pink'], ['m-black-pants', 'Black'], ['m-grey-pants', 'Grey']],
     [['w-pink-pants', 'Pink'], ['w-black-pants', 'Black'], ['w-grey-pants', 'Grey']]];
   const FAMILY = FAMILIES.find(f => f.some(([k]) => k === KEY)) || [];
@@ -1448,7 +1448,7 @@ body.is-custom-bag-page #gallery { display: none; }
     document.querySelectorAll('.pdp-size[data-s]').forEach(b => { b.disabled = !isAvailable(state.colour, b.dataset.s); b.setAttribute('aria-checked', String(b.dataset.s === state.size)); });
     $('sizeName').textContent = state.size ? sizeLabel(state.size) : 'Select a size';
     if (PRODUCT.soldOut) { addBtn.textContent = 'SOLD OUT'; addBtn.disabled = true; addBtn.classList.add('is-soldout'); }
-    else { addBtn.textContent = 'ADD TO BAG'; addBtn.disabled = false; addBtn.classList.remove('is-soldout'); }
+    else { addBtn.textContent = PRODUCT.membersOnly && !window.__bymMeOK ? 'MEMBERS ONLY · SIGN IN' : 'ADD TO BAG'; addBtn.disabled = false; addBtn.classList.remove('is-soldout'); }
     if (state.size) { barMsg.textContent = ''; }
   }
   state.listeners.add(renderSelection); renderSelection();
@@ -1508,8 +1508,10 @@ body.is-custom-bag-page #gallery { display: none; }
   /* signed-in customers (session cookie, 180 days): no "sign up" prompt, and the wishlist is saved to the account too */
   let WL_ME = null;
   const wlApi = body => fetch('/api/account', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ action: 'wishlist' }, body)) }).catch(() => {});
-  fetch('/api/account?action=me', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).then(j => {
+  (window.__bymMe = fetch('/api/account?action=me', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null)).then(j => {
     WL_ME = j && j.profile ? j.profile : null;
+    window.__bymMeOK = !!WL_ME;
+    if (WL_ME) { const ab = document.getElementById('addBtn'); if (ab && /^MEMBERS ONLY/.test(ab.textContent)) ab.textContent = 'ADD TO BAG'; }
     { const d = $('pdpAcctDot'); if (d) d.hidden = !WL_ME; }   // small dot on the account icon = signed in
     if (WL_ME) { const keys = (JSON.parse(localStorage.getItem('bym.wishlist') || '[]') || []).map(x => x && x.key).filter(Boolean); if (keys.length) wlApi({ merge: keys }); }
   }).catch(() => {});
@@ -2012,6 +2014,10 @@ body.is-custom-bag-page #gallery { display: none; }
   async function addMain(btn = addBtn, msg = barMsg) {
     if (PRODUCT.soldOut) { msg.classList.remove('is-ok'); msg.textContent = 'This item is sold out.'; return false; }
     if (adding) return false;
+    if (PRODUCT.membersOnly) {   // members-only piece: only signed-in customers can add it to the bag
+      const me = await (window.__bymMe || Promise.resolve(null));
+      if (!(me && me.profile)) { msg.classList.remove('is-ok'); msg.textContent = 'Members only. Sign in or create your free account.'; setTimeout(() => location.assign('members.html?next=' + encodeURIComponent(location.pathname + location.search)), 700); return false; }
+    }
     adding = true; setTimeout(() => { adding = false; }, 400);
     if (PRODUCT.customBag) { const ok = await cbHandleAddToBag(msg, btn); return ok; }
     const hw = hwCheck(true);
