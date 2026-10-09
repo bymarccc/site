@@ -1368,7 +1368,7 @@
     .shop .salerail--mini .sales__progress { margin-top: 14px; }
   }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=20261010u"></script>
+<script src="/assets/catalog.js?v=20261010v"></script>
 <script>
 (() => {
   'use strict';
@@ -2502,6 +2502,7 @@
     } else {
       x = r.left - sr.left + r.width / 2 - w / 2; y = r.top - sr.top + r.height + 8;
       x = Math.max(12, Math.min(sr.width - w - 12, x)); if (y + 96 > sr.height) y = r.top - sr.top - 96 - 8;
+      if (el.dataset.obj === 'artjeans') y = r.top - sr.top + r.height * 0.5;   // tall jeans: card sits over the middle of the jeans, not below them
     }
     infoCard.style.left = x + 'px'; infoCard.style.top = y + 'px';
     requestAnimationFrame(() => infoCard.classList.add('is-in'));
