@@ -502,8 +502,9 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-gallery.is-vert { touch-action: pinch-zoom; }
 .pdp-gallery.is-vert .pdp-gallery__track { flex-direction: column; }
 .pdp-gallery.is-vert .pdp-gallery__slide { flex: 0 0 100%; width: 100%; }
-.pdp-gallery.is-vert .pdp-bars { display: flex; flex-direction: column; gap: 5px; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); z-index: 3; left: auto; bottom: auto; }
-.pdp-gallery.is-vert .pdp-bars i { width: 2px; height: 16px; }
+.pdp-gallery.is-vert .pdp-bars { display: flex; flex-direction: column; gap: 8px; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); z-index: 3; left: auto; bottom: auto; }
+.pdp-gallery.is-vert .pdp-bars i { width: 6px; height: 6px; border-radius: 50%; }   /* dots, not dashes */
+html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important; }   /* members-only piece: price shows after sign-in */
 .pdp-gallery__peek { position: absolute; inset: 0; z-index: 2; background: var(--gbg, #f0f0f0); pointer-events: none; }
 .pdp-gallery__peek[hidden] { display: none; }
 .pdp-gallery__peek img { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -995,7 +996,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261010z"></script>
+<script src="/assets/catalog.js?v=20261011a"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1013,6 +1014,7 @@ body.is-custom-bag-page #gallery { display: none; }
   const { CATALOG, MODEL, REVIEWS, ONE_SIZE } = window.BYMARCCC_CATALOG;
   const KEY = (new URLSearchParams(location.search).get('p') || (location.hash.match(/^#p=([\w-]+)/) || [])[1] || 'skinny').toLowerCase();
   const PRODUCT = Object.assign({ model: MODEL, reviews: REVIEWS, unavailable: [], details: [], collections: [], description: '' }, CATALOG[KEY] || CATALOG.skinny);
+  document.documentElement.classList.toggle('bym-memlock', !!PRODUCT.membersOnly && !window.__bymMeOK);
   // BABY TOP family (one product per colour): SSENSE-style page — photos swipe up/down, colours in a strip under the photo
   const BABY_FAMILY = [['w-white-baby-top-1', 'White'], ['w-pink-baby-top', 'Pink'], ['w-fuchsia-baby-top', 'Fuchsia'], ['w-blue-baby-top', 'Blue'], ['w-red-baby-top', 'Red'], ['w-white-baby-top', 'Black'], ['w-burgundy-baby-top', 'Burgundy']];
   // ZIP SETS: the same SSENSE-style colour strip (Pink · Black · Grey) on the zip hoodies and pants
@@ -1511,6 +1513,7 @@ body.is-custom-bag-page #gallery { display: none; }
   (window.__bymMe = fetch('/api/account?action=me', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null)).then(j => {
     WL_ME = j && j.profile ? j.profile : null;
     window.__bymMeOK = !!WL_ME;
+    document.documentElement.classList.toggle('bym-memlock', !!PRODUCT.membersOnly && !WL_ME);
     if (WL_ME) { const ab = document.getElementById('addBtn'); if (ab && /^MEMBERS ONLY/.test(ab.textContent)) ab.textContent = 'ADD TO BAG'; }
     { const d = $('pdpAcctDot'); if (d) d.hidden = !WL_ME; }   // small dot on the account icon = signed in
     if (WL_ME) { const keys = (JSON.parse(localStorage.getItem('bym.wishlist') || '[]') || []).map(x => x && x.key).filter(Boolean); if (keys.length) wlApi({ merge: keys }); }
@@ -4423,7 +4426,7 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
     const pt = typeOf(P), pc = coll(P), pg = gOf(P);
     const words = s => String(s || '').toLowerCase().split(/[^a-z]+/).filter(w => w.length > 2 && !['the', 'and', 'jeans', 'pants', 'top'].includes(w));
     const pw = new Set(words(P.title));
-    const scored = Object.entries(C).filter(([k, p]) => k !== key && p && p.gallery && p.gallery.length && typeof p.price === 'number' && !p.soldOut && !p.customBag && !p.lookItems && !(p.collections || []).includes('looks') && gOf(p).some(g => pg.includes(g)))
+    const scored = Object.entries(C).filter(([k, p]) => k !== key && p && p.gallery && p.gallery.length && typeof p.price === 'number' && !p.soldOut && !p.membersOnly && !p.customBag && !p.lookItems && !(p.collections || []).includes('looks') && gOf(p).some(g => pg.includes(g)))
       .map(([k, p]) => { let sc = 0; const t = typeOf(p);
         if (pt && t === pt) sc += 40;
         if (coll(p).some(c => pc.includes(c))) sc += 20;
