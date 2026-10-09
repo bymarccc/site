@@ -1148,6 +1148,7 @@
   .shop__title { margin: 0 0 14px; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; }
   .shop__subhead { grid-column: 1 / -1; margin: clamp(20px, 4vw, 34px) 0 14px; padding: 0 clamp(16px, 4vw, 48px); text-align: center; font-size: 12px; font-weight: 600; letter-spacing: .28em; color: #111; }
   .shop__subhead:first-child { margin-top: 0; }
+  .shop__grid > .shop__subhead { margin-bottom: calc(12px - clamp(22px, 3vw, 34px)); }   /* SKINNY / RELAXED JEANS sit close to their cards (cancels the grid's row gap) */
   .shop--women { border-top: 1px solid #e4e4e1; }
   .shop__tabs { display: flex; gap: 28px; padding: 0 clamp(16px, 4vw, 48px) 14px; margin: 0 0 clamp(18px, 3vw, 32px); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; border-bottom: 1px solid #e4e4e1; }
   .shop__tabs::-webkit-scrollbar { display: none; }
@@ -1366,7 +1367,7 @@
     .shop .salerail--mini .sales__progress { margin-top: 14px; }
   }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=20261009d"></script>
+<script src="/assets/catalog.js?v=20261009m"></script>
 <script>
 (() => {
   'use strict';
@@ -1742,7 +1743,7 @@
         const avail = SUBS.filter(([k]) => items.some(([, p]) => subOf(p) === k));
         if (avail.length > 1) {
           const bar = document.createElement('div'); bar.className = 'shop__subs';
-          [['all', 'ALL'], ...avail].forEach(([k, label]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__sub' + (k === sub ? ' is-on' : ''); b.textContent = label; b.addEventListener('click', () => { if (sub === k) return; sub = k; render(); }); bar.appendChild(b); });
+          avail.forEach(([k, label]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__sub' + (k === sub ? ' is-on' : ''); b.textContent = label; b.addEventListener('click', () => { sub = sub === k ? 'all' : k; render(); }); bar.appendChild(b); });   // no ALL link: TOPS itself shows everything, tapping the chosen one again goes back to all
           grid.appendChild(bar);
           if (sub !== 'all') items = items.filter(([, p]) => subOf(p) === sub);
         }
@@ -1764,7 +1765,7 @@
     collections.forEach(c => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__tab'; b.setAttribute('role', 'tab'); b.dataset.key = c.key; b.textContent = c.label;
       b.setAttribute('aria-selected', String(c.key === active));
-      b.addEventListener('click', () => { active = c.key; section.querySelectorAll('.shop__tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.key === active))); render(); { const tr = tabs.getBoundingClientRect(), gr = grid.getBoundingClientRect(); if (tr.top <= 10 && gr.top < tr.bottom) window.scrollTo({ top: scrollY + gr.top - tr.bottom - 8 }); } /* tabs stuck at the top: show the new category from its first product */  b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
+      b.addEventListener('click', () => { active = c.key; sub = 'all'; subFor = active; section.querySelectorAll('.shop__tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.key === active))); render(); { const tr = tabs.getBoundingClientRect(), gr = grid.getBoundingClientRect(); if (tr.top <= 10 && gr.top < tr.bottom) window.scrollTo({ top: scrollY + gr.top - tr.bottom - 8 }); } /* tabs stuck at the top: show the new category from its first product */  b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); });
       tabBtns.push(b);
       if (c.key === 'looks') { b.classList.add('shop__tab--look'); const row = document.createElement('div'); row.className = 'shop__lookrow'; row.appendChild(b); tabs.parentNode.insertBefore(row, tabs); }   // SHOP THE LOOK: its own small line between MEN/WOMEN and the other tabs
       else tabs.appendChild(b);

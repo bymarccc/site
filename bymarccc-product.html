@@ -553,7 +553,8 @@ body.is-custom-bag-page #gallery { display: none; }
 .pdp-family[hidden] { display: none; }
 .pdp-family__label { display: flex; justify-content: center; gap: 6px; margin: 4px 0 0; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #6f6f6f; }
 .pdp-family__label b { color: #111; font-weight: 500; }
-.pdp-family__row { position: relative; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; padding: 0 calc(50% - 20px) 0; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.pdp-family__row { position: relative; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; padding: 0; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.pdp-family__row::before, .pdp-family__row::after { content: ''; flex: 0 0 calc(50% - 22px); }   /* side spacers instead of padding: iPhone Safari drops the end padding of a scrolling row, so short strips (3 colours) could not scroll at all */
 .pdp-family__row::-webkit-scrollbar { display: none; }
 .pdp-family__row > button { flex: 0 0 auto; width: 40px; display: block; padding: 0 0 4px; margin: 0; border: 0; border-radius: 0; background: none; border-bottom: 1.5px solid transparent; scroll-snap-align: center; transition: opacity .2s; opacity: .55; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .pdp-family__row > button img { display: block; width: 40px; height: 56px; object-fit: cover; object-position: 50% 30%; background: #f0f0f0; pointer-events: none; }
@@ -974,7 +975,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261009d"></script>
+<script src="/assets/catalog.js?v=20261009m"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
