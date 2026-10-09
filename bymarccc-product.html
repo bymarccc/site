@@ -924,9 +924,6 @@ body.is-custom-bag-page #gallery { display: none; }
     .pdp-reco__img { position: relative; display: block; aspect-ratio: 2 / 3; background: #f0f0f0; overflow: hidden; }
     .pdp-reco__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .25s; }
     .pdp-reco__img img.is-on { opacity: 1; }
-    .pdp-reco__nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 34px; height: 44px; border: 0; background: none; color: #111; font: inherit; font-size: 15px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    .pdp-reco__nav--p { left: 0; } .pdp-reco__nav--n { right: 0; }
-    .pdp-reco__nav[hidden] { display: none; }
     .pdp-reco__meta { display: block; padding: 10px 12px 0 10px; font-size: 12px; line-height: 1.35; }
     .pdp-reco__name { display: block; font-weight: 500; text-transform: uppercase; letter-spacing: .02em; }
     .pdp-reco__price { display: block; margin-top: 6px; }
@@ -998,7 +995,7 @@ body.is-custom-bag-page #gallery { display: none; }
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261009t"></script>
+<script src="/assets/catalog.js?v=20261009u"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -4426,17 +4423,16 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
         return [k, p, sc]; })
       .filter(x => x[2] >= 20).sort((a, b) => b[2] - a[2]).slice(0, 10);
     if (scored.length < 2) return;
+    // full-body photo per product (head to shoes); a product's own "fullBody" index wins. Products missing here show their first photo.
+    const FULL = {"w-pink-pants":1,"m-art-print-jeans":1,"w-mini-bag-jeans-blackwash-black":2,"w-mini-bag-jeans-blackwash-burgundy":2,"w-lace-jean":0,"w-transparent-jean":0,"m-pink-zip-hoodie":2,"w-pink-zip-hoodie":2,"m-pink-pants":1,"m-black-zip-hoodie":2,"m-black-pants":2,"m-grey-zip-hoodie":2,"m-grey-pants":2,"w-black-zip-hoodie":2,"w-black-pants":1,"w-grey-zip-hoodie":2,"w-grey-pants":2,"m-sacred-cross-jeans":1,"m-spike-stud-jeans":1,"m-drip-jeans":1,"w-mini-bag-jeans-black":2,"w-mini-bag-jeans-burgundy":2,"w-blue-zip-hoodie":2,"m-blue-zip-hoodie":4,"m-tech-contrast-jacket":2,"m-tech-wide-pants":1,"skinny":1,"relaxed":1,"zebra-jacket":2,"sale-embroidered-crosses-jeans":0,"sale-striped-jeans":0,"sale-star-denim-jacket":0,"sale-glitter-crosses-relaxed-jeans":0,"sale-sicily-jeans":0,"sale-blue-striped-jeans":0,"sale-black-striped-jeans":0,"sale-cross-patch-jeans":0,"sale-palm-tree-jeans":0,"sale-silk-patch-jeans":0,"sale-studded-patch-jeans":0,"sale-chain-patch-jeans":0,"sale-leopard-patch-jeans":0,"sale-pink-striped-jeans":0,"sale-art-dept-jeans":0,"sale-camo-cross-jeans":0,"sale-cross-sweatpants":0,"sale-glitter-flame-jeans":0,"sale-beige-elegant-pants":0,"sale-printed-jeans":0,"sale-star-jeans":0,"sale-embroidered-cross-turtleneck":0,"w-red-baby-top":2,"w-hg-delulu-blazer":1,"w-delulu-blazer-2":3,"w-muse-blazer":2,"w-logo-vest":2,"w-logo-leggings":0,"w-logo-bag":2,"w-white-shoulder-bag":3,"w-logo-flare-leggings":1,"w-white-logo-windbreaker":1,"w-black-logo-windbreaker":3,"w-sporty-top":2,"w-sporty-top-ecru":3,"w-logo-flare-jeans":3,"w-purple-sweatpants":1,"w-red-sweatpants":1,"van-gogh-jacket":0,"bandana-jeans":0,"palm-jeans":0,"distressed-jeans":0,"art-jeans":0};
+    const fullOf = (k, p) => { const i = typeof p.fullBody === 'number' ? p.fullBody : FULL[k]; const g = p.gallery[typeof i === 'number' && p.gallery[i] ? i : 0]; return g.src || g; };
     const money = (n, c) => (c || 'RON') === 'RON' && window.BYM_FMT ? window.BYM_FMT(n) : `${n} ${c || 'RON'}`;
     const track = document.getElementById('recoTrack');
     scored.forEach(([k, p]) => {
-      const imgs = p.gallery.slice(0, 6).map(g => g.src || g);
       const a = document.createElement('a'); a.className = 'pdp-reco__card'; a.href = 'bymarccc-product.html?p=' + k;
       const sale = typeof p.salePrice === 'number';
-      a.innerHTML = `<span class="pdp-reco__img">${imgs.map((src, i) => `<img src="${src}" alt="${i ? '' : p.title}" loading="lazy" decoding="async"${i ? '' : ' class="is-on"'}>`).join('')}${imgs.length > 1 ? '<button class="pdp-reco__nav pdp-reco__nav--p" type="button" aria-label="Previous photo" hidden>&lt;</button><button class="pdp-reco__nav pdp-reco__nav--n" type="button" aria-label="Next photo">&gt;</button>' : ''}</span>
+      a.innerHTML = `<span class="pdp-reco__img"><img class="is-on" src="${fullOf(k, p)}" alt="${p.title}" loading="lazy" decoding="async"></span>
         <span class="pdp-reco__meta"><span class="pdp-reco__name">${p.title}</span><span class="pdp-reco__price">${sale ? `${money(p.salePrice, p.currency)}<s>${money(p.price, p.currency)}</s>` : money(p.price, p.currency)}</span></span>`;
-      const pics = [...a.querySelectorAll('img')], prev = a.querySelector('.pdp-reco__nav--p'), next = a.querySelector('.pdp-reco__nav--n'); let i = 0;
-      const show = n => { i = Math.max(0, Math.min(pics.length - 1, n)); pics.forEach((im, j) => im.classList.toggle('is-on', j === i)); prev.hidden = i === 0; next.hidden = i === pics.length - 1; };
-      if (prev) { prev.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); show(i - 1); }); next.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); show(i + 1); }); }
       track.appendChild(a);
     });
     box.hidden = false;
