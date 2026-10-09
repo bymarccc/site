@@ -1181,6 +1181,10 @@ body.is-custom-bag-page #gallery { display: none; }
       const N = 24, c = document.createElement('canvas'); c.width = 2; c.height = N; const x = c.getContext('2d', { willReadFrequently: true }); const w = img.naturalWidth, h = img.naturalHeight;
       x.drawImage(img, 0, 0, w * .03, h, 0, 0, 1, N); x.drawImage(img, w * .97, 0, w * .03, h, 1, 0, 1, N);
       const d = x.getImageData(0, 0, 2, N).data, stops = [];
+      // busy edges (a close-up with print/fabric to the border, not a studio background): fill the frame instead of side bars
+      { const cs = o => d[o] + d[o + 1] + d[o + 2], bg = (cs(0) + cs(4)) / 2; let busy = 0;
+        for (let k = 0; k < N; k++) { if (Math.abs(cs(k * 8) - bg) > 60 || Math.abs(cs(k * 8 + 4) - bg) > 60) busy++; }
+        if (busy >= 17 || Math.abs(cs(0) - cs(4)) > 90 || Math.min(cs(0), cs(4)) < 600) { s.classList.add('is-cover'); return; } }
       for (let k = 0; k < N; k++) { const a = k * 8, b = a + 4; stops.push(`rgb(${(d[a] + d[b]) >> 1},${(d[a + 1] + d[b + 1]) >> 1},${(d[a + 2] + d[b + 2]) >> 1}) ${((k + .5) / N * 100).toFixed(1)}%`); }
       const col = `linear-gradient(to bottom, ${stops.join(', ')})`;
       s.style.setProperty('--sbg', col); if (i === 0) gallery.style.setProperty('--gbg', col);
