@@ -1366,7 +1366,7 @@
     .shop .salerail--mini .sales__progress { margin-top: 14px; }
   }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=20261009c"></script>
+<script src="/assets/catalog.js?v=20261009j"></script>
 <script>
 (() => {
   'use strict';
@@ -1670,7 +1670,7 @@
       grid.innerHTML = '';
       if (subFor !== active) { sub = 'all'; subFor = active; }
       grid.classList.remove('shop__grid--sales');
-      let items = Object.entries(CATALOG).filter(([, p]) => genderOf(p).includes(gender) && (p.collections || []).includes(active));
+      let items = Object.entries(CATALOG).filter(([, p]) => genderOf(p).includes(gender) && ((p.collections || []).includes(active) || (gender === 'men' && active === 'tops' && (p.collections || []).includes('jackets'))));   // MEN: jackets live under TOPS → JACKETS
       { const HIDE_HOME = new Set(['w-white-baby-top-1', 'w-pink-baby-top', 'w-fuchsia-baby-top', 'w-blue-baby-top', 'w-red-baby-top']); items = items.filter(([k]) => !HIDE_HOME.has(k)); }   // baby tops: only BLACK on the homepage — every colour is on its product page
       if (active === 'looks') items.sort((a, b) => (a[1].lookNo || 99) - (b[1].lookNo || 99));   // LOOK 1 left, LOOK 2 right, …
       if (active === 'new') items = NEW_LIST.filter(k => CATALOG[k] && genderOf(CATALOG[k]).includes(gender)).map(k => [k, CATALOG[k]]);   // NEW COLLECTION tab: every piece with the NEW COLLECTION label
@@ -1737,8 +1737,8 @@
         mountSalesSlider(grid, items); return;
       }
       if (active === 'tops') {
-        const SUBS = [['hoodies', 'HOODIES', /hoodie/i], ['tees', 'T-SHIRTS', /\btee\b|t-?shirt/i], ['baby', 'BABY TOPS', /baby top/i], ['long', 'LONG SLEEVES', /long sleeve|sporty/i], ['tanks', 'TANKS', /tank|vest/i]];
-        const subOf = p => (SUBS.find(([, , re]) => re.test(p.title || '')) || [])[0];
+        const SUBS = [['hoodies', 'HOODIES', /hoodie/i], ['tees', 'T-SHIRTS', /\btee\b|t-?shirt/i], ['jackets', 'JACKETS', /(?!)/], ['baby', 'BABY TOPS', /baby top/i], ['long', 'LONG SLEEVES', /long sleeve|sporty/i], ['tanks', 'TANKS', /tank|vest/i]];
+        const subOf = p => (p.collections || []).includes('jackets') && !(p.collections || []).includes('tops') ? 'jackets' : (SUBS.find(([, , re]) => re.test(p.title || '')) || [])[0];
         const avail = SUBS.filter(([k]) => items.some(([, p]) => subOf(p) === k));
         if (avail.length > 1) {
           const bar = document.createElement('div'); bar.className = 'shop__subs';
