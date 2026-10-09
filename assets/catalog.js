@@ -1214,7 +1214,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"burgundy","name":"Burgundy","hex":"#6B1A1E"}],
       "chart": ["S","M","L"],
-      "gallery": [{"src":"assets/img/gallery/w-logo-vest-1-c2984dac.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-2-a545ffc7.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-3-266e7c1d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-4-9e935202.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-5-1b6cdb4d.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-vest-6-44e96152.webp","w":1025,"h":1535}]
+      "gallery": [{"src": "assets/img/gallery/w-logo-vest-full-53d23b1a.webp", "w": 1024, "h": 1536}, {"src": "assets/img/gallery/w-logo-vest-front-a795d522.webp", "w": 1024, "h": 1536}, {"src": "assets/img/gallery/w-logo-vest-zip-fe2bd6b8.webp", "w": 1024, "h": 1536}, {"src": "assets/img/gallery/w-logo-vest-bag-399264f3.webp", "w": 1024, "h": 1536}, {"src": "assets/img/gallery/w-logo-vest-close-de9e7ad3.webp", "w": 1024, "h": 1536}, {"src": "assets/img/gallery/w-logo-vest-backcrop-6168c96c.webp", "w": 1024, "h": 1536}, {"src": "assets/img/gallery/w-logo-vest-back-268a9da2.webp", "w": 1024, "h": 1536}, {"src": "assets/img/gallery/w-logo-vest-6-44e96152.webp", "w": 1025, "h": 1535}]
     },
     "w-logo-leggings": {
       "gender": "women",
