@@ -1204,8 +1204,9 @@
   @media (min-width: 900px) { .shop__subs { justify-content: center; } }
   .shop__sub { flex: 0 0 auto; padding: 4px 0; border: 0; background: none; color: #9a9a96; font: inherit; font-size: 10px; font-weight: 500; letter-spacing: .16em; cursor: pointer; text-decoration: none; }   /* quiet text links (SSENSE / Acne style), the chosen one black + underlined */
   .shop__sub.is-on { color: #111; text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 1px; }
-  .shop__bars { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; gap: 4px; }
-  .shop__bars i { display: block; flex: 1 1 0; max-width: 18px; min-width: 4px; height: 2px; background: rgba(17,17,17,.28); border-radius: 1px; transition: background .25s; }
+  /* photo position: tiny dots bottom-left (Très Bien / SSENSE style) instead of dashes */
+  .shop__bars { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 4px; align-items: center; }
+  .shop__bars i { display: block; flex: 0 0 auto; width: 4px; height: 4px; background: rgba(17,17,17,.22); border-radius: 50%; transition: background .25s; }
   .shop__bars i.is-on { background: #111; }
   .shop__meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; font-size: 12.5px; letter-spacing: .04em; }
   .shop__name { text-transform: uppercase; }
@@ -1254,8 +1255,8 @@
   .sales__imgwrap { display: block; position: relative; aspect-ratio: 1212 / 1816; background: #f2f2f0; overflow: hidden; border-radius: 16px; touch-action: pan-x pan-y pinch-zoom; }
   .sales__imgwrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; opacity: 0; transition: opacity .35s cubic-bezier(.22,1,.36,1); -webkit-user-drag: none; user-select: none; }
   .sales__imgwrap img.is-on { opacity: 1; }
-  .sales__bars { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 4px; z-index: 2; }
-  .sales__bars i { display: block; width: 18px; height: 2px; background: rgba(255,255,255,.55); box-shadow: 0 0 0 1px rgba(0,0,0,.08); border-radius: 1px; transition: background .25s; }
+  .sales__bars { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 4px; z-index: 2; }
+  .sales__bars i { display: block; width: 4px; height: 4px; background: rgba(255,255,255,.55); box-shadow: 0 0 0 1px rgba(0,0,0,.08); border-radius: 50%; transition: background .25s; }
   .sales__bars i.is-on { background: #fff; }
   .sales__info { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; flex: 1 1 auto; }
   .sales__name { font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: #111; text-decoration: none; }

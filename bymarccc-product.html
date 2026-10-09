@@ -909,6 +909,29 @@ body.is-custom-bag-page #gallery { display: none; }
       </div>
     </section>
   </div>
+  <!-- RECOMMENDATIONS: similar pieces (same type / category / gender), one continuous grey strip, each card flips through its own photos -->
+  <section class="pdp-reco" id="reco" hidden aria-label="Recommendations">
+    <h2 class="pdp-reco__title">RECOMMENDATIONS</h2>
+    <div class="pdp-reco__track" id="recoTrack"></div>
+  </section>
+  <style>
+    .pdp-reco { margin: 44px 0 30px; }
+    .pdp-reco__title { margin: 0 16px 12px; font-size: 13px; font-weight: 600; letter-spacing: .04em; color: #111; }
+    .pdp-reco__track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+    .pdp-reco__track::-webkit-scrollbar { display: none; }
+    .pdp-reco__card { flex: 0 0 62vw; max-width: 340px; scroll-snap-align: start; color: #111; text-decoration: none; display: block; }
+    @media (min-width: 900px) { .pdp-reco__card { flex-basis: 22vw; } .pdp-reco__title { margin-left: 32px; } }
+    .pdp-reco__img { position: relative; display: block; aspect-ratio: 2 / 3; background: #f0f0f0; overflow: hidden; }
+    .pdp-reco__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .25s; }
+    .pdp-reco__img img.is-on { opacity: 1; }
+    .pdp-reco__nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 34px; height: 44px; border: 0; background: none; color: #111; font: inherit; font-size: 15px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .pdp-reco__nav--p { left: 0; } .pdp-reco__nav--n { right: 0; }
+    .pdp-reco__nav[hidden] { display: none; }
+    .pdp-reco__meta { display: block; padding: 10px 12px 0 10px; font-size: 12px; line-height: 1.35; }
+    .pdp-reco__name { display: block; font-weight: 500; text-transform: uppercase; letter-spacing: .02em; }
+    .pdp-reco__price { display: block; margin-top: 6px; }
+    .pdp-reco__price s { color: #9a9a9a; margin-left: 6px; }
+  </style>
 </main>
 
 <!-- Complete the look -->
@@ -4381,5 +4404,43 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
 })();
 </script>
 
+<script>
+  (() => {
+    const box = document.getElementById('reco'); if (!box || !window.BYMARCCC_CATALOG) return;
+    const C = window.BYMARCCC_CATALOG.CATALOG;
+    const key = (new URLSearchParams(location.search).get('p') || '').toLowerCase(), P = C[key]; if (!P) return;
+    const gOf = p => p.genders || [p.gender || 'men'];
+    const TYPES = [['hoodie', /hoodie/], ['pants', /pants|sweatpants|joggers/], ['jeans', /jean|denim/], ['baby', /baby top/], ['tee', /\btee\b|t-?shirt/], ['long', /long sleeve|sporty/], ['blazer', /blazer|coat|pardesiu/], ['jacket', /jacket|windbreaker|vest/], ['leggings', /legging/], ['shorts', /shorts/], ['bag', /\bbag\b/], ['cap', /\bcap\b|hat/], ['tank', /tank/]];
+    const typeOf = p => { const t = String(p.title || '').toLowerCase(); const m = TYPES.find(([, re]) => re.test(t)); return m ? m[0] : ''; };
+    const coll = p => (p.collections || []).filter(c => !['sales', 'looks', 'new'].includes(c));
+    const pt = typeOf(P), pc = coll(P), pg = gOf(P);
+    const words = s => String(s || '').toLowerCase().split(/[^a-z]+/).filter(w => w.length > 2 && !['the', 'and', 'jeans', 'pants', 'top'].includes(w));
+    const pw = new Set(words(P.title));
+    const scored = Object.entries(C).filter(([k, p]) => k !== key && p && p.gallery && p.gallery.length && typeof p.price === 'number' && !p.soldOut && !p.customBag && !p.lookItems && !(p.collections || []).includes('looks') && gOf(p).some(g => pg.includes(g)))
+      .map(([k, p]) => { let sc = 0; const t = typeOf(p);
+        if (pt && t === pt) sc += 40;
+        if (coll(p).some(c => pc.includes(c))) sc += 20;
+        if (P.denimGroup && p.denimGroup === P.denimGroup) sc += 12;
+        words(p.title).forEach(w => { if (pw.has(w)) sc += 6; });
+        if (String(p.gallery[0].src || p.gallery[0]).startsWith('assets/')) sc += 3;   // own photos first
+        return [k, p, sc]; })
+      .filter(x => x[2] >= 20).sort((a, b) => b[2] - a[2]).slice(0, 10);
+    if (scored.length < 2) return;
+    const money = (n, c) => (c || 'RON') === 'RON' && window.BYM_FMT ? window.BYM_FMT(n) : `${n} ${c || 'RON'}`;
+    const track = document.getElementById('recoTrack');
+    scored.forEach(([k, p]) => {
+      const imgs = p.gallery.slice(0, 6).map(g => g.src || g);
+      const a = document.createElement('a'); a.className = 'pdp-reco__card'; a.href = 'bymarccc-product.html?p=' + k;
+      const sale = typeof p.salePrice === 'number';
+      a.innerHTML = `<span class="pdp-reco__img">${imgs.map((src, i) => `<img src="${src}" alt="${i ? '' : p.title}" loading="lazy" decoding="async"${i ? '' : ' class="is-on"'}>`).join('')}${imgs.length > 1 ? '<button class="pdp-reco__nav pdp-reco__nav--p" type="button" aria-label="Previous photo" hidden>&lt;</button><button class="pdp-reco__nav pdp-reco__nav--n" type="button" aria-label="Next photo">&gt;</button>' : ''}</span>
+        <span class="pdp-reco__meta"><span class="pdp-reco__name">${p.title}</span><span class="pdp-reco__price">${sale ? `${money(p.salePrice, p.currency)}<s>${money(p.price, p.currency)}</s>` : money(p.price, p.currency)}</span></span>`;
+      const pics = [...a.querySelectorAll('img')], prev = a.querySelector('.pdp-reco__nav--p'), next = a.querySelector('.pdp-reco__nav--n'); let i = 0;
+      const show = n => { i = Math.max(0, Math.min(pics.length - 1, n)); pics.forEach((im, j) => im.classList.toggle('is-on', j === i)); prev.hidden = i === 0; next.hidden = i === pics.length - 1; };
+      if (prev) { prev.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); show(i - 1); }); next.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); show(i + 1); }); }
+      track.appendChild(a);
+    });
+    box.hidden = false;
+  })();
+  </script>
 </body>
 </html>
