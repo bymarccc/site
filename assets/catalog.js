@@ -1527,7 +1527,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "noSize": true,
       "gallery": [{"src":"assets/img/custom-bag/base.webp","w":1400,"h":933}],
       "pinterestUrl": "https://pin.it/1AbmKcrlz",
-      "variants": [{"id":"design-01","name":"Sticker Wall","thumbnail":"assets/img/custom-bag/designs/graffiti-texture.webp","frontImage":"assets/img/custom-bag/designs/graffiti-texture.webp","backImage":"assets/img/custom-bag/designs/graffiti-texture.webp"},{"id":"design-02","name":"Candy Pop","thumbnail":"assets/img/custom-bag/designs/candy-texture.webp","frontImage":"assets/img/custom-bag/designs/candy-texture.webp","backImage":"assets/img/custom-bag/designs/candy-texture.webp"}],
+      "variants": [{"id":"design-01", "frontMockup": "assets/img/custom-bag/designs/sticker-wall-front-27fda492.webp","name":"Sticker Wall","thumbnail":"assets/img/custom-bag/designs/sticker-wall-f6b88d5d.webp","frontImage":"assets/img/custom-bag/designs/sticker-wall-f6b88d5d.webp","backImage":"assets/img/custom-bag/designs/sticker-wall-f6b88d5d.webp"},{"id":"design-02", "frontMockup": "assets/img/custom-bag/designs/candy-pop-front-f1e25e74.webp","name":"Candy Pop","thumbnail":"assets/img/custom-bag/designs/candy-pop-2436b561.webp","frontImage":"assets/img/custom-bag/designs/candy-pop-2436b561.webp","backImage":"assets/img/custom-bag/designs/candy-pop-2436b561.webp"}],
       "baseImage": "assets/img/custom-bag/base.webp",
       "baseImageBack": "assets/img/custom-bag/base-back.webp",
       "hardwareOverlay": "assets/img/custom-bag/hardware-overlay.webp",

@@ -1016,7 +1016,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261011h"></script>
+<script src="/assets/catalog.js?v=20261011i"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1709,7 +1709,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
       if (!v) return;
       cbState[cbState.activeSide + 'Variant'] = v;
       cbSyncVariantUI();
-      try { await Promise.all([cbLoadImage(v.frontImage), cbLoadImage(v.backImage)]); } catch {}
+      try { await Promise.all([cbLoadImage(v.frontImage), cbLoadImage(v.backImage)].concat(v.frontMockup ? [cbLoadImage(v.frontMockup)] : [])); } catch {}
       cbRender();
     }
 
@@ -1898,6 +1898,9 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
       if (!activeBaseImg) return;
       const W = cbCanvas.width, H = cbCanvas.height;
       cbCtx.clearRect(0, 0, W, H);
+      // FRONT with a design and no own photos → Mark's finished bag mockup (artwork already placed on the bag)
+      { const fv = side === 'front' && !(cbState.front || []).length ? cbState.frontVariant : null, fm = fv && fv.frontMockup ? cbResolved.get(fv.frontMockup) : null;
+        if (fm) { cbCtx.fillStyle = '#f2f2f0'; cbCtx.fillRect(0, 0, W, H); const s = Math.min(W / fm.naturalWidth, H / fm.naturalHeight), dw = fm.naturalWidth * s, dh = fm.naturalHeight * s; cbCtx.save(); cbCtx.globalCompositeOperation = 'multiply'; cbCtx.drawImage(fm, (W - dw) / 2, (H - dh) / 2, dw, dh); cbCtx.restore(); return; } }   // multiply: the photo's white turns into the preview grey
       cbCtx.drawImage(activeBaseImg, 0, 0, W, H);
       const pz = { x: PRINT_ZONE.x * W, y: PRINT_ZONE.y * H, w: PRINT_ZONE.w * W, h: PRINT_ZONE.h * H };
       cbCtx.save();
