@@ -642,6 +642,25 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
 .cb-ai__bgretry, .cb-ai__bgkeep { border: none; background: none; font-size: 11.5px; text-decoration: underline; cursor: pointer; padding: 0; color: #111; }
 .cb-ai__pin { display: inline-flex; align-items: center; gap: 4px; margin-top: 14px; font-size: 12.5px; color: #111; text-decoration: none; border-bottom: 1px solid #111; }
 .cb-ai__pin span { color: #5B95C3; }
+/* Custom bag — quieter, more premium controls (beats the generic `.pdp button { font: inherit }`) */
+.pdp .cb-variants { gap: 10px; margin: 10px 0 14px; }
+.pdp .cb-variant { width: 68px; gap: 5px; }
+.pdp .cb-variant__thumb { width: 64px; height: 64px; border-radius: 16px; }
+.pdp .cb-variant__thumb--none svg { width: 20px; height: 20px; }
+.pdp .cb-variant__name { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: #6f6f6f; }
+.pdp .cb-variant[aria-checked="true"] .cb-variant__name { color: #111; }
+.pdp .cb-ai__tabs { display: inline-flex; gap: 0; padding: 3px; border: 1px solid #e4e4e1; border-radius: 999px; margin: 2px 0 6px; }
+.pdp .cb-ai__tab { flex: 0 0 auto; min-width: 74px; border: 0; border-radius: 999px; padding: 6px 14px; font-size: 10px; line-height: 1; letter-spacing: .16em; background: transparent; color: #6f6f6f; }
+.pdp .cb-ai__tab.is-active { background: #111; color: #fff; }
+.pdp .cb-ai__hint { font-size: 9.5px; letter-spacing: .16em; margin: 16px 0 8px; }
+.pdp .cb-ai__upload { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; padding: 7px 14px; margin-top: 4px; }
+.pdp .cb-ai__textinput { font-size: 13px; border-radius: 999px; padding: 9px 16px; }
+.pdp .cb-ai__posrow { display: inline-flex; gap: 0; padding: 3px; border: 1px solid #e4e4e1; border-radius: 999px; margin-top: 10px; }
+.pdp .cb-ai__posrow button { flex: 0 0 auto; min-width: 64px; border: 0; border-radius: 999px; padding: 6px 12px; font-size: 10px; line-height: 1; letter-spacing: .14em; background: transparent; color: #6f6f6f; }
+.pdp .cb-ai__posrow button.is-active { background: #111; color: #fff; }
+.pdp .cb-ai__drag { font-size: 10.5px; color: #8a8a86; margin: 8px 0 0; }
+.pdp .cb-ai__drag[hidden] { display: none; }
+
 
 
 /* ---------- Mobile product-page layout: hide the Design/Size labels, center the size
@@ -867,10 +886,11 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
           <p class="cb-ai__hint">Add text</p>
           <input type="text" id="cbBackText" class="cb-ai__textinput" maxlength="40" placeholder="Optional text on the back">
           <div class="cb-ai__posrow" id="cbBackTextPos">
-            <button type="button" data-pos="top">Top</button>
+            <button type="button" data-pos="left">Left</button>
             <button type="button" data-pos="center" class="is-active">Center</button>
-            <button type="button" data-pos="bottom">Bottom</button>
+            <button type="button" data-pos="right">Right</button>
           </div>
+          <p class="cb-ai__drag" id="cbTextDrag" hidden>Drag the text on the bag to move it up or down.</p>
         </div>
 
         <p class="cb-ai__note">Your photos stay in your browser and are only saved with your order once you add it to your bag.</p>
@@ -1579,7 +1599,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     const MAX_PHOTOS = 3, MAX_FILE_BYTES = 8 * 1024 * 1024, ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
     const cbVariantsEl = $('cbVariants'), cbAiEl = $('cbAi'), cbCanvas = $('cbCanvas'), cbCtx = cbCanvas.getContext('2d');
     const cbErr = $('cbErr');
-    const cbState = { frontVariant: null, backVariant: null, activeSide: 'front', front: [], back: [], selFront: -1, selBack: -1, backText: '', backTextPos: 'center' };
+    const cbState = { frontVariant: null, backVariant: null, activeSide: 'front', front: [], back: [], selFront: -1, selBack: -1, backText: '', backTextPos: 'center', backTextY: 0.52 };
     let cbGen = 0;   // bumped by cbClearAll() so stale async work (e.g. a background-removal call in flight) never resurrects state after a reset
     const cbResolved = new Map();
     function cbLoadImage(src) {
@@ -1668,7 +1688,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
       cbState[side + 'Variant'] = null;
       cbState[side] = [];
       if (side === 'front') cbState.selFront = -1; else cbState.selBack = -1;
-      if (side === 'back') { cbState.backText = ''; cbBackTextInput.value = ''; }
+      if (side === 'back') { cbState.backText = ''; cbBackTextInput.value = ''; cbState.backTextY = 0.52; const d = document.getElementById('cbTextDrag'); if (d) d.hidden = true; }
       cbSyncVariantUI();
       cbRenderAllThumbs(); cbFront.cbRenderControls(); cbBack.cbRenderControls();
       cbRender();
@@ -1820,7 +1840,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
 
     // ---- Back text ----
     const cbBackTextInput = $('cbBackText');
-    cbBackTextInput.addEventListener('input', () => { cbState.backText = cbBackTextInput.value; cbRender(); });
+    cbBackTextInput.addEventListener('input', () => { cbState.backText = cbBackTextInput.value; $('cbTextDrag').hidden = !cbState.backText.trim(); cbRender(); });
     $('cbBackTextPos').querySelectorAll('button').forEach(b => {
       b.addEventListener('click', () => {
         cbState.backTextPos = b.dataset.pos;
@@ -1863,9 +1883,10 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
       cbCtx.save();
       cbCtx.font = '600 ' + Math.round(pz.h * 0.09) + 'px Helvetica, Arial, sans-serif';
       cbCtx.fillStyle = '#fff'; cbCtx.strokeStyle = 'rgba(0,0,0,.35)'; cbCtx.lineWidth = 3;
-      cbCtx.textAlign = 'center'; cbCtx.textBaseline = 'middle';
-      const x = pz.x + pz.w / 2;
-      const y = cbState.backTextPos === 'top' ? pz.y + pz.h * 0.16 : cbState.backTextPos === 'bottom' ? pz.y + pz.h * 0.88 : pz.y + pz.h * 0.52;
+      const al = cbState.backTextPos === 'left' || cbState.backTextPos === 'right' ? cbState.backTextPos : 'center';
+      cbCtx.textAlign = al; cbCtx.textBaseline = 'middle';
+      const x = al === 'left' ? pz.x + pz.w * 0.08 : al === 'right' ? pz.x + pz.w * 0.92 : pz.x + pz.w / 2;   // LEFT · CENTER · RIGHT
+      const y = pz.y + pz.h * (cbState.backTextY == null ? 0.52 : cbState.backTextY);   // height: dragged by the shopper
       cbCtx.strokeText(cbState.backText, x, y);
       cbCtx.fillText(cbState.backText, x, y);
       cbCtx.restore();
@@ -1902,6 +1923,15 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
       const pt = cbCanvasPoint(e), side = cbState.activeSide, arr = cbState[side] || [];
       const W = cbCanvas.width, H = cbCanvas.height;
       const pz = { x: PRINT_ZONE.x * W, y: PRINT_ZONE.y * H, w: PRINT_ZONE.w * W, h: PRINT_ZONE.h * H };
+      // back text sits above the photos → grab it first; it moves up / down only
+      if (side === 'back' && cbState.backText.trim()) {
+        const ty = pz.y + pz.h * cbState.backTextY;
+        if (Math.abs(pt.y - ty) < pz.h * 0.12 && pt.x > pz.x && pt.x < pz.x + pz.w) {
+          cbDrag = { text: true, startY: pt.y, origY: cbState.backTextY };
+          cbCanvas.setPointerCapture(e.pointerId);
+          return;
+        }
+      }
       for (let i = arr.length - 1; i >= 0; i--) {
         const p = arr[i];
         const cx = pz.x + pz.w * p.xNorm, cy = pz.y + pz.h * p.yNorm;
@@ -1919,6 +1949,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
       const pt = cbCanvasPoint(e);
       const W = cbCanvas.width, H = cbCanvas.height;
       const pz = { x: PRINT_ZONE.x * W, y: PRINT_ZONE.y * H, w: PRINT_ZONE.w * W, h: PRINT_ZONE.h * H };
+      if (cbDrag.text) { cbState.backTextY = Math.min(0.92, Math.max(0.08, cbDrag.origY + (pt.y - cbDrag.startY) / pz.h)); cbRender(); return; }
       const p = cbState[cbDrag.side][cbDrag.index];
       if (!p) return;
       p.xNorm = Math.min(1, Math.max(0, cbDrag.origX + (pt.x - cbDrag.startX) / pz.w));
@@ -1954,14 +1985,14 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
           backVariantId: cbState.backVariant ? cbState.backVariant.id : null,
           frontPhotos: cbState.front.map(p => p.dataUrl),
           backPhotos: cbState.back.map(p => p.dataUrl),
-          backText: cbState.backText, backTextPos: cbState.backTextPos,
+          backText: cbState.backText, backTextPos: cbState.backTextPos, backTextY: Math.round(cbState.backTextY * 100) / 100,
           preview: frontPreview, backPreview,
           designJSON: {
             frontVariantId: cbState.frontVariant ? cbState.frontVariant.id : null,
             backVariantId: cbState.backVariant ? cbState.backVariant.id : null,
             front: cbState.front.map(p => ({ xNorm: p.xNorm, yNorm: p.yNorm, scale: p.scale, rotate: p.rotate })),
             back: cbState.back.map(p => ({ xNorm: p.xNorm, yNorm: p.yNorm, scale: p.scale, rotate: p.rotate })),
-            backText: cbState.backText, backTextPos: cbState.backTextPos,
+            backText: cbState.backText, backTextPos: cbState.backTextPos, backTextY: Math.round(cbState.backTextY * 100) / 100,
           },
         },
       };
