@@ -996,7 +996,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261011b"></script>
+<script src="/assets/catalog.js?v=20261011c"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1021,8 +1021,9 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   const FAMILIES = [BABY_FAMILY,
     [['m-burgundy-zip-hoodie', 'Burgundy'], ['m-red-zip-hoodie', 'Red'], ['m-pink-zip-hoodie', 'Pink'], ['m-black-zip-hoodie', 'Black'], ['m-grey-zip-hoodie', 'Grey']],
     [['w-burgundy-zip-hoodie', 'Burgundy'], ['w-red-zip-hoodie', 'Red'], ['w-pink-zip-hoodie', 'Pink'], ['w-black-zip-hoodie', 'Black'], ['w-grey-zip-hoodie', 'Grey']],
-    [['m-pink-pants', 'Pink'], ['m-black-pants', 'Black'], ['m-grey-pants', 'Grey']],
-    [['w-pink-pants', 'Pink'], ['w-black-pants', 'Black'], ['w-grey-pants', 'Grey']]];
+    [['m-red-pants', 'Red'], ['m-pink-pants', 'Pink'], ['m-black-pants', 'Black'], ['m-grey-pants', 'Grey']],
+    [['w-red-pants', 'Red'], ['w-pink-pants', 'Pink'], ['w-black-pants', 'Black'], ['w-grey-pants', 'Grey']],
+    [['w-logo-flare-jeans', 'Ivory'], ['w-logo-flare-leggings', 'Black']]];
   const FAMILY = FAMILIES.find(f => f.some(([k]) => k === KEY)) || [];
   const IN_FAMILY = FAMILY.length > 0;
   const VERT = !matchMedia('(min-width: 900px)').matches;   // phone: every product's photos swipe up/down with the dashes on the right (like the baby tops)
