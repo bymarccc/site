@@ -1742,10 +1742,10 @@
         }
         mountSalesSlider(grid, items); return;
       }
-      if (active === 'bottoms' && gender === 'women') {   // women BOTTOMS → PANTS · DENIM (tapping the chosen one again shows all)
-        const DENIM_X = new Set(['w-butterfly-embroidery-1', 'w-art-dept-3']); const bsub = (k, p) => /jean|denim/i.test(p.title || '') || DENIM_X.has(k) ? 'denim' : 'pants';
+      if (active === 'bottoms' && gender === 'women') {   // women BOTTOMS → DENIM · PANTS · LEGGINGS (tapping the chosen one again shows all)
+        const DENIM_X = new Set(['w-butterfly-embroidery-1', 'w-art-dept-3']); const bsub = (k, p) => /legging/i.test(p.title || '') ? 'leggings' : /jean|denim/i.test(p.title || '') || DENIM_X.has(k) ? 'denim' : 'pants';
         const bar = document.createElement('div'); bar.className = 'shop__subs';
-        [['denim', 'DENIM'], ['pants', 'PANTS']].forEach(([k, label]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__sub' + (k === sub ? ' is-on' : ''); b.textContent = label; b.addEventListener('click', () => { sub = sub === k ? 'all' : k; render(); }); bar.appendChild(b); });
+        [['denim', 'DENIM'], ['pants', 'PANTS'], ['leggings', 'LEGGINGS']].forEach(([k, label]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__sub' + (k === sub ? ' is-on' : ''); b.textContent = label; b.addEventListener('click', () => { sub = sub === k ? 'all' : k; render(); }); bar.appendChild(b); });
         grid.appendChild(bar);
         if (sub !== 'all') items = items.filter(([k, p]) => bsub(k, p) === sub);
       }
