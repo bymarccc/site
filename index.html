@@ -1164,8 +1164,7 @@
   .shop__img { position: relative; display: block; aspect-ratio: 1212 / 1816; background: #f2f2f0; overflow: hidden; touch-action: pan-y pinch-zoom; }
   /* Diesel-style vertical label on the photo */
   .shop__newtag { position: absolute; z-index: 2; top: 14px; left: 8px; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 8.8px; font-weight: 500; letter-spacing: .08em; line-height: 1; color: #111; pointer-events: none; white-space: nowrap; }
-  .shop__card.is-members .shop__img img { opacity: .92; }
-  html:not(.bym-member) .shop__card.is-members .shop__price { display: none; }   /* price shows after sign-in */   /* members-only pieces: slightly see-through on the homepage */
+  html:not(.bym-member) .shop__card.is-members .shop__price { display: none; }   /* price shows after sign-in */
   @media (min-width: 900px) { .shop__newtag { top: 18px; left: 12px; font-size: 9.6px; } }   /* 20% smaller — quieter, more premium */
   /* SOLD OUT: a white tab cut into the photo's bottom-right corner (concave corners via the two pseudo elements) */
   .shop__soldout { position: absolute; z-index: 3; right: 0; bottom: 0; background: #fff; color: #111; font-size: 11px; font-weight: 500; letter-spacing: .12em; line-height: 1; padding: 9px 11px 8px 13px; border-radius: 12px 0 0 0; }
@@ -1370,7 +1369,7 @@
     .shop .salerail--mini .sales__progress { margin-top: 14px; }
   }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=20261011c"></script>
+<script src="/assets/catalog.js?v=20261011d"></script>
 <script>
 (() => {
   'use strict';

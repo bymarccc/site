@@ -1369,7 +1369,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"ecru","name":"Ivory","hex":"#efe9dc"}],
       "chart": ["XS-S","M-L"],
-      "gallery": [{"src":"assets/img/gallery/w-sporty-top-ecru-13-d1847dc6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-11-a77dd443.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-12-ae91d27a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-14-21aeb101.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-15-5c0457fb.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-16-118f8abe.webp","w":1024,"h":1534}]
+      "gallery": [{"src":"assets/img/gallery/w-sporty-top-ecru-11-a77dd443.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-12-ae91d27a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-13-d1847dc6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-14-21aeb101.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-15-5c0457fb.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-16-118f8abe.webp","w":1024,"h":1534}]
     },
     "w-logo-flare-jeans": {
       "gender": "women",
