@@ -1026,7 +1026,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261011n"></script>
+<script src="/assets/catalog.js?v=20261011o"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1932,7 +1932,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
       cbDrawPhotos(side, pz);
       if (side === 'back' && cbState.backText) cbDrawBackText(pz);
       cbCtx.restore();
-      if (cbHwImg) cbCtx.drawImage(cbHwImg, 0, 0, W, H);
+      if (cbHwImg && !(side === 'back' && cbBaseImgBack)) cbCtx.drawImage(cbHwImg, 0, 0, W, H);   // the hardware overlay is cut for the FRONT photo: on the BACK photo it showed up as a second, doubled handle
     }
 
     // ---- Drag to reposition the active side's photos directly on the canvas ----
@@ -4489,6 +4489,7 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
         if (String(p.gallery[0].src || p.gallery[0]).startsWith('assets/')) sc += 3;   // own photos first
         return [k, p, sc]; })
       .filter(x => x[2] >= 20).sort((a, b) => b[2] - a[2]).slice(0, 10);
+    if (P.customBag) ['w-white-shoulder-bag', 'w-burgundy-shoulder-bag'].forEach(k => { const p = C[k]; if (p && p.gallery && p.gallery.length && typeof p.price === 'number' && !p.soldOut && !scored.some(x => x[0] === k)) scored.push([k, p, 0]); });   // custom bag: women's bags as accessories at the end
     if (scored.length < 2) return;
     // full-body photo per product (head to shoes); a product's own "fullBody" index wins. Products missing here show their first photo.
     const FULL = {"w-pink-pants":1,"m-art-print-jeans":1,"w-mini-bag-jeans-blackwash-black":2,"w-mini-bag-jeans-blackwash-burgundy":2,"w-lace-jean":0,"w-transparent-jean":0,"m-pink-zip-hoodie":2,"w-pink-zip-hoodie":2,"m-pink-pants":1,"m-black-zip-hoodie":2,"m-black-pants":2,"m-grey-zip-hoodie":2,"m-grey-pants":2,"w-black-zip-hoodie":2,"w-black-pants":1,"w-grey-zip-hoodie":2,"w-grey-pants":2,"m-sacred-cross-jeans":1,"m-spike-stud-jeans":1,"m-drip-jeans":1,"w-mini-bag-jeans-black":2,"w-mini-bag-jeans-burgundy":2,"w-blue-zip-hoodie":2,"m-blue-zip-hoodie":4,"m-tech-contrast-jacket":2,"m-tech-wide-pants":1,"skinny":1,"relaxed":1,"zebra-jacket":2,"sale-embroidered-crosses-jeans":0,"sale-striped-jeans":0,"sale-star-denim-jacket":0,"sale-glitter-crosses-relaxed-jeans":0,"sale-sicily-jeans":0,"sale-blue-striped-jeans":0,"sale-black-striped-jeans":0,"sale-cross-patch-jeans":0,"sale-palm-tree-jeans":0,"sale-silk-patch-jeans":0,"sale-studded-patch-jeans":0,"sale-chain-patch-jeans":0,"sale-leopard-patch-jeans":0,"sale-pink-striped-jeans":0,"sale-art-dept-jeans":0,"sale-camo-cross-jeans":0,"sale-cross-sweatpants":0,"sale-glitter-flame-jeans":0,"sale-beige-elegant-pants":0,"sale-printed-jeans":0,"sale-star-jeans":0,"sale-embroidered-cross-turtleneck":0,"w-red-baby-top":2,"w-hg-delulu-blazer":1,"w-delulu-blazer-2":0,"w-muse-blazer":0,"w-logo-vest":0,"w-logo-leggings":0,"w-white-shoulder-bag":3,"w-logo-flare-leggings":1,"w-white-logo-windbreaker":1,"w-black-logo-windbreaker":3,"w-sporty-top":2,"w-sporty-top-ivory":3,"w-logo-flare-jeans":3,"w-purple-sweatpants":1,"w-red-sweatpants":1,"van-gogh-jacket":0,"bandana-jeans":0,"palm-jeans":0,"distressed-jeans":0,"art-jeans":0};
