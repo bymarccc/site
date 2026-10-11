@@ -3476,6 +3476,7 @@ __name(executeRequest, "executeRequest");
 var pages_template_worker_default = {
   async fetch(originalRequest, env2, workerContext) {
     let request = originalRequest;
+    { const u = new URL(request.url); if (/^\/bymarccc-product(\.html)?$/.test(u.pathname) && u.searchParams.get("p") === "w-sporty-top-ecru") { u.searchParams.set("p", "w-sporty-top-ivory"); return Response.redirect(u.toString(), 301); } }   // renamed: ecru → ivory
     const handlerIterator = executeRequest(request);
     let data = {};
     let isFailOpen = false;

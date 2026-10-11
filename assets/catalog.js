@@ -36,7 +36,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
   "collections": [{"key":"denim","label":"DENIM"},{"key":"tops","label":"TOPS"},{"key":"bottoms","label":"BOTTOMS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"},{"key":"looks","label":"SHOP THE LOOK"}],
   "womenCollections": [{"key":"tops","label":"TOPS"},{"key":"bottoms","label":"BOTTOMS"},{"key":"accessories","label":"ACCESSORIES"},{"key":"sales","label":"SALES"},{"key":"looks","label":"SHOP THE LOOK"}],
   "customizeCollections": [{"key":"bags","label":"BAGS"}],
-  "womenFeatured": {"tops":["w-sporty-top-ecru","w-sporty-top","w-burgundy-baby-top","w-white-baby-top","w-burgundy-zip-hoodie","w-logo-vest","w-blue-zip-hoodie","w-hot-pink-zip-hoodie","w-red-zip-hoodie","w-pink-zip-hoodie","w-black-zip-hoodie","w-grey-zip-hoodie","w-delulu-blazer-2","w-muse-blazer","w-hg-delulu-blazer","w-burgundy-long-sleeve","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-flare-jeans","w-logo-flare-leggings","w-red-pants","w-pink-pants","w-mini-bag-jeans-blackwash-black","w-mini-bag-jeans-blackwash-burgundy","w-mini-bag-jeans-burgundy","w-mini-bag-jeans-black","w-lace-jean","w-transparent-jean","w-black-pants","w-grey-pants","w-logo-leggings"],"jackets":["w-white-logo-windbreaker","w-black-logo-windbreaker"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag"]},
+  "womenFeatured": {"tops":["w-sporty-top-ivory","w-sporty-top","w-burgundy-baby-top","w-white-baby-top","w-burgundy-zip-hoodie","w-logo-vest","w-blue-zip-hoodie","w-hot-pink-zip-hoodie","w-red-zip-hoodie","w-pink-zip-hoodie","w-black-zip-hoodie","w-grey-zip-hoodie","w-delulu-blazer-2","w-muse-blazer","w-hg-delulu-blazer","w-burgundy-long-sleeve","w-fuchsia-baby-top","w-blue-baby-top","w-red-baby-top","w-white-baby-top-1","w-pink-baby-top","w-no-bra-tank-top"],"bottoms":["w-logo-flare-jeans","w-logo-flare-leggings","w-red-pants","w-pink-pants","w-mini-bag-jeans-blackwash-black","w-mini-bag-jeans-blackwash-burgundy","w-mini-bag-jeans-burgundy","w-mini-bag-jeans-black","w-lace-jean","w-transparent-jean","w-black-pants","w-grey-pants","w-logo-leggings"],"jackets":["w-white-logo-windbreaker","w-black-logo-windbreaker"],"accessories":["w-white-shoulder-bag","w-burgundy-shoulder-bag"]},
   "tryOnGarments": {"black-baby-top":{"type":"womens_baby_top","label":"women's black baby top: short, fitted, short-sleeve black cotton top with a fine rib, round neck; the hem sits slightly above the belly button","category":"tops","colour":"black","views":{"front":"assets/try-on/black-baby-top/garment.png"},"fitReference":"assets/try-on/black-baby-top/fit-reference.jpg","print":{"placement":"centred on the chest, a little below the neckline","width":0.3}}},
   "products": {
     "m-blue-zip-hoodie": {"gender": "men", "model": {"size": "M"}, "id": "bymarccc:blue-zip-hoodie", "title": "BLUE ZIP HOODIE", "price": 400, "currency": "RON", "cut": "Oversized zip hoodie", "collections": ["tops"], "details": ["Oversized fit with a full zip", "Drawstrings with marbled bead charms", "Front pocket", "bymarccc alien logo stitched on the sleeve and on the back of the hood", "Blue · 100% organic cotton", "Machine wash at 30°C", "All clothing is custom made."], "description": "A soft, oversized blue zip hoodie in 100% organic cotton. The drawstrings end in marbled ink-wash bead charms. Small black alien logo stitched on the sleeve and on the hood.", "unavailable": [], "colours": [{"id": "blue", "name": "Blue", "hex": "#2bb5e3"}], "chart": ["S", "M", "L"], "gallery": [{"src": "assets/img/gallery/m-blue-zip-hoodie-1-103186b6.webp", "w": 1025, "h": 1535}, {"src": "assets/img/gallery/m-blue-zip-hoodie-6-37555ca4.webp", "w": 1025, "h": 1535}, {"src": "assets/img/gallery/m-blue-zip-hoodie-7-8d93fb2e.webp", "w": 1025, "h": 1535}, {"src": "assets/img/gallery/m-blue-zip-hoodie-2-f63d08c0.webp", "w": 1025, "h": 1535}, {"src": "assets/img/gallery/m-blue-zip-hoodie-4-94f8ba16.webp", "w": 1025, "h": 1535}, {"src": "assets/img/gallery/m-blue-zip-hoodie-5-1787f3e7.webp", "w": 1025, "h": 1535}, {"src": "assets/img/gallery/m-blue-zip-hoodie-3-bafdd645.webp", "w": 1025, "h": 1535}], "mockup": "assets/img/gallery/m-blue-zip-hoodie-7-8d93fb2e.webp", "fullBody": 4},
@@ -1258,7 +1258,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "description": "A structured ivory shoulder bag in crocodile-effect faux leather with long rounded straps, a top zip and a black alien logo on the front.",
       "unavailable": [],
       "colours": [{"id":"white","name":"Ivory","hex":"#f2f0ea"}],
-      "gallery": [{"src":"assets/img/gallery/w-white-shoulder-bag-1-63d73c5c.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-shoulder-bag-2-590ced37.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-shoulder-bag-3-027ebbaa.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-14-21aeb101.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-16-118f8abe.webp","w":1024,"h":1534}]
+      "gallery": [{"src":"assets/img/gallery/w-white-shoulder-bag-1-63d73c5c.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-shoulder-bag-2-590ced37.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-white-shoulder-bag-3-027ebbaa.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ivory-14-21aeb101.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ivory-16-118f8abe.webp","w":1024,"h":1534}]
     },
     "w-burgundy-shoulder-bag": {
       "gender": "women",
@@ -1356,7 +1356,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "chart": ["XS-S","M-L"],
       "gallery": [{"src":"assets/img/gallery/w-sporty-top-1-af68c16e.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-sporty-top-2-23cb31b2.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-11-8839b7cc.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-12-b4cd5ef0.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-13-64088253.webp","w":1024,"h":1534}]
     },
-    "w-sporty-top-ecru": {
+    "w-sporty-top-ivory": {
       "gender": "women",
       "id": "bymarccc:sporty-top-ecru",
       "title": "SPORTY TOP",
@@ -1367,9 +1367,9 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "details": ["Cropped, close-fitting zip-up top with a high stand collar","Two-way front zip and two zipped pockets at the waist","Contoured seams for a sculpted fit","Black alien logo on the sleeve","Ivory","50% recycled polyester, 50% viscose","Machine wash max 30°C (delicate) · Do not bleach · Iron max 110°C · Do not dry clean · Do not tumble dry","All clothing is custom made."],
       "description": "A cropped ivory zip-up top with a high collar, sculpting seams, zipped waist pockets and a black alien logo on the sleeve.",
       "unavailable": [],
-      "colours": [{"id":"ecru","name":"Ivory","hex":"#efe9dc"}],
+      "colours": [{"id":"ivory","name":"Ivory","hex":"#efe9dc"}],
       "chart": ["XS-S","M-L"],
-      "gallery": [{"src":"assets/img/gallery/w-sporty-top-ecru-11-a77dd443.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-12-ae91d27a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-13-d1847dc6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-14-21aeb101.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-15-5c0457fb.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ecru-16-118f8abe.webp","w":1024,"h":1534}]
+      "gallery": [{"src":"assets/img/gallery/w-sporty-top-ivory-11-a77dd443.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ivory-12-ae91d27a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ivory-13-d1847dc6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ivory-14-21aeb101.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ivory-15-5c0457fb.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-sporty-top-ivory-16-118f8abe.webp","w":1024,"h":1534}]
     },
     "w-logo-flare-jeans": {
       "gender": "women",
@@ -1382,7 +1382,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "details": ["Close-fitting flared trousers in soft stretch fabric","Front pintuck seams down each leg","Wide, comfortable waistband","Black alien logo on the front hip","Ivory","All clothing is custom made."],
       "description": "Ivory flared trousers with front pintuck seams, a wide waistband and a black alien logo on the hip.",
       "unavailable": [],
-      "colours": [{"id":"ecru","name":"Ivory","hex":"#efe9dc"}],
+      "colours": [{"id":"ivory","name":"Ivory","hex":"#efe9dc"}],
       "chart": ["XS-S","M-L"],
       "gallery": [{"src":"assets/img/gallery/w-logo-flare-jeans-1-452bb0b9.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-logo-flare-jeans-2-d1847dc6.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-logo-flare-jeans-3-ae91d27a.webp","w":1024,"h":1534},{"src":"assets/img/gallery/w-logo-flare-jeans-4-5c0457fb.webp","w":1024,"h":1534}]
     },
