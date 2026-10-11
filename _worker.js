@@ -2533,6 +2533,7 @@ async function acctInit() {
     db.prepare("CREATE TABLE IF NOT EXISTS acct_orders (order_id TEXT PRIMARY KEY, email TEXT NOT NULL, created_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'placed', pay TEXT, currency TEXT, total_local REAL, ship_local REAL, total_ron REAL NOT NULL DEFAULT 0, discount_pct REAL DEFAULT 0, credit_ron REAL DEFAULT 0, items TEXT, ship_to TEXT)"),
     db.prepare("CREATE INDEX IF NOT EXISTS acct_orders_email ON acct_orders (email, created_at)"),
     db.prepare("CREATE TABLE IF NOT EXISTS acct_credits (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL, kind TEXT NOT NULL, amount_ron REAL NOT NULL DEFAULT 0, pct REAL NOT NULL DEFAULT 0, note TEXT, created_at TEXT NOT NULL, expires_at TEXT, used_order TEXT)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS acct_avatars (email TEXT PRIMARY KEY, avatar TEXT NOT NULL, updated_at TEXT NOT NULL)"),
     db.prepare("CREATE TABLE IF NOT EXISTS acct_referrals (id INTEGER PRIMARY KEY AUTOINCREMENT, referrer TEXT NOT NULL, referee TEXT NOT NULL UNIQUE, order_id TEXT, status TEXT NOT NULL, created_at TEXT NOT NULL)")
   ]).catch((e) => { acctReady = null; throw e; });
   await acctReady;
@@ -2641,13 +2642,17 @@ async function acctRecordOrder(o, info) {
   }
 }
 __name(acctRecordOrder, "acctRecordOrder");
+var ACCT_AVATARS = ["/assets/img/avatars/avatar-1.webp", "/assets/img/avatars/avatar-2.webp"];
 async function acctProfile(db, email) {
   const c = await db.prepare("SELECT * FROM acct_customers WHERE email = ?1").bind(email).first();
   if (!c) return null;
   const sp = await acctSpend(db, email), tf = acctTierFor(sp.spend, sp.override);
   let prefs = {}; try { prefs = JSON.parse(c.prefs || "{}"); } catch {}
+  const av = await db.prepare("SELECT avatar FROM acct_avatars WHERE email = ?1").bind(email).first().catch(() => null);
+  const avatar = av && av.avatar ? av.avatar : "d" + (parseInt((await acctSha(email)).slice(0, 6), 16) % ACCT_AVATARS.length);   // every new account gets one of the bymarccc avatars
   return {
     email, name: c.name || "", phone: c.phone || "", since: c.created_at, prefs,
+    avatar, avatarUrl: /^d\d$/.test(avatar) ? ACCT_AVATARS[+avatar.slice(1)] || ACCT_AVATARS[0] : avatar, avatars: ACCT_AVATARS,
     refCode: c.ref_code, refLink: `${SEO_BASE}/r/${c.ref_code}`,
     spend: sp.spend, orders: sp.orders,
     tier: { id: tf.tier.id, name: tf.tier.name, pct: tf.tier.pct, freeShip: tf.tier.freeShip, drops: tf.tier.drops },
@@ -2779,6 +2784,13 @@ async function accountApi(request) {
     await db.prepare("UPDATE acct_customers SET name = ?2, phone = ?3 WHERE email = ?1").bind(email, name, phone).run();
     return json(200, { profile: await acctProfile(db, email) });
   }
+  if (action === "avatar") {   // "d0" / "d1" = a bymarccc avatar, or the shopper's own photo (small JPEG data URL, resized in the browser)
+    const v = String(b.avatar || "");
+    const ok = /^d\d$/.test(v) && +v.slice(1) < ACCT_AVATARS.length || /^data:image\/(jpeg|webp|png);base64,[A-Za-z0-9+/=]+$/.test(v) && v.length <= 120000;
+    if (!ok) return json(400, { error: "Please choose a smaller photo." });
+    await db.prepare("INSERT INTO acct_avatars (email, avatar, updated_at) VALUES (?1,?2,?3) ON CONFLICT(email) DO UPDATE SET avatar = excluded.avatar, updated_at = excluded.updated_at").bind(email, v, acctNow()).run();
+    return json(200, { profile: await acctProfile(db, email) });
+  }
   if (action === "prefs") {
     const prefs = { news: !!b.news, drops: !!b.drops, sms: !!b.sms };
     await db.prepare("UPDATE acct_customers SET prefs = ?2 WHERE email = ?1").bind(email, JSON.stringify(prefs)).run();
@@ -2786,7 +2798,7 @@ async function accountApi(request) {
   }
   if (action === "delete") {
     if (String(b.confirm || "") !== "DELETE") return json(400, { error: "Type DELETE to confirm." });
-    for (const t of ["acct_sessions", "acct_addresses", "acct_wishlist", "acct_playlist", "acct_codes", "acct_shared_members"]) await db.prepare(`DELETE FROM ${t} WHERE email = ?1`).bind(email).run();
+    for (const t of ["acct_sessions", "acct_addresses", "acct_wishlist", "acct_playlist", "acct_codes", "acct_shared_members", "acct_avatars"]) await db.prepare(`DELETE FROM ${t} WHERE email = ?1`).bind(email).run();
     await db.prepare("DELETE FROM acct_customers WHERE email = ?1").bind(email).run();
     return json(200, { ok: true }, { "Set-Cookie": acctCookie("", 0) });
   }
