@@ -789,8 +789,12 @@
 .track[aria-current="true"]:not(.is-paused) .track__play .i-pause { display: block; }
 .track:hover .track__play { background: rgba(255,255,255,.2); }
 .track[aria-current="true"]:hover .track__play { background: #fff; }
-.track__prog { display: none; height: 2px; margin-top: 5px; border-radius: 1px; background: rgba(255,255,255,.18); overflow: hidden; }
-.track__prog i { display: block; height: 100%; width: var(--p, 0%); background: var(--play-blue, #5B95C3); }
+.track__prog { display: none; position: relative; height: 3px; margin-top: 7px; border-radius: 2px; background: rgba(255,255,255,.18); overflow: visible; touch-action: none; cursor: pointer; }
+.track__prog::before { content: ''; position: absolute; left: 0; right: 0; top: -10px; bottom: -10px; }   /* bigger finger target */
+.track__prog::after { content: ''; position: absolute; top: 50%; left: var(--p, 0%); width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); transform: scale(0); transition: transform .15s; }
+.track__prog.is-seeking::after, .track[aria-current="true"] .track__prog::after { transform: scale(1); }
+.track__prog.is-seeking { height: 5px; }
+.track__prog i { display: block; height: 100%; width: var(--p, 0%); border-radius: inherit; background: var(--play-blue, #5B95C3); }
 .track[aria-current="true"] .track__prog { display: block; }
 .music .mini.is-entering { opacity: 1; transform: none; }
 .music .mini__title { font-size: 11.5px; }
@@ -2694,6 +2698,12 @@
       const ar = document.createElement('span'); ar.className = 'track__artist'; ar.textContent = t.channel || '';
       meta.append(tt, ar);
       const prog = document.createElement('span'); prog.className = 'track__prog'; prog.innerHTML = '<i></i>'; meta.appendChild(prog);
+      /* YouTube-style scrub: press on the bar of the playing row and drag left / right */
+      const seekTo = e => { const r = prog.getBoundingClientRect(); const f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); prog.style.setProperty('--p', f * 100 + '%');
+        if (tab === 'video') window.BYMARCCC_VP?.seek?.(f); else if (typeof miniItem !== 'undefined' && miniItem && miniItem.id === t.id && audio.duration) audio.currentTime = f * audio.duration; };
+      prog.addEventListener('pointerdown', e => { if (b.getAttribute('aria-current') !== 'true') return; e.preventDefault(); e.stopPropagation(); prog.classList.add('is-seeking'); prog.setPointerCapture?.(e.pointerId); seekTo(e);
+        const mv = ev => seekTo(ev), up = ev => { ev.stopPropagation(); prog.classList.remove('is-seeking'); prog.removeEventListener('pointermove', mv); prog.removeEventListener('pointerup', up); prog.removeEventListener('pointercancel', up); const swallow = c => { c.stopPropagation(); c.preventDefault(); }; b.addEventListener('click', swallow, { capture: true, once: true }); setTimeout(() => b.removeEventListener('click', swallow, { capture: true }), 400); };
+        prog.addEventListener('pointermove', mv); prog.addEventListener('pointerup', up); prog.addEventListener('pointercancel', up); });
       const du = document.createElement('span'); du.className = 'track__dur'; du.textContent = t.duration || '';
       if (!t.duration) resolveDuration(t);   // permanent rule: read the real media duration and fill it in automatically
       const pl = document.createElement('span'); pl.className = 'track__play'; pl.setAttribute('aria-hidden', 'true');
@@ -2704,7 +2714,7 @@
         if (tab === 'video') { if (t.video && window.BYMARCCC_VP) { audio.pause(); window.BYMARCCC_VP.play(t); window.BYMARCCC_VP.pip?.(); markCurrent(); } return; }   // MUSIC VIDEO → floating mini player; the playlist stays open behind it
         // MUSIC → this row is the player: first tap plays, next taps pause / resume
         if (t.src && typeof miniItem !== 'undefined' && miniItem && miniItem.id === t.id) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
-        window.BYMARCCC_VP?.pause();   // a music track replaces a playing music video
+        window.BYMARCCC_VP?.stop ? window.BYMARCCC_VP.stop() : window.BYMARCCC_VP?.pause();   // a music track replaces the music video: its floating player closes
         t.src ? miniPlayList(shown.items, i) : playFrom(shown.items, i);
       });
       li.appendChild(b); frag.appendChild(li);
@@ -3140,7 +3150,7 @@
   audio.addEventListener('timeupdate', () => {
     if (!audio.duration) return;
     const p = audio.currentTime / audio.duration * 100;
-    const row = miniItem && list.querySelector(`.track[data-id="${miniItem.id}"] .track__prog i`); if (row) row.style.setProperty('--p', p + '%');
+    const row = miniItem && list.querySelector(`.track[data-id="${miniItem.id}"] .track__prog`); if (row) row.style.setProperty('--p', p + '%');
     miniFill.style.width = p + '%'; miniCur.textContent = fmt(audio.currentTime);
     miniBar.setAttribute('aria-valuenow', Math.round(p));
   });
@@ -4159,7 +4169,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   progBar.addEventListener('pointerup', vSeekEnd); progBar.addEventListener('pointercancel', vSeekEnd);
   let vSeeking = false;
   let lastVSaveT = 0;
-  video.addEventListener('timeupdate', () => {
+  video.addEventListener('timeupdate', () => {   // keep the playlist row's bar in sync with the music video
+    { const cur = window.BYMARCCC_VP && window.BYMARCCC_VP.current && window.BYMARCCC_VP.current(); const row = cur && video.duration && document.querySelector(`#musicList .track[data-id="${cur.id}"] .track__prog`); if (row) row.style.setProperty('--p', (video.currentTime / video.duration * 100) + '%'); }
     if (video.duration && !vSeeking) prog.style.width = (video.currentTime / video.duration * 100) + '%';
     if (!bgPlay && sndOn && !vSeeking && !video.paused && !snd.paused) picSync();
     if (!video.paused) { const now = Date.now(); if (now - lastVSaveT > 3000) { lastVSaveT = now; saveNow('video', { src: video.currentSrc || video.src, title: title.textContent || '', time: video.currentTime || 0, paused: false }); } }
@@ -4588,6 +4599,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     // iPhone: the finger touching a song row already starts loading that video, so it can float the moment the tap ends
     prefetch(t) { if (!AUTO_PIP || !(vp.hidden || vp.dataset.mode !== 'video' || video.paused)) return; const i = list.findIndex(v => v.src === t.video); if (i < 0 || (idx === i && video.getAttribute('src'))) return; load(i); },
     close,
+    stop() { try { if (document.pictureInPictureElement && document.exitPictureInPicture) document.exitPictureInPicture().catch(() => {}); else if (video.webkitPresentationMode === 'picture-in-picture') video.webkitSetPresentationMode('inline'); } catch {} if (!vp.hidden || !video.paused) close(); },   // a MUSIC track replaces the music video: the floating player goes away
+    seek(f) { if (video.duration) video.currentTime = Math.max(0, Math.min(.999, f)) * video.duration; },
   };
 
   /* ---------- cross-page resume: reopen the widget already loaded, where it left off ----------
