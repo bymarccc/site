@@ -3813,6 +3813,7 @@ body.pdp .ai-launch{--ai-offset:92px}
 .vp__prog i { position: relative; display: block; height: 100%; width: 0; border-radius: inherit; background: #ff0033; pointer-events: none; }
 .vp__prog i::after { content: ""; position: absolute; right: -7px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: #ff0033; transform: scale(0); transition: transform .12s ease; }
 .vp.is-ctrls .vp__prog i::after, .vp__prog.is-seeking i::after { transform: scale(1); }
+.vp__prog { display: none !important; }   /* no red seek line on the video: the whole picture drags the player */
 .vp__prog.is-seeking i::after { transform: scale(1.25); }
 .vp__prog[data-t]::after { content: attr(data-t); position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); padding: 3px 8px; border-radius: 999px; background: rgba(0,0,0,.7); color: #fff; font: 600 11px/1.2 "Jost", Helvetica, Arial, sans-serif; letter-spacing: .04em; white-space: nowrap; pointer-events: none; opacity: 0; }
 .vp__prog.is-seeking[data-t]::after { opacity: 1; }
