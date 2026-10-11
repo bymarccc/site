@@ -1026,7 +1026,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261011t"></script>
+<script src="/assets/catalog.js?v=20261011u"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1062,7 +1062,12 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   const CTL_ALLOWED_KEYS = ['zebra-jacket', 'skinny', 'relaxed', 'w-sporty-top', 'w-sporty-top-ivory', 'w-logo-vest', 'w-white-shoulder-bag', 'w-logo-flare-leggings'];
   // Complete the Look for the women's set pieces: the matching leggings
   const CTL_LOOKS = { 'w-sporty-top': ['w-logo-flare-leggings', 'w-logo-leggings'], 'w-sporty-top-ivory': ['w-logo-flare-jeans', 'w-white-shoulder-bag'], 'w-logo-vest': ['w-logo-leggings'], 'w-white-shoulder-bag': ['w-sporty-top-ivory', 'w-logo-flare-jeans'], 'w-logo-flare-leggings': ['w-white-logo-windbreaker'] };
-  const COLOURS = PRODUCT.colours && PRODUCT.colours.length ? PRODUCT.colours : [{ id: 'default', name: '', hex: '#111111' }], SIZE_CHART = PRODUCT.chart || ONE_SIZE, GALLERY = PRODUCT.gallery || [];
+  const COLOURS = PRODUCT.colours && PRODUCT.colours.length ? PRODUCT.colours : [{ id: 'default', name: '', hex: '#111111' }], SIZE_CHART = PRODUCT.chart || ONE_SIZE, ALL_G = (PRODUCT.gallery || []).slice(), GALLERY = ALL_G.slice();
+  /* colour products with several photos per colour: swiping shows ONE photo per colour; tapping a colour shows only that colour's photos */
+  const SC = PRODUCT.slideColours && PRODUCT.slideColours.length === ALL_G.length ? PRODUCT.slideColours : null;
+  let curCols = SC ? SC.slice() : null;
+  const swipeView = () => { const L = [], C = []; ALL_G.forEach((g, i) => { if (!C.includes(SC[i])) { C.push(SC[i]); L.push(g); } }); return [L, C]; };
+  if (SC) { const [L, C] = swipeView(); GALLERY.splice(0, GALLERY.length, ...L); curCols = C; }
   const sizeLabel = s => PRODUCT.noSize ? 'Made to measure' : SIZE_CHART.label(s);
   const hasPrice = typeof PRODUCT.price === 'number';
   // same title the server puts in <head> for Google (see seoHeadFor in _worker.js)
@@ -1198,7 +1203,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     zoomScale = 1; panX = 0; panY = 0; pinch = null; panDrag = null;
     slides.forEach(s => { const img = s.querySelector('img'); if (img) { img.style.transition = anim ? 'transform .25s var(--ease)' : 'none'; img.style.transform = ''; } });
   }
-  GALLERY.forEach((g, i) => {
+  const addSlide = (g, i) => {
     const s = document.createElement('div'); s.className = 'pdp-gallery__slide'; s.setAttribute('role', 'group'); s.setAttribute('aria-label', `${i + 1} of ${GALLERY.length}: ${PRODUCT.title}`);
     const img = document.createElement('img'); img.src = g.src; img.alt = `${PRODUCT.title} — look ${i + 1}`; img.width = g.w; img.height = g.h;
     /* Eager-load every slide: with a transform-based carousel, native lazy-loading in some
@@ -1223,7 +1228,8 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
       s.style.setProperty('--sbg', col); if (i === 0) gallery.style.setProperty('--gbg', col);
     } catch (e) {} };
     if (img.complete && img.naturalWidth) sample(); else img.addEventListener('load', sample, { once: true });
-  });
+  };
+  GALLERY.forEach(addSlide);
   const slides = [...track.children];
   /* Model info / "Fill in your height & weight" — set ONCE here, from the product's gender and
      whether it's jeans, and never touched again by layout(). It lives outside the carousel's own
@@ -1258,12 +1264,23 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     slides.forEach((s, i) => s.setAttribute('aria-hidden', String(i !== gi)));
     const nxt = slides[(gi + 1) % slides.length]?.querySelector('img'); if (nxt) nxt.loading = 'eager';
   }
-  const slideOfColour = id => PRODUCT.slideColours ? Math.max(0, PRODUCT.slideColours.indexOf(id)) : COLOURS.findIndex(c => c.id === id);
+  function showColourPhotos(colourId) {   // only this colour's photos (or one per colour when colourId is null)
+    if (!SC) return;
+    let L = [], C = [];
+    if (colourId) ALL_G.forEach((g, i) => { if (SC[i] === colourId) { L.push(g); C.push(SC[i]); } });
+    if (!L.length) [L, C] = swipeView();
+    GALLERY.splice(0, GALLERY.length, ...L); curCols = C;
+    track.innerHTML = ''; slides.length = 0; GALLERY.forEach(addSlide); slides.push(...track.children);
+    bars.innerHTML = GALLERY.length > 1 ? GALLERY.map(() => '<i></i>').join('') : '';
+    thumbs.innerHTML = ''; if (GALLERY.length > 1) GALLERY.forEach(addThumb);
+    gallery.classList.toggle('is-single', GALLERY.length < 2); $('galPrev').hidden = $('galNext').hidden = GALLERY.length < 2;
+    gi = 0; layout(0, false); resetZoom();
+  }
   function goTo(i) {
     /* Finite carousel: clamp to the real bounds instead of wrapping — reaching the last
        image must never jump back to the first, and vice-versa. */
     gi = Math.max(0, Math.min(GALLERY.length - 1, i)); layout(); resetZoom();
-    { const sc = PRODUCT.slideColours ? PRODUCT.slideColours[gi] : (COLOURS[gi] || {}).id; if (PRODUCT.imageColours && sc && state.colour !== sc) setColour(sc); }
+    { const sc = curCols ? curCols[gi] : (COLOURS[gi] || {}).id; if (PRODUCT.imageColours && sc && state.colour !== sc) setColour(sc); }
     if (PRODUCT.designImages) {
       const dname = DESIGNS.find(d => designImageIndex(d) === gi);
       if (dname && state.design !== dname) { state.design = dname; emit(); }
@@ -1276,11 +1293,12 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   /* Desktop (Pull&Bear-style): thumbnail strip beside the photo, and the size guide / details /
      description / delivery accordions in their own column on the left. Mobile keeps its layout. */
   const thumbs = document.createElement('div'); thumbs.className = 'pdp-thumbs';
-  if (GALLERY.length > 1) GALLERY.forEach((g, i) => {
+  const addThumb = (g, i) => {
     const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', `Show image ${i + 1}`);
     const im = document.createElement('img'); im.src = g.src; im.alt = ''; im.loading = 'lazy'; im.decoding = 'async';
     b.appendChild(im); b.addEventListener('click', () => goTo(i)); thumbs.appendChild(b);
-  });
+  };
+  if (GALLERY.length > 1) GALLERY.forEach(addThumb);
   gallery.parentNode.insertBefore(thumbs, gallery);
   const leftCol = document.createElement('aside'); leftCol.className = 'pdp-left';
   gallery.parentNode.insertBefore(leftCol, thumbs);
@@ -1387,10 +1405,10 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   COLOURS.forEach(c => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-swatch'; b.setAttribute('role', 'radio'); b.dataset.c = c.id;
     b.setAttribute('aria-label', c.name); b.style.setProperty('--c', c.hex); b.innerHTML = '<i></i>';
-    b.addEventListener('click', () => { setColour(c.id); if (PRODUCT.imageColours) goTo(slideOfColour(c.id)); });
+    b.addEventListener('click', () => { setColour(c.id); if (SC) showColourPhotos(c.id); else if (PRODUCT.imageColours) goTo(COLOURS.indexOf(c)); });
     swatches.appendChild(b);
   });
-  if (PRODUCT.imageColours && URL_COLOUR && COLOURS.some(c => c.id === URL_COLOUR)) setTimeout(() => goTo(slideOfColour(URL_COLOUR)), 0);
+  if (PRODUCT.imageColours && URL_COLOUR && COLOURS.some(c => c.id === URL_COLOUR)) setTimeout(() => { if (SC) { setColour(URL_COLOUR); showColourPhotos(URL_COLOUR); } else goTo(COLOURS.findIndex(c => c.id === URL_COLOUR)); }, 0);
   SIZE_CHART.sizes.forEach(s => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-size'; b.setAttribute('role', 'radio'); b.dataset.s = s.size; b.textContent = s.size;
     b.addEventListener('click', () => { if (!b.disabled) setSize(s.size); });
@@ -2112,7 +2130,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     if (!state.size && !$('sizeMsg') && !$('sizes').hidden) { const sm = document.createElement('p'); sm.className = 'pdp-sizemsg'; sm.id = 'sizeMsg'; sm.setAttribute('role', 'alert'); $('sizes').after(sm); state.listeners.add(() => { if (state.size) sm.textContent = ''; }); }   // the size hint sits right under the sizes, not under ADD TO BAG
     if (!state.size && $('sizeMsg')) { msg.textContent = ''; const sm = $('sizeMsg'); sm.textContent = 'Please select a size.'; sm.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); return false; }   // baby tops: the hint sits right under XS-S / M-L
     if (!state.size) { msg.classList.remove('is-ok'); msg.textContent = 'Please select a size.'; $('sizes').scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'center' }); setTimeout(() => $('sizes').querySelector('.pdp-size:not([disabled])')?.focus({ preventScroll: true }), 400); return false; }
-    const line = { id: variantId(), name: PRODUCT.title, variant: [state.colour === 'default' ? '' : colourOf(state.colour).name, PRODUCT.noSize ? '' : sizeLabel(state.size), state.design || ''].filter(Boolean).join(' · '), image: (PRODUCT.imageColours ? GALLERY[PRODUCT.slideColours ? Math.max(0, PRODUCT.slideColours.indexOf(state.colour)) : COLOURS.findIndex(x => x.id === state.colour)] || GALLERY[0] : GALLERY[0]).src, price: UNIT_PRICE, currency: PRODUCT.currency, quantity: 1, key: KEY };
+    const line = { id: variantId(), name: PRODUCT.title, variant: [state.colour === 'default' ? '' : colourOf(state.colour).name, PRODUCT.noSize ? '' : sizeLabel(state.size), state.design || ''].filter(Boolean).join(' · '), image: (PRODUCT.imageColours ? (SC ? ALL_G[Math.max(0, SC.indexOf(state.colour))] : GALLERY[COLOURS.findIndex(x => x.id === state.colour)]) || GALLERY[0] : GALLERY[0]).src, price: UNIT_PRICE, currency: PRODUCT.currency, quantity: 1, key: KEY };
     if (window.__bymLookVariant) line.variant = window.__bymLookVariant();
     if (PRODUCT.needsBody) { line.id += `:${hw.h}x${hw.w}`; line.variant += (line.variant ? ' · ' : '') + `${hw.h} cm · ${hw.w} kg`; line.attributes = { 'Height (cm)': hw.h, 'Weight (kg)': hw.w }; }
     btn.disabled = true; btn.classList.add('is-busy');
