@@ -1272,10 +1272,10 @@ function tryOnModels() {
   return [...new Set([m, "gpt-image-1.5", "gpt-image-1"].filter(Boolean))];
 }
 __name(tryOnModels, "tryOnModels");
-async function tryOnEdit(buildForm, deadline, models) {
+async function tryOnEdit(buildForm, deadline, models, fidelities = [true, false]) {
   let lastErr = null;
   for (const model of models || tryOnModels()) {
-    for (const fidelity of [true, false]) {
+    for (const fidelity of fidelities) {
       const left = deadline - Date.now();
       if (left < 15e3) { const e = new Error("timeout"); e.name = "AbortError"; throw lastErr && lastErr.name === "AbortError" ? lastErr : e; }
       try {
@@ -1379,7 +1379,7 @@ async function assistantTryon(request) {
     form.append("model", model);
     form.append("prompt", prompt);
     form.append("size", size);
-    form.append("quality", b.testQuality === "medium" || b.testQuality === "low" ? b.testQuality : env("OPENAI_IMAGE_QUALITY", "high"));   // testQuality: internal validation runs only (cheaper); customers never send it   // quality over speed
+    form.append("quality", b.testQuality === "medium" || b.testQuality === "low" ? b.testQuality : env("OPENAI_IMAGE_QUALITY", model === "gpt-image-1-mini" ? "medium" : "low"));   // cost cap ~$0.02-0.03 per photo (was high ≈ $0.5)
     if (fidelity) form.append("input_fidelity", "high");          // keeps the customer's face/body/background
     form.append("image[]", ph.blob, `customer.${ph.info.type.split("/")[1]}`);
     refs.forEach((r, i) => form.append("image[]", r, `garment-${i + 1}.${r.type.split("/")[1]}`));
@@ -1387,7 +1387,8 @@ async function assistantTryon(request) {
   };
   let res;
   try {
-    res = await tryOnEdit(buildForm, t0 + 17e4, b.testModel === "gpt-image-1-mini" ? ["gpt-image-1-mini"] : null);   // testModel: internal validation runs only (cheaper)
+    // cheap by default: gpt-image-1-mini (fallback gpt-image-1.5 low), no input_fidelity (it multiplies the input-image cost)
+    res = await tryOnEdit(buildForm, t0 + 17e4, [...new Set([env("OPENAI_IMAGE_MODEL", ""), "gpt-image-1-mini", "gpt-image-1.5"].filter(Boolean))], env("OPENAI_IMAGE_FIDELITY", "") === "high" ? [true, false] : [false]);
   } catch (e) {
     const m = String(e && e.message || "");
     const code = e && e.name === "AbortError" ? "TIMEOUT" : e && (e.code === "moderation_blocked" || /safety|moderation|content policy/i.test(m)) ? "SAFETY_REJECTED" : e && (e.code === "insufficient_quota" || e.code === "billing_hard_limit_reached" || /quota|billing/i.test(m)) ? "TRYON_UNAVAILABLE" : e && (e.status === 429 || e.status >= 500) ? "GENERATION_BUSY" : "GENERATION_FAILED";
@@ -2661,20 +2662,24 @@ async function acctProfile(db, email) {
   };
 }
 __name(acctProfile, "acctProfile");
-// OpenAI cut-out: GPT Image edit with a transparent background and high input fidelity (keeps faces/text/logos as close as possible)
+// OpenAI cut-out, capped at ~$0.02 per photo: gpt-image-1-mini medium (fallback gpt-image-1.5 low), fixed size from the
+// photo's aspect, no input_fidelity (that alone multiplies the input cost), one model try per call — never the try-on chain.
 async function removeBgOpenAI(buf, type) {
   if (!env("OPENAI_API_KEY")) return json(503, { error: "NOT_CONFIGURED" });
-  const prompt = "Remove the background completely and return only the main subject on a fully transparent background. Keep the subject exactly as it is: same pixels, colours, face, text, logos, edges and proportions. Do not add, redraw, restyle or crop anything.";
-  const buildForm = (model, fidelity) => {
+  const prompt = "Remove the background completely and return only the main subject on a fully transparent background. Keep the subject exactly as it is: same colours, face, text, logos, edges and proportions. Do not add, redraw, restyle or crop anything.";
+  const info = readImageInfo(new Uint8Array(buf));
+  const size = tryOnSize(info);
+  const plan = [[env("OPENAI_BG_MODEL", "gpt-image-1-mini"), "medium"], ["gpt-image-1.5", "low"]];
+  const buildForm = (model) => {
+    const q = (plan.find((x) => x[0] === model) || plan[0])[1];
     const fd = new FormData();
     fd.append("model", model); fd.append("prompt", prompt);
     fd.append("image", new File([buf], "upload." + type.split("/")[1], { type }));
-    fd.append("background", "transparent"); fd.append("output_format", "png"); fd.append("quality", "medium"); fd.append("size", "auto"); fd.append("n", "1");
-    if (fidelity) fd.append("input_fidelity", "high");
+    fd.append("background", "transparent"); fd.append("output_format", "png"); fd.append("quality", q); fd.append("size", size); fd.append("n", "1");
     return fd;
   };
   try {
-    const { out } = await tryOnEdit(buildForm, Date.now() + 9e4);
+    const { out } = await tryOnEdit((model) => buildForm(model), Date.now() + 9e4, [...new Set(plan.map((x) => x[0]))], [false]);
     const b64 = out && out.data && out.data[0] && out.data[0].b64_json;
     if (!b64) return json(502, { error: "UPSTREAM_FAILED" });
     const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -2684,7 +2689,7 @@ async function removeBgOpenAI(buf, type) {
   }
 }
 __name(removeBgOpenAI, "removeBgOpenAI");
-// POST /api/removebg — Picsart "Remove Background" for the bag customiser (key: PICSART_API_KEY in Cloudflare).
+// POST /api/removebg — background removal for the bag customiser: ChatGPT image API (~$0.02/photo); Picsart only if PICSART_API_KEY is set.
 // Body = the shopper's image (image/jpeg|png|webp, ≤ 8 MB). Returns the transparent PNG; 503 when not configured
 // so the page falls back to the in-browser remover.
 async function removeBgApi(request) {
@@ -2702,12 +2707,12 @@ async function removeBgApi(request) {
   fd.append("output_type", "cutout"); fd.append("format", "PNG");
   let r;
   try { r = await fetch("https://api.picsart.io/tools/1.0/removebg", { method: "POST", headers: { "X-Picsart-API-Key": key, accept: "application/json" }, body: fd }); }
-  catch (e) { return json(502, { error: "UPSTREAM_UNREACHABLE" }); }
+  catch (e) { return removeBgOpenAI(buf, type); }
   const j = await r.json().catch(() => null);
   const out = j && j.data && j.data.url;
-  if (!r.ok || !out) return json(502, { error: "UPSTREAM_FAILED", status: r.status, detail: j && (j.message || j.detail || j.code) || null });
+  if (!r.ok || !out) return removeBgOpenAI(buf, type);   // Picsart out of credits / failing: ChatGPT cut-out instead
   const img = await fetch(out).catch(() => null);
-  if (!img || !img.ok) return json(502, { error: "UPSTREAM_IMAGE_FAILED" });
+  if (!img || !img.ok) return removeBgOpenAI(buf, type);
   return new Response(img.body, { status: 200, headers: { "Content-Type": "image/png", "Cache-Control": "no-store" } });
 }
 __name(removeBgApi, "removeBgApi");
