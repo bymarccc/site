@@ -1242,7 +1242,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       const t0 = Date.now(); let tried = 0;
       const go = () => {
         if (inPiP()) return;
-        if (video.readyState < 1 && Date.now() - t0 < 5000) { clearTimeout(pipT); pipT = setTimeout(go, 40); return; }
+        if ((video.readyState < 2 || !video.videoWidth) && Date.now() - t0 < 5000) { clearTimeout(pipT); pipT = setTimeout(go, 40); return; }
         tried++;
         try {
           if (tried === 1 && typeof video.webkitSetPresentationMode === 'function' && (!video.webkitSupportsPresentationMode || video.webkitSupportsPresentationMode('picture-in-picture'))) video.webkitSetPresentationMode('picture-in-picture');
