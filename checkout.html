@@ -957,6 +957,7 @@
 .vp:not(.is-ctrls) .vp__ov { opacity: 0; pointer-events: none; }
 .vp.is-ctrls .vp__ov { opacity: .95; pointer-events: auto; }
 .vp__prog { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
+.vp__prog { display: none !important; }   /* no red seek line: the whole picture drags the player */
 .vp__prog::before { content: ""; position: absolute; inset: -12px 0; }
 .vp__prog.is-seeking { height: 9px; }
 .vp__prog i { display: block; height: 100%; width: 0; background: #ff0033; pointer-events: none; }
@@ -1371,7 +1372,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const sndUrl = v => { if (v && v.aud) return v.aud; const u = (v && (v.raw || v.src)) || ''; const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/[^?#]+)\.(?:mp4|mov|webm)(?:[?#].*)?$/i.exec(u); return m ? m[1] + m[2] + '.m4a' : ''; };
   // iPhone/iPad: Safari floats an inline video only from a tap (never by itself), so on iPhone a music video starts
   // straight in the system Picture-in-Picture window — that window then follows you Home and into other apps
-  const AUTO_PIP = false;   // the small site mini player opens first; the floating system window only starts from its PiP button (auto-opening it came out huge)
+  const AUTO_PIP = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const applySound = () => { if (sndOn && !pipOwn) { video.muted = true; snd.muted = userMuted; } else { video.muted = userMuted; } };
   const sndSync = () => { if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.3) { try { snd.currentTime = video.currentTime || 0; } catch {} } };
   /* while the twin plays, the SOUND is the clock: a lagging picture is moved to the song (throttled), the song is never
