@@ -1373,7 +1373,7 @@
     .shop .salerail--mini .sales__progress { margin-top: 14px; }
   }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=20261011u"></script>
+<script src="/assets/catalog.js?v=20261011v"></script>
 <script>
 (() => {
   'use strict';
@@ -1755,7 +1755,7 @@
       if (active === 'tops') {
         const W = gender === 'women';
         // women: T-SHIRTS (tees, baby tops, long sleeves, tank) · JACKETS (logo vest + windbreakers) · BLAZERS · HOODIES
-        const SUBS = W ? [['tees', 'T-SHIRTS', /(?!)/], ['jackets', 'JACKETS', /vest|windbreaker/i], ['blazers', 'BLAZERS', /blazer/i], ['hoodies', 'HOODIES', /hoodie/i]]
+        const SUBS = W ? [['tees', 'T-SHIRTS', /(?!)/], ['jackets', 'JACKETS', /vest|windbreaker|sporty jacket/i], ['blazers', 'BLAZERS', /blazer/i], ['hoodies', 'HOODIES', /hoodie/i]]
           : [['hoodies', 'HOODIES', /hoodie/i], ['tees', 'T-SHIRTS', /\btee\b|t-?shirt/i], ['jackets', 'JACKETS', /(?!)/], ['baby', 'BABY TOPS', /baby top/i], ['long', 'LONG SLEEVES', /long sleeve|sporty/i], ['tanks', 'TANKS', /tank|vest/i]];
         const subOf = p => W ? ((SUBS.find(([, , re]) => re.test(p.title || '')) || ['tees'])[0]) : (p.collections || []).includes('jackets') && !(p.collections || []).includes('tops') ? 'jackets' : (SUBS.find(([, , re]) => re.test(p.title || '')) || [])[0];
         const avail = SUBS.filter(([k]) => items.some(([, p]) => subOf(p) === k));
