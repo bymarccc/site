@@ -1026,7 +1026,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261011r"></script>
+<script src="/assets/catalog.js?v=20261011s"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1767,11 +1767,11 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
       function bgShow(text) { els.bgStatus.hidden = false; els.bgStatus.classList.remove('is-error'); els.bgActions.hidden = true; els.bgText.textContent = text; }
       function bgError(text) { els.bgStatus.hidden = false; els.bgStatus.classList.add('is-error'); els.bgActions.hidden = false; els.bgText.textContent = text; }
       function bgHide() { els.bgStatus.hidden = true; }
-      function commitPhoto(dataUrl) {
+      function commitPhoto(dataUrl, original) {
         const small = new Image();
         small.onload = () => {
           const idx = arr().length;
-          arr().push({ dataUrl, img: small, xNorm: 0.5, yNorm: 0.5, scale: 1, rotate: 0 });
+          arr().push({ dataUrl, original: original || dataUrl, img: small, xNorm: 0.5, yNorm: 0.5, scale: 1, rotate: 0 });
           setSel(idx);
           cbRender();
         };
@@ -1795,12 +1795,12 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
         }
         if (myGen !== cbGen) return;   // cleared while this file was being read
 
-        bgShow('Removing background\u2026');
+        bgShow('Enhancing & removing background\u2026');
         try {
           const transparent = await cbRemoveBackground(downscaled);
           if (myGen !== cbGen) return;
           bgHide();
-          commitPhoto(transparent);
+          commitPhoto(transparent, downscaled);
           return;
         } catch (err) {
           console.error('Background removal failed:', err);
@@ -1813,10 +1813,10 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
           function commitOriginalAfterFailure() { bgHide(); commitPhoto(downscaled); }
           const onRetry = async () => {
             cleanup();
-            bgShow('Removing background\u2026');
+            bgShow('Enhancing & removing background\u2026');
             try {
               const transparent = await cbRemoveBackground(downscaled);
-              if (myGen === cbGen) { bgHide(); commitPhoto(transparent); }
+              if (myGen === cbGen) { bgHide(); commitPhoto(transparent, downscaled); }
             } catch (err2) {
               console.error('Background removal failed again:', err2);
               if (myGen === cbGen) { bgError('Still could not remove the background automatically.'); els.bgRetry.addEventListener('click', onRetry); els.bgKeep.addEventListener('click', onKeep); return; }
@@ -2008,6 +2008,8 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
           backVariantId: cbState.backVariant ? cbState.backVariant.id : null,
           frontPhotos: cbState.front.map(p => p.dataUrl),
           backPhotos: cbState.back.map(p => p.dataUrl),
+          frontOriginals: cbState.front.map(p => p.original || p.dataUrl),
+          backOriginals: cbState.back.map(p => p.original || p.dataUrl),
           backText: cbState.backText, backTextPos: cbState.backTextPos, backTextY: Math.round(cbState.backTextY * 100) / 100,
           preview: frontPreview, backPreview,
           designJSON: {

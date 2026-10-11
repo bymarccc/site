@@ -2666,7 +2666,7 @@ __name(acctProfile, "acctProfile");
 // photo's aspect, no input_fidelity (that alone multiplies the input cost), one model try per call — never the try-on chain.
 async function removeBgOpenAI(buf, type) {
   if (!env("OPENAI_API_KEY")) return json(503, { error: "NOT_CONFIGURED" });
-  const prompt = "Remove the background completely and return only the main subject on a fully transparent background. Keep the subject exactly as it is: same colours, face, text, logos, edges and proportions. Do not add, redraw, restyle or crop anything.";
+  const prompt = "Remove the background completely and return only the main subject on a fully transparent background, with clean crisp edges. Also enhance the image: sharpen details, reduce noise and blur, balance exposure and make the colours vivid and true. Keep the subject exactly as it is: same face, text, logos, shape and proportions. Do not add, redraw, restyle or crop anything.";
   const info = readImageInfo(new Uint8Array(buf));
   const size = tryOnSize(info);
   const plan = [[env("OPENAI_BG_MODEL", "gpt-image-1-mini"), "medium"], ["gpt-image-1.5", "low"]];
