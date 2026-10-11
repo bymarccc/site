@@ -1234,6 +1234,10 @@
   .shop__all:hover, .shop__next:hover { background: #000; }
   .shop__loadmore { grid-column: 1 / -1; display: block; width: auto; margin: 28px auto 8px; padding: 16px 52px; border: 0; border-radius: 999px; background: #111; color: #fff; font: inherit; font-size: 12.5px; letter-spacing: .18em; text-transform: uppercase; cursor: pointer; }
   .shop__loadmore:hover { background: #000; }
+  .shop__card.is-new { animation: shopCardIn .5s cubic-bezier(.22,1,.36,1) both; }
+  @keyframes shopCardIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .shop__card.is-new { animation: none; } }
+
   #shopCustomize .shop__pill, #shopCustomize .shop__tabs { display: none !important; }   /* CUSTOMIZE has one tab (BAGS): no pill / search there */
   @media (max-width: 640px) { .shop__loadmore { width: 100%; padding: 16px 0; } }
   .shop__empty { grid-column: 1 / -1; padding: 48px 0; text-align: center; font-size: 13px; letter-spacing: .1em; color: #6f6f6f; }
@@ -1771,10 +1775,12 @@
       items = [...items.filter(([, p]) => !p.soldOut), ...items.filter(([, p]) => p.soldOut)];   // SOLD OUT pieces always last
       const show = !all && items.length > LIMIT ? items.slice(0, LIMIT) : items;
       show.forEach(([k, p]) => grid.appendChild(card(k, p, active)));
-      if (gender === 'women' && active in SCAN_START) [...grid.querySelectorAll(':scope > .shop__card')].forEach((c, i) => { const pat = (Math.floor(i / 6) + SCAN_START[active]) % 2 ? SCAN_B : SCAN_A; if (!pat.includes(i % 6)) c.querySelectorAll('.scanfx').forEach(x => x.remove()); });
+      const pruneScan = () => { if (gender === 'women' && active in SCAN_START) [...grid.querySelectorAll(':scope > .shop__card')].forEach((c, i) => { const pat = (Math.floor(i / 6) + SCAN_START[active]) % 2 ? SCAN_B : SCAN_A; if (!pat.includes(i % 6)) c.querySelectorAll('.scanfx').forEach(x => x.remove()); }); };
+      pruneScan();
       if (show.length < items.length) {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'shop__loadmore'; b.textContent = 'LOAD MORE';
-        b.addEventListener('click', () => render(true));
+        // LOAD MORE adds the rest of the cards in place — the grid is NOT rebuilt, so nothing reloads, flickers or jumps
+        b.addEventListener('click', () => { b.remove(); items.slice(show.length).forEach(([k, p]) => { const c = card(k, p, active); c.classList.add('is-new'); grid.appendChild(c); }); pruneScan(); }, { once: true });
         grid.appendChild(b);
       }
       // The "NEXT: <collection>" jump button has been removed site-wide (MEN/WOMEN/CUSTOMIZE) —
@@ -2366,6 +2372,10 @@
       video: M + 'imagine8.mp4',
       poster: M + 'imagine8.jpg',
       thumb: 'assets/img/thumb-carbonne-imagine.jpg' },
+    { id: 'mj-heal-the-world', title: 'Michael Jackson - Heal the World', channel: '', duration: '',
+      src:   CLD + 'v1790321282/Michael_Jackson_Heal_The_World_44s-346s.m4a',
+      thumb: 'assets/img/thumb-mj-heal-the-world.jpg' },
+      /* no `video` on purpose — music-only */
       /* no `video` on purpose — track 5 is music-only, per instructions */
     { id: 'gvx', title: 'Je veux - ZaZ', channel: '', duration: '3:36',
       src:   M + 'je-veux.m4a',
