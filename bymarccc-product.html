@@ -1026,7 +1026,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261011s"></script>
+<script src="/assets/catalog.js?v=20261011t"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1639,20 +1639,40 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     }
     // Server cut-out (/api/removebg, ChatGPT image API) first; falls back to the in-browser remover.
     // The photo is shrunk to ≤1024px first so the API reads fewer input tokens (cheaper per photo).
-    async function cbShrinkForApi(dataUrl) {
-      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
-      const k = Math.min(1, 1024 / Math.max(img.naturalWidth, img.naturalHeight));
-      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      const png = /^data:image\/png/.test(dataUrl);
-      return new Promise((res) => c.toBlob(res, png ? 'image/png' : 'image/jpeg', .9));
-    }
+    // The API gets the photo placed on a white canvas of exactly the size it works at (so nothing is re-framed).
+    // Only its cut-out SHAPE is used: the final photo keeps the shopper's own original pixels (lightly enhanced here).
     async function cbRemoveBgPicsart(dataUrl) {
-      let blob; try { blob = await cbShrinkForApi(dataUrl); } catch {} if (!blob) blob = await (await fetch(dataUrl)).blob();
-      const r = await fetch('/api/removebg', { method: 'POST', headers: { 'Content-Type': blob.type || 'image/jpeg' }, body: blob });
-      if (!r.ok || !(r.headers.get('content-type') || '').startsWith('image/')) throw new Error('picsart ' + r.status);
-      const out = await r.blob();
-      return new Promise((resolve, reject) => { const fr = new FileReader(); fr.onload = () => resolve(fr.result); fr.onerror = () => reject(fr.error); fr.readAsDataURL(out); });
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
+      const iw = img.naturalWidth, ih = img.naturalHeight, ratio = ih / iw;
+      const [CW, CH] = ratio > 1.2 ? [1024, 1536] : ratio < 0.83 ? [1536, 1024] : [1024, 1024];
+      const k = Math.min(CW / iw, CH / ih), dw = Math.round(iw * k), dh = Math.round(ih * k), dx = Math.round((CW - dw) / 2), dy = Math.round((CH - dh) / 2);
+      const sc = document.createElement('canvas'); sc.width = CW; sc.height = CH;
+      const sx = sc.getContext('2d'); sx.fillStyle = '#fff'; sx.fillRect(0, 0, CW, CH); sx.drawImage(img, dx, dy, dw, dh);
+      const blob = await new Promise(res => sc.toBlob(res, 'image/jpeg', .92));
+      const r = await fetch('/api/removebg', { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+      if (!r.ok || !(r.headers.get('content-type') || '').startsWith('image/')) throw new Error('removebg ' + r.status);
+      const outUrl = URL.createObjectURL(await r.blob());
+      const out = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = outUrl; });
+      URL.revokeObjectURL(outUrl);
+      // alpha mask: the cut-out, cropped back to where the photo sat, scaled to the original's size
+      const mc = document.createElement('canvas'); mc.width = iw; mc.height = ih;
+      const mx = mc.getContext('2d', { willReadFrequently: true });
+      mx.drawImage(out, dx * out.naturalWidth / CW, dy * out.naturalHeight / CH, dw * out.naturalWidth / CW, dh * out.naturalHeight / CH, 0, 0, iw, ih);
+      const m = mx.getImageData(0, 0, iw, ih).data;
+      let sum = 0; for (let i = 3; i < m.length; i += 4) sum += m[i];
+      const cover = sum / (255 * iw * ih);
+      if (cover < 0.03 || cover > 0.985) throw new Error('mask unusable');
+      // original pixels + light enhance (contrast / colour / sharpen), then the mask as alpha
+      const oc = document.createElement('canvas'); oc.width = iw; oc.height = ih;
+      const ox = oc.getContext('2d', { willReadFrequently: true });
+      ox.filter = 'contrast(1.05) saturate(1.07) brightness(1.01)'; ox.drawImage(img, 0, 0); ox.filter = 'none';
+      const src = ox.getImageData(0, 0, iw, ih), s = src.data, o = new Uint8ClampedArray(s);
+      const A = 0.5;   // unsharp amount
+      for (let y = 1; y < ih - 1; y++) for (let x = 1; x < iw - 1; x++) { const i = (y * iw + x) * 4; for (let c = 0; c < 3; c++) {
+        const bl = (s[i + c - 4] + s[i + c + 4] + s[i + c - iw * 4] + s[i + c + iw * 4]) / 4; o[i + c] = Math.max(0, Math.min(255, s[i + c] + A * (s[i + c] - bl))); } }
+      for (let i = 0; i < o.length; i += 4) o[i + 3] = m[i + 3];
+      src.data.set(o); ox.putImageData(src, 0, 0);
+      return oc.toDataURL('image/png');
     }
     async function cbRemoveBackground(dataUrl) {
       try { return await cbRemoveBgPicsart(dataUrl); } catch (e) { console.warn('Server remove-bg unavailable, using in-browser remover:', e); }
@@ -1795,7 +1815,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
         }
         if (myGen !== cbGen) return;   // cleared while this file was being read
 
-        bgShow('Enhancing & removing background\u2026');
+        bgShow('Hold on a sec \u2014 we\u2019re enhancing your photo and cutting it out for your coolest custom painted bag\u2026');
         try {
           const transparent = await cbRemoveBackground(downscaled);
           if (myGen !== cbGen) return;
@@ -1813,7 +1833,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
           function commitOriginalAfterFailure() { bgHide(); commitPhoto(downscaled); }
           const onRetry = async () => {
             cleanup();
-            bgShow('Enhancing & removing background\u2026');
+            bgShow('Hold on a sec \u2014 we\u2019re enhancing your photo and cutting it out for your coolest custom painted bag\u2026');
             try {
               const transparent = await cbRemoveBackground(downscaled);
               if (myGen === cbGen) { bgHide(); commitPhoto(transparent, downscaled); }
