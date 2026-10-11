@@ -3770,7 +3770,7 @@ body.pdp .ai-launch{--ai-offset:92px}
 .vp__ov { position: absolute; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; touch-action: manipulation; padding: 0; opacity: .9; }
 .vp__ov svg { width: 13px; height: 13px; }
 .vp__ov--close { top: 6px; left: 6px; }
-.vp__ov--mute { bottom: 6px; right: 6px; }
+.vp__ov--mute { bottom: 22px; right: 6px; }
 .vp__ov--full { top: 6px; right: 6px; }
 .vp__ov--pip { top: 6px; right: 40px; }
 .vp__ov[hidden] { display: none; }
@@ -3788,10 +3788,16 @@ body.pdp .ai-launch{--ai-offset:92px}
 .vp.is-ctrls .vp__ctr, .vp.is-ctrls .vp__shade { opacity: 1; }
 .vp:not(.is-ctrls) .vp__ov { opacity: 0; pointer-events: none; }
 .vp.is-ctrls .vp__ov { opacity: .95; pointer-events: auto; }
-.vp__prog { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.22); cursor: pointer; touch-action: none; }
-.vp__prog::before { content: ""; position: absolute; inset: -12px 0; }
-.vp__prog.is-seeking { height: 9px; }
-.vp__prog i { display: block; height: 100%; width: 0; background: #ff0033; pointer-events: none; }
+.vp__prog { position: absolute; left: 12px; right: 12px; bottom: 9px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.35); cursor: pointer; touch-action: none; z-index: 3; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: height .12s ease; }
+.vp__prog::before { content: ""; position: absolute; left: -12px; right: -12px; bottom: -9px; top: -14px; }   /* big invisible finger zone above the line (the frame clips below it) */
+.vp__prog.is-seeking { height: 7px; }
+.vp__prog i { position: relative; display: block; height: 100%; width: 0; border-radius: inherit; background: #ff0033; pointer-events: none; }
+.vp__prog i::after { content: ""; position: absolute; right: -7px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: #ff0033; transform: scale(0); transition: transform .12s ease; }
+.vp.is-ctrls .vp__prog i::after, .vp__prog.is-seeking i::after { transform: scale(1); }
+.vp__prog.is-seeking i::after { transform: scale(1.25); }
+.vp__prog[data-t]::after { content: attr(data-t); position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); padding: 3px 8px; border-radius: 999px; background: rgba(0,0,0,.7); color: #fff; font: 600 11px/1.2 "Jost", Helvetica, Arial, sans-serif; letter-spacing: .04em; white-space: nowrap; pointer-events: none; opacity: 0; }
+.vp__prog.is-seeking[data-t]::after { opacity: 1; }
+.vp__ov, .vp__ctr { z-index: 4; }   /* buttons stay above the seek zone */
 /* end of song: black card with replay / next */
 .vp__end { position: absolute; inset: 0; background: #000; display: none; align-items: center; justify-content: center; gap: 22px; }
 .vp.is-ended .vp__end { display: flex; }
@@ -4160,7 +4166,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const r = progBar.getBoundingClientRect();
     const p = Math.min(1, Math.max(0, (cx - r.left) / r.width));
     prog.style.width = (p * 100) + '%';
-    if (video.duration) video.currentTime = p * video.duration;
+    if (video.duration) { video.currentTime = p * video.duration; const f = t => { t = Math.max(0, Math.floor(t)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }; progBar.dataset.t = f(p * video.duration) + ' / ' + f(video.duration); }
     return p;
   };
   progBar.addEventListener('pointerdown', e => { vSeeking = true; progBar.classList.add('is-seeking'); progBar.setPointerCapture?.(e.pointerId); seekVideoAt(e.clientX); vp.classList.remove('is-ended'); showCtrls(); e.stopPropagation(); e.preventDefault(); });
