@@ -3292,30 +3292,35 @@
   /* Each reel → the product(s) it shows. `p` can be a single product key, an array of keys (video features
      more than one piece), or omitted entirely (video with no shoppable product yet). Video files are hosted
      on Cloudinary — nothing here is bundled with the site. */
+  /* `img` = thumbnail override per product key · `sold` = keys shown SOLD OUT (not clickable) · `extra` = card for a piece that isn't in the catalog yet (not clickable) */
   const REELS = [
-    { v: '/assets/media/reel-delulu-blazer.mp4', p: 'w-hg-delulu-blazer' },
-    { v: '/assets/media/reel-paris-hoodie.mp4', p: 'w-black-hoodie', design: 'PARIS' },
-    { v: '/assets/media/reel-delulu-dress.mp4' },   // no matching catalog product yet — video only, no card
-    { v: '/assets/media/reel-white-baby-top.mp4', p: ['w-white-baby-top-1', 'w-black-sequin-shorts'] },
-    { v: '/assets/media/reel-red-baby-top.mp4', p: 'w-red-baby-top' },
+    { v: '/assets/media/reel-delulu-blazer.mp4', p: 'w-hg-delulu-blazer', img: { 'w-hg-delulu-blazer': 'assets/img/gallery/reel-delulu-blazer-b52d2eeb.webp' } },
+    { v: '/assets/media/reel-paris-hoodie.mp4', p: 'w-black-hoodie', design: 'PARIS', sold: ['w-black-hoodie'] },
+    { v: '/assets/media/reel-delulu-dress.mp4', extra: [{ title: 'DELULU DRESS', img: 'assets/img/gallery/reel-delulu-dress-33d1b04a.webp' }] },
+    { v: '/assets/media/reel-white-baby-top.mp4', p: ['w-white-baby-top-1', 'w-black-sequin-shorts'], img: { 'w-white-baby-top-1': 'assets/img/gallery/reel-white-delulu-top-99844bc7.webp', 'w-black-sequin-shorts': 'assets/img/gallery/reel-sequin-shorts-2ceb46a4.webp' }, sold: ['w-black-sequin-shorts'] },
+    { v: '/assets/media/reel-red-baby-top.mp4', p: 'w-red-baby-top', img: { 'w-red-baby-top': 'assets/img/gallery/reel-red-boys-lie-top-a8c950ba.webp' } },
   ];
   const track = document.getElementById('reelTrack');
   const fmt = (n, c) => (c === 'RON' || !c) && window.BYM_FMT ? window.BYM_FMT(n) : (Number.isInteger(n) ? String(n) : n.toFixed(2).replace('.', ',')) + ' ' + c;   // geo pricing: visitor's currency
   const bag = () => window.BYMARCCC && window.BYMARCCC.bag;
   const muteSvg = `<svg class="off" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 8l5 8M22 8l-5 8"/></svg><svg class="on" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11"/></svg>`;
   let unmuted = null;
-  function cardHtml(p, key) {
-    const url = 'bymarccc-product.html?p=' + key;
-    return `<div class="reel__card"><a class="reel__thumb" href="${url}">${p.soldOut ? '<span class="shop__soldout">SOLD OUT</span>' : ''}<img src="${p.gallery[0].src}" alt="${p.title}" loading="lazy"></a>
-      <div class="reel__meta"><a class="reel__name" href="${url}">${p.title}</a>${typeof p.price === 'number' ? `<span class="reel__price">${fmt(p.price, p.currency)}</span>` : ''}</div></div>`;
+  function cardHtml(p, key, r) {
+    const url = 'bymarccc-product.html?p=' + key, src = (r.img && r.img[key]) || p.gallery[0].src, sold = p.soldOut || (r.sold || []).includes(key);
+    const price = typeof p.price === 'number' ? `<span class="reel__price">${fmt(p.price, p.currency)}</span>` : '';
+    const badge = sold ? '<span class="shop__soldout">SOLD OUT</span>' : '';
+    if (sold) return `<div class="reel__card is-soldout"><span class="reel__thumb">${badge}<img src="${src}" alt="${p.title}" loading="lazy"></span><div class="reel__meta"><span class="reel__name">${p.title}</span>${price}</div></div>`;
+    return `<div class="reel__card"><a class="reel__thumb" href="${url}"><img src="${src}" alt="${p.title}" loading="lazy"></a>
+      <div class="reel__meta"><a class="reel__name" href="${url}">${p.title}</a>${price}</div></div>`;
   }
+  const extraHtml = x => `<div class="reel__card"><span class="reel__thumb"><img src="${x.img}" alt="${x.title}" loading="lazy"></span><div class="reel__meta"><span class="reel__name">${x.title}</span></div></div>`;
   REELS.forEach((r, i) => {
     const keys = Array.isArray(r.p) ? r.p : (r.p ? [r.p] : []);
     const products = keys.map(k => [k, CATALOG[k]]).filter(([, p]) => p);
-    const label = products.length ? products.map(([, p]) => p.title).join(' + ') : 'bymarccc';
+    const label = products.length ? products.map(([, p]) => p.title).join(' + ') : ((r.extra || [])[0] || {}).title || 'bymarccc';
     const item = document.createElement('article'); item.className = 'reel__item';
     item.innerHTML = `<div class="reel__video"><video src="${r.v}" poster="${posterFor(r.v)}" muted playsinline loop preload="metadata" aria-label="${label}"></video><button class="reel__mute" type="button" aria-pressed="false" aria-label="Unmute">${muteSvg}</button><button class="reel__play" type="button" aria-label="Play video"><span><svg viewBox="0 0 24 24" fill="#111" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button></div>
-      ${products.map(([key, p]) => cardHtml(p, key)).join('')}`;
+      ${products.map(([key, p]) => cardHtml(p, key, r)).join('')}${(r.extra || []).map(extraHtml).join('')}`;
     const video = item.querySelector('video'), mute = item.querySelector('.reel__mute'), playBtn = item.querySelector('.reel__play');
     /* Preserve each clip's real aspect ratio instead of forcing a fixed crop — the 2:3 box in CSS is only a
        before-metadata placeholder so the layout doesn't jump. */
