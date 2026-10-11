@@ -741,6 +741,16 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   body:not(.is-custom-bag-page) .pdp-left .pdp-acc__btn { justify-content: space-between; padding: 16px 0; font-size: 15px; }
 }
 
+
+/* custom bag: designs above the bag in one swipeable row; FRONT/BACK, upload and text controls centred */
+.pdp .cb-ai .cb-variants { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; scrollbar-width: none; justify-content: flex-start; margin: 8px 0 14px; }
+.pdp .cb-ai .cb-variants::-webkit-scrollbar { display: none; }
+.pdp .cb-ai .cb-variant { flex: 0 0 auto; scroll-snap-align: start; }
+.pdp .cb-ai .cb-ai__tabs { display: flex; width: max-content; margin: 4px auto 6px; }
+.pdp .cb-ai__panel { text-align: center; }
+.pdp .cb-ai__panel .cb-ai__thumbs, .pdp .cb-ai__panel .cb-ai__controls, .pdp .cb-ai__panel .cb-ai__bgstatus, .pdp .cb-ai__panel .cb-ai__bgactions { justify-content: center; }
+.pdp .cb-ai__panel .cb-ai__posrow { display: flex; width: max-content; margin: 10px auto 0; }
+.pdp .cb-ai__drag { text-align: center; }
 </style>
 <style>html,body{margin:0;padding:0;background:#fff}</style>
 <!-- Quick-view mode (?qv=1 inside the homepage long-press sheet): no music / AI widgets, links leave the sheet, bag syncs back -->
@@ -835,12 +845,12 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
           <p class="cb-ai__sub">Upload your photos and create your bag preview.</p>
         </div>
 
+        <div class="pdp-label" id="cbVariantLabel" hidden><span>DESIGN</span><span id="cbVariantName">Select a design</span></div>
+        <div class="cb-variants" id="cbVariants" hidden role="radiogroup" aria-label="Design"></div>
+
         <div class="cb-ai__preview">
           <canvas id="cbCanvas" width="1400" height="933" aria-label="Bag preview"></canvas>
         </div>
-
-        <div class="pdp-label" id="cbVariantLabel" hidden><span>DESIGN</span><span id="cbVariantName">Select a design</span></div>
-        <div class="cb-variants" id="cbVariants" hidden role="radiogroup" aria-label="Design"></div>
 
         <div class="cb-ai__tabs" role="tablist">
           <button type="button" class="cb-ai__tab is-active" data-cbside="front" role="tab" aria-selected="true">FRONT</button>
