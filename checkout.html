@@ -1371,7 +1371,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const sndUrl = v => { if (v && v.aud) return v.aud; const u = (v && (v.raw || v.src)) || ''; const m = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/video\/upload\/)(?:[^/]+\/)*?(v\d+\/[^?#]+)\.(?:mp4|mov|webm)(?:[?#].*)?$/i.exec(u); return m ? m[1] + m[2] + '.m4a' : ''; };
   // iPhone/iPad: Safari floats an inline video only from a tap (never by itself), so on iPhone a music video starts
   // straight in the system Picture-in-Picture window — that window then follows you Home and into other apps
-  const AUTO_PIP = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const AUTO_PIP = false;   // the small site mini player opens first; the floating system window only starts from its PiP button (auto-opening it came out huge)
   const applySound = () => { if (sndOn && !pipOwn) { video.muted = true; snd.muted = userMuted; } else { video.muted = userMuted; } };
   const sndSync = () => { if (Math.abs((snd.currentTime || 0) - (video.currentTime || 0)) > 0.3) { try { snd.currentTime = video.currentTime || 0; } catch {} } };
   /* while the twin plays, the SOUND is the clock: a lagging picture is moved to the song (throttled), the song is never
