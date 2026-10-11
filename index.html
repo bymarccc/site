@@ -5073,12 +5073,12 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   /* Order of the shop cards that carry the scan = a zig-zag chain (cards 1·4·5·8·9·12·13 … = 3 steps apart in play order).
      Step s lights every visible chain item j with j % 3 == s % 3 and j <= s:  1 → 4 → 5 → (1 + 8) → (4 + 9) → (5 + 12) → (1 + 8 + 13) … */
-  const STEP = 2300;
+  const STEP = 3900;
   const loop = async () => { if (looping) return; looping = true; let st = 0;
     while ([...shown].some(el => el.closest('.shop__card'))) {
       const all = [...document.querySelectorAll('.shop__card .scanfx:not(.scanfx--scroll)')];
       const act = all.filter((el, j) => shown.has(el) && j % 3 === st % 3 && j <= st);
-      act.forEach(el => run(el, 2.6));
+      act.forEach(el => run(el, 4.6));
       await sleep(act.length ? STEP : 120);
       st++;
     }
