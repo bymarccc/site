@@ -2366,9 +2366,6 @@
       video: M + 'imagine8.mp4',
       poster: M + 'imagine8.jpg',
       thumb: 'assets/img/thumb-carbonne-imagine.jpg' },
-    { id: 'mj-heal-the-world', title: 'Michael Jackson - Heal the World', channel: '', duration: '',
-      src:   CLD + 'v1790321282/Michael_Jackson_Heal_The_World_44s-346s.m4a',
-      thumb: 'assets/img/thumb-mj-heal-the-world.jpg' },
       /* no `video` on purpose — track 5 is music-only, per instructions */
     { id: 'gvx', title: 'Je veux - ZaZ', channel: '', duration: '3:36',
       src:   M + 'je-veux.m4a',
@@ -2408,7 +2405,8 @@
       thumb: 'assets/img/thumb-sade-paradise.jpg' },
     { id: 'sade-your-love-is-king', title: 'Sade - Your Love Is King', channel: '', duration: '3:40',
       src:   CLD + 'v1790595835/Your_Love_Is_King.mp3',
-      thumb: 'assets/img/thumb-sade-paradise.jpg' }
+      thumb: 'assets/img/thumb-sade-paradise.jpg' },
+    { id: 'BWf-eARnf6U', yt: true, start: 67, end: 372, title: 'Michael Jackson - Heal The World', channel: 'Michael Jackson', duration: '5:05' }
   ];
   /* playlist shown A→Z by title (MUSIC and MUSIC VIDEO lists, and the player's next/prev order) */
   SEED.sort((a, b) => a.title.localeCompare(b.title, 'en', { sensitivity: 'base' }));
@@ -2711,7 +2709,7 @@
       b.append(img, meta, du);   // no play/pause circle — the row itself plays / pauses
       b.addEventListener('pointerdown', () => { if (tab === 'video' && t.video) window.BYMARCCC_VP?.prefetch?.(t); }, { passive: true });
       b.addEventListener('click', () => {
-        if (tab === 'video') { if (t.video && window.BYMARCCC_VP) { audio.pause(); window.BYMARCCC_VP.play(t); window.BYMARCCC_VP.pip?.(); markCurrent(); } return; }   // MUSIC VIDEO → floating mini player; the playlist stays open behind it
+        if (tab === 'video') { if (t.yt) { window.BYMARCCC_VP?.stop?.(); playFrom([t], 0); return; } if (t.video && window.BYMARCCC_VP) { audio.pause(); window.BYMARCCC_VP.play(t); window.BYMARCCC_VP.pip?.(); markCurrent(); } return; }   // MUSIC VIDEO → floating mini player; the playlist stays open behind it
         // MUSIC → this row is the player: first tap plays, next taps pause / resume
         if (t.src && typeof miniItem !== 'undefined' && miniItem && miniItem.id === t.id) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
         window.BYMARCCC_VP?.stop ? window.BYMARCCC_VP.stop() : window.BYMARCCC_VP?.pause();   // a music track replaces the music video: its floating player closes
@@ -2765,7 +2763,7 @@
     });
     if (typeof marqueeCurrent === 'function') marqueeCurrent();
   }
-  const tabItems = () => tab === 'video' ? playlist.filter(t => t.video) : playlist;
+  const tabItems = () => tab === 'video' ? playlist.filter(t => t.video || t.yt) : playlist;
   function showPlaylist() { shown = { kind: 'playlist', items: tabItems() }; setStatus(shown.items.length ? '' : 'No music videos yet'); render(); }
 
   tabs.forEach(b => b.addEventListener('click', () => {
@@ -2810,7 +2808,7 @@
     }));
   }
   const decode = s => { const t = document.createElement('textarea'); t.innerHTML = s || ''; return t.value; };
-  const normalise = it => ({ id: it.id, title: it.title || '', channel: it.channel || '', thumb: it.thumb || thumbFor(it.id), duration: it.duration || '', src: it.src || (SEED.find(t => t.id === it.id) || {}).src || '' });
+  const normalise = it => ({ id: it.id, title: it.title || '', channel: it.channel || '', thumb: it.thumb || thumbFor(it.id), duration: it.duration || '', src: it.src || (SEED.find(t => t.id === it.id) || {}).src || '', ...((s => s && s.yt ? { yt: true, start: s.start, end: s.end } : {})(SEED.find(t => t.id === it.id))) });
 
   /* Enrich the playlist with real metadata when a Data API path exists. */
   async function enrichPlaylist() {
@@ -2935,7 +2933,7 @@
       fpNotice.classList.add('is-visible');
       return;
     }
-    const load = () => { try { p.loadVideoById(current.id); } catch {} };
+    const load = () => { try { p.loadVideoById(current.start || current.end ? { videoId: current.id, startSeconds: current.start || 0, endSeconds: current.end || undefined } : current.id); } catch {} };
     if (playerReady) load(); else pendingLoad = load;
   }
   function next() { if (qi < queue.length - 1) playFrom(queue, qi + 1); else { playing = false; updatePlayUI(); } }
