@@ -535,6 +535,10 @@
 .music__go:hover { background: rgba(255,255,255,.08); }
 .music__go:focus-visible { outline: 2px solid var(--play-blue); }
 .music__go svg { width: 14px; height: 14px; }
+.music__ico-x { display: none; }
+.music__search.has-q .music__ico-s { display: none; }
+.music__search.has-q .music__ico-x { display: block; }
+.music__input::-webkit-search-cancel-button, .music__input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
 
 .music__tabs { display: flex; gap: 6px; margin-top: 16px; }
 .music__tab {
@@ -975,8 +979,9 @@
             <form class="music__search" id="musicSearch" role="search" novalidate>
               <label for="musicQuery" class="visually-hidden">Search playlist</label>
               <input class="music__input" id="musicQuery" type="search" placeholder="SEARCH PLAYLIST" autocomplete="off" enterkeyhint="search" inputmode="search">
-              <button class="music__go" type="submit" aria-label="Search">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <button class="music__go" type="submit" aria-label="Search / clear">
+                <svg class="music__ico-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                <svg class="music__ico-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
               </button>
             </form>
 
@@ -2794,8 +2799,10 @@
     render();
     setStatus(items.length ? '' : 'No tracks found');
   }
+  const syncX = () => form?.classList.toggle('has-q', !!query.value);
   form?.addEventListener('submit', e => { e.preventDefault(); applyFilter(query.value); });
-  query?.addEventListener('input', () => applyFilter(query.value));
+  form?.querySelector('.music__go')?.addEventListener('click', e => { if (query.value) { e.preventDefault(); e.stopPropagation(); query.value = ''; syncX(); applyFilter(''); query.focus({ preventScroll: true }); } });
+  query?.addEventListener('input', () => { syncX(); applyFilter(query.value); });
 
   async function searchYouTube(q, mode, signal) {
     if (CONFIG.searchEndpoint) {
