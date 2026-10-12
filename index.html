@@ -1182,7 +1182,8 @@
   .shop__soldout::after { right: 100%; bottom: 0; }
   .shop__card.is-soldout .shop__img img, .shop__card.is-soldout .shop__img video { opacity: .55; }
   .shop__card.is-soldout .shop__meta { opacity: .5; }
-  .reel__thumb .shop__soldout { font-size: 8px; padding: 5px 6px 4px 7px; border-radius: 8px 0 0 0; }
+  .reel__thumb .shop__soldout::before, .reel__thumb .shop__soldout::after { width: 6px; height: 6px; background: radial-gradient(circle at 0 0, transparent 5.5px, #f2f2f0 6px); }
+  .reel__thumb .shop__soldout { font-size: 6px; padding: 3px 4px 2.5px 5px; border-radius: 5px 0 0 0; letter-spacing: .06em; }
   .shop__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; opacity: 0; transition: opacity .35s cubic-bezier(.22,1,.36,1); }
   .shop__img img.is-on { opacity: 1; }
 
@@ -3288,12 +3289,12 @@
   .reel__play span { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.92); display: grid; place-items: center; }
   .reel__play svg { width: 22px; height: 22px; margin-left: 3px; }
   .reel__mute .on { display: none; } .reel__mute[aria-pressed="true"] .on { display: block; } .reel__mute[aria-pressed="true"] .off { display: none; }
-  .reel__card { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 12px; margin-top: 12px; }
-  .reel__thumb { display: block; aspect-ratio: 1 / 1; background: #f2f2f0; overflow: hidden; position: relative; }
-  .reel__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .reel__meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .reel__name { font-size: 13px; letter-spacing: .02em; color: inherit; text-decoration: none; }
-  .reel__price { font-size: 12.5px; color: #666; }
+  .reel__card { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: 10px; margin-top: 10px; }
+  .reel__thumb { display: block; background: #f2f2f0; overflow: hidden; position: relative; border-radius: 3px; }   /* width follows the column, height follows the photo → the whole picture shows, nothing cropped */
+  .reel__thumb img { width: 100%; height: auto; display: block; }
+  .reel__meta { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .reel__name { font-size: 11.5px; letter-spacing: .03em; color: inherit; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .reel__price { font-size: 11px; color: #777; }
   .reel__nav { position: absolute; top: 34%; z-index: 2; width: 40px; height: 40px; border: 1px solid #e4e4e1; border-radius: 50%; background: rgba(255,255,255,.92); display: none; place-items: center; cursor: pointer; }
   .reel__nav svg { width: 18px; height: 18px; }
   .reel__nav--prev { left: 10px; } .reel__nav--next { right: 10px; }
