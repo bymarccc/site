@@ -395,23 +395,6 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "chart": ["40"],
       "gallery": [{"src":"assets/img/gallery/sale-palm-tree-jeans-05b5c5f3.webp","w":1024,"h":1536}]
     },
-    "sale-silk-patch-jeans": {
-      "saleRail": true,
-      "gender": "men",
-      "id": "bymarccc:sale-silk-patch-jeans",
-      "title": "Silk Patch Jeans",
-      "price": 500,
-      "salePrice": 200,
-      "currency": "RON",
-      "cut": "Skinny",
-      "collections": ["sales"],
-      "details": ["Size 40 only","One pair — sample sale","All clothing is custom made."],
-      "description": "Silk Patch Jeans — one pair, size 40.",
-      "unavailable": [],
-      "colours": [{"id":"default","name":"As shown","hex":"#dcdcd8"}],
-      "chart": ["40"],
-      "gallery": [{"src":"assets/img/gallery/sale-silk-patch-jeans-d1ee18fc.webp","w":1024,"h":1536}]
-    },
     "sale-studded-patch-jeans": {
       "saleRail": true,
       "gender": "men",
