@@ -1007,28 +1007,6 @@
 </section>
 
 
-<section class="zebra" id="zebra" data-tone="dark" aria-roledescription="carousel" aria-label="The Zebra Patch Collection">
-  <h2 class="zebra__heading">The Zebra Patch Collection</h2>
-
-  <div class="zebra__stage" id="stage">
-    <div class="zebra__glow" aria-hidden="true"></div>
-    <div class="zebra__track" id="track" aria-live="off"></div>
-
-    <button class="zebra__arrow zebra__arrow--prev" id="prev" type="button" aria-label="Previous product">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
-    </button>
-    <button class="zebra__arrow zebra__arrow--next" id="next" type="button" aria-label="Next product">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
-    </button>
-  </div>
-
-  <div class="zebra__info" aria-live="polite" aria-atomic="true">
-    <h3 class="zebra__name" id="productName">Grey Zebra Patch Jeans</h3>
-    <p class="zebra__desc">Hand-finished statement denim, made to fit you.</p>
-    <nav class="zebra__links" aria-label="Zebra Patch fits"><button type="button" class="zebra__link" id="skinnyLink">SKINNY</button><button type="button" class="zebra__link" id="relaxedLink">RELAXED</button></nav>
-  </div>
-
-</section>
 
 <!-- =====================================================================
      SECTION 3 — Collections (Acne-style tabs + product grid), data from catalog.js
@@ -1131,6 +1109,29 @@
   <h2 class="shop__title shop__title--bold shop__title--hidden">WOMEN</h2>
   <nav class="shop__tabs" role="tablist" aria-label="Womenswear collections"></nav>
   <div class="shop__grid" role="tabpanel"></div>
+</section>
+
+<section class="zebra" id="zebra" data-tone="dark" aria-roledescription="carousel" aria-label="The Zebra Patch Collection">
+  <h2 class="zebra__heading">The Zebra Patch Collection</h2>
+
+  <div class="zebra__stage" id="stage">
+    <div class="zebra__glow" aria-hidden="true"></div>
+    <div class="zebra__track" id="track" aria-live="off"></div>
+
+    <button class="zebra__arrow zebra__arrow--prev" id="prev" type="button" aria-label="Previous product">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <button class="zebra__arrow zebra__arrow--next" id="next" type="button" aria-label="Next product">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+
+  <div class="zebra__info" aria-live="polite" aria-atomic="true">
+    <h3 class="zebra__name" id="productName">Grey Zebra Patch Jeans</h3>
+    <p class="zebra__desc">Hand-finished statement denim, made to fit you.</p>
+    <nav class="zebra__links" aria-label="Zebra Patch fits"><button type="button" class="zebra__link" id="skinnyLink">SKINNY</button><button type="button" class="zebra__link" id="relaxedLink">RELAXED</button></nav>
+  </div>
+
 </section>
 
 <section class="shop shop--customize" id="shopCustomize" aria-label="bymarccc customize collections" data-gender="men">
@@ -1392,7 +1393,7 @@
     .shop .salerail--mini .sales__progress { margin-top: 14px; }
   }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=20261013f"></script>
+<script src="/assets/catalog.js?v=20261013g"></script>
 <script>
 (() => {
   'use strict';
