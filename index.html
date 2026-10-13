@@ -375,7 +375,12 @@
 
   position: relative;
   isolation: isolate;
-  background: var(--play-bg);
+  background:   /* soft pastel wash, same as artbymarc.net */
+    radial-gradient(75% 95% at 0% 35%, #B9ECFB 0%, rgba(185,236,251,0) 72%),
+    radial-gradient(75% 95% at 100% 65%, #F9C6EC 0%, rgba(249,198,236,0) 72%),
+    radial-gradient(45% 55% at 55% 0%, #F3F6C6 0%, rgba(243,246,198,0) 75%),
+    radial-gradient(40% 50% at 100% 100%, #E3CDFB 0%, rgba(227,205,251,0) 75%),
+    #F6F4EC;
   color: var(--play-ink);
   height: 100vh;
   height: 100svh;   /* NOT dvh: the dynamic viewport changes while scrolling (Safari toolbar) and made the whole section jump */
