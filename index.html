@@ -1226,6 +1226,10 @@
   .shop__bars i.is-on { background: #111; }
   .shop__meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; font-size: 12.5px; letter-spacing: .04em; }
   .shop__name { text-transform: uppercase; }
+  /* editorial grid (Jacquemus-style): bigger photos, tiny gaps, only a small name — price lives on the product page (sale grids keep their prices) */
+  .shop__grid:not(.shop__grid--sales) { gap: clamp(16px, 2.4vw, 26px) clamp(4px, 1vw, 8px); padding: 0 clamp(6px, 1.6vw, 24px); }
+  .shop__grid:not(.shop__grid--sales) > .shop__card .shop__price { display: none; }
+  .shop__grid:not(.shop__grid--sales) > .shop__card .shop__meta { margin-top: 8px; padding: 0 2px; font-size: 10.5px; letter-spacing: .09em; color: #333; }
   .shop__price { flex: 0 0 auto; color: #111; }
   .shop__price--old { color: #9a9a9a; font-weight: 400; text-decoration: line-through; margin-right: 6px; }
   .shop__price--sale { color: #c8102e; font-weight: 600; }
