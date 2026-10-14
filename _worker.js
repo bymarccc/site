@@ -1794,7 +1794,17 @@ async function orderSubmit(request) {
   const chk = await goatifyItemCheck(b.items).catch(() => ({ extras: [], notes: "" }));
   const m = orderEmails(o, pay, totals, chk.extras.map((e) => e && e.image), CURRENT_ORIGIN || "https://bymarccc.com");
   const from = env("ORDER_EMAIL_FROM");
+  // GOATIFY: forward the accepted order (no-op unless GOATIFY_FORWARDING=on). Never changes the answer to the customer.
+  let gForwarded = false;
   try {
+    const fo = { ...o, items: o.items.map((it, i) => ({ ...it, ...(chk.extras[i] || {}) })) };
+    const notes = [o.addToParent ? `ADD-ON to ${o.addToParent} — ship together in the same parcel.` : "", chk.notes, b.installments && pay === "card" ? "Pay in 2: first instalment paid by card, second charged automatically later." : ""].filter(Boolean).join("\n");
+    const g = await forwardToGoatify(fo, { pay, totals: { sub: totals.sub, ship: totals.ship }, placedAt: new Date().toISOString(), notes, sourceUrl: CURRENT_ORIGIN ? CURRENT_ORIGIN + "/checkout.html" : void 0 }, (k) => env(k));
+    gForwarded = !!g.forwarded;
+    if (!g.forwarded && g.reason !== "off") console.error("GOATIFY forward failed", JSON.stringify(g));
+  } catch (e) { console.error("GOATIFY forward error", String(e && e.message || e)); }
+  // Owner alert e-mail only as a fallback: when GOATIFY took the order, GOATIFY sends the push notification instead.
+  if (!gForwarded) try {
     await resendSend({ from, to: env("ORDER_NOTIFY_TO").split(",").map((x) => x.trim()).filter(Boolean), reply_to: c.email || void 0, subject: m.owner.subject, html: m.owner.html, text: m.owner.text });
   } catch (e) {
     return json(502, { error: "ORDER_EMAIL_FAILED", detail: env("ASSISTANT_DEBUG") ? String(e.message) : void 0 });
@@ -1806,13 +1816,6 @@ async function orderSubmit(request) {
     const ronSub = (ronItems.length ? ronItems : o.items).reduce((a, it) => a + it.price * it.qty, 0);
     await acctRecordOrder(o, { email: acctInfo.email || c.email, pay, currency: o.currency || "RON", totalLocal: totals.total, shipLocal: ship, totalRon: Math.max(0, ronSub - (acctInfo.creditRon || 0)), pct: acctInfo.pct, creditRon: acctInfo.creditRon || 0, voucher: acctInfo.voucher, items: o.items.map((it, i) => ({ name: it.name, variant: it.variant, qty: it.qty, price: it.price, image: (chk.extras[i] && chk.extras[i].image) || (b.items[i] && b.items[i].image) || "" })) });
   } catch (e) { console.error("account order record failed", String(e && e.message || e)); }
-  // GOATIFY: forward the accepted order (no-op unless GOATIFY_FORWARDING=on). Never changes the answer to the customer.
-  try {
-    const fo = { ...o, items: o.items.map((it, i) => ({ ...it, ...(chk.extras[i] || {}) })) };
-    const notes = [o.addToParent ? `ADD-ON to ${o.addToParent} — ship together in the same parcel.` : "", chk.notes, b.installments && pay === "card" ? "Pay in 2: first instalment paid by card, second charged automatically later." : ""].filter(Boolean).join("\n");
-    const g = await forwardToGoatify(fo, { pay, totals: { sub: totals.sub, ship: totals.ship }, placedAt: new Date().toISOString(), notes, sourceUrl: CURRENT_ORIGIN ? CURRENT_ORIGIN + "/checkout.html" : void 0 }, (k) => env(k));
-    if (!g.forwarded && g.reason !== "off") console.error("GOATIFY forward failed", JSON.stringify(g));
-  } catch (e) { console.error("GOATIFY forward error", String(e && e.message || e)); }
   let customerMail = "skipped";
   // Customer confirmation: retried (Resend allows ~2 requests/second and the shop e-mail went out just before), failures logged.
   if (c.email) {
