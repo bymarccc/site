@@ -4,3 +4,6 @@
 
 /assets/catalog.js
   Cache-Control: no-cache
+
+/assets/media/*
+  Cache-Control: public, max-age=86400, must-revalidate
