@@ -3061,7 +3061,7 @@ async function onRequest(context) {
     const qcc = String(url.searchParams.get("cc") || "").toUpperCase();
     let L = { lang: "en", prefixed: false, path, cc: GEO_COUNTRIES[qcc] ? qcc : null };
     if (lm) { L.lang = lm[1]; L.prefixed = true; L.cc = L.cc || I18N_PRICE_CC[lm[1]]; }
-    else L.lang = i18nCookie(request) || i18nAcceptLang(request) || "en";
+    else { const ck = i18nCookie(request); L.lang = ck || i18nAcceptLang(request) || "en"; if (ck && !L.cc && I18N_PRICE_CC[ck]) L.cc = I18N_PRICE_CC[ck]; }   // language picked in the switcher → same price market as its /xx/ pages (de → EUR)
     const route = request.method === "GET" || request.method === "HEAD" ? contentRoute(path) : null;
     if (route) { try { const r = await contentRender(request, url, L, route); if (r) return r; } catch (e) { stylistLog && stylistLog("content-render-failed", { path, error: String(e && e.message || e).slice(0, 300) }); } }
     const areq = lm ? new Request(new URL(path + url.search, url.origin).toString(), request) : request;
