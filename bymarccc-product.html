@@ -1026,7 +1026,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261013j"></script>
+<script src="/assets/catalog.js?v=20261016b"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1261,9 +1261,11 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
         ? 'Model is 177 cm & 53 kg, wearing size XS-S'
         : 'Model is 184 cm & 74 kg, wearing size M';
   }
+  let wrapLock = false;   // phone: while the photos loop round (last → first / first → last) the track is driven by wrapTo()
+  const wrapOff = () => slides.forEach(sl => { if (sl.style.transform) sl.style.transform = ''; });
   function layout(dx = 0, anim = true) {
     track.classList.toggle('no-anim', !anim || reduced.matches);
-    track.style.transform = VERT ? `translate3d(0, calc(${-gi * 100}% + ${dx}px), 0)` : `translate3d(calc(${-gi * 100}% + ${dx}px), 0, 0)`;
+    if (!wrapLock) track.style.transform = VERT ? `translate3d(0, calc(${-gi * 100}% + ${dx}px), 0)` : `translate3d(calc(${-gi * 100}% + ${dx}px), 0, 0)`;
     count.textContent = `${gi + 1} / ${GALLERY.length}`;
     const gc = $('galNum'); if (gc) { gc.textContent = `${gi + 1}/${GALLERY.length}`; gc.hidden = GALLERY.length < 2; }   // ourlegacy-style 2/10 counter
     [...bars.children].forEach((b, i) => b.classList.toggle('is-on', i === gi));
@@ -1283,7 +1285,18 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     gallery.classList.toggle('is-single', GALLERY.length < 2); $('galPrev').hidden = $('galNext').hidden = GALLERY.length < 2;
     gi = 0; layout(0, false); resetZoom();
   }
+  /* Phone (vertical photos): endless loop, like the reference — after the last photo the first one slides in from below, and above the first comes the last */
+  function wrapTo(i) {
+    const n = GALLERY.length, fwd = i >= n, tgt = fwd ? 0 : n - 1, s = slides[tgt];
+    if (!s || wrapLock) return;
+    wrapOff(); s.style.transform = `translateY(${fwd ? n * 100 : -n * 100}%)`;
+    gi = tgt; wrapLock = true; layout(); resetZoom();
+    track.classList.toggle('no-anim', reduced.matches);
+    track.style.transform = `translate3d(0, ${fwd ? -n * 100 : 100}%, 0)`;
+    setTimeout(() => { wrapLock = false; wrapOff(); layout(0, false); }, reduced.matches ? 0 : 520);
+  }
   function goTo(i) {
+    if (VERT && GALLERY.length > 1 && (i >= GALLERY.length || i < 0)) return wrapTo(i);
     /* Finite carousel: clamp to the real bounds instead of wrapping — reaching the last
        image must never jump back to the first, and vice-versa. */
     gi = Math.max(0, Math.min(GALLERY.length - 1, i)); layout(); resetZoom();
@@ -1325,7 +1338,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   /* iPhone Safari: drive the swipe from touch events (reliable there); pointer events stay for mouse / pen */
   const TOUCH = 'ontouchstart' in window;
   const onDown = e => {
-    if (e.target.closest('button, input, label, form')) return;
+    if (e.target.closest('button, input, label, form') || wrapLock) return;
     try { if (!e.fake) gallery.setPointerCapture?.(e.pointerId); } catch (er) {}
     zoomPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (zoomPointers.size >= 2) {
@@ -1354,17 +1367,16 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     if (!drag.axis) { if (Math.hypot(dx, dy) < 6) return; drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; }
     if (VERT && drag.axis === 'x') { e.preventDefault(); return; }   // vertical gallery: a sideways swipe also flips the photo (on release)
     if (drag.axis !== (VERT ? 'y' : 'x')) return;
-    /* vertical gallery: past the LAST photo the finger scrolls the page down to the colours / sizes / details,
-       and above the FIRST photo (when the page is scrolled) it scrolls the page back up — the photos never trap the page */
-    if (VERT && (drag.page || (gi === GALLERY.length - 1 && dy < 0) || (gi === 0 && dy > 0 && scrollY > 0))) {
-      if (!drag.page) { drag.page = true; drag.py = e.clientY; drag.pv = 0; drag.pt = performance.now(); layout(); }
-      const step = e.clientY - drag.py, now = performance.now(); drag.pv = step / Math.max(1, now - drag.pt); drag.pt = now; drag.py = e.clientY;
-      window.scrollBy(0, -step); e.preventDefault(); return;
-    }
-    /* Rubber-band resistance at the first/last image — no sliding past a real boundary into a blank frame. */
+    /* vertical gallery: endless loop — dragging past the last photo reveals the first (and above the first, the last); the page scrolls from the info area below the photos */
     let ddx = VERT ? dy : dx;
-    if (gi === 0 && ddx > 0) ddx *= 0.35;
-    if (gi === GALLERY.length - 1 && ddx < 0) ddx *= 0.35;
+    if (VERT && GALLERY.length > 1) {
+      const nn = GALLERY.length; wrapOff();
+      if (gi === nn - 1 && ddx < 0) slides[0].style.transform = `translateY(${nn * 100}%)`;
+      else if (gi === 0 && ddx > 0) slides[nn - 1].style.transform = `translateY(${-nn * 100}%)`;
+    } else {
+      if (gi === 0 && ddx > 0) ddx *= 0.35;
+      if (gi === GALLERY.length - 1 && ddx < 0) ddx *= 0.35;
+    }
     drag.x = e.clientX; drag.y = e.clientY; layout(ddx, false); e.preventDefault();
   };
   const endDrag = e => {
@@ -1383,10 +1395,9 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     if (drag.page) { let v = -drag.pv * 16; drag = null; const glide = () => { if (Math.abs(v) < 0.5) return; window.scrollBy(0, v); v *= 0.92; requestAnimationFrame(glide); }; if (!reduced.matches) requestAnimationFrame(glide); return; }   // a little momentum after a page scroll from the gallery
     const sideV = VERT && drag.axis === 'x';
     const dx = sideV ? (e ? e.clientX : drag.x0) - drag.x0 : VERT ? (drag.y ?? drag.y0) - drag.y0 : drag.x - drag.x0, v = dx / Math.max(1, performance.now() - drag.t), axis = drag.axis; drag = null;
-    if (sideV) { if (dx < -40 || v < -0.4) goTo(Math.min(gi + 1, GALLERY.length - 1)); else if (dx > 40 || v > 0.4) goTo(Math.max(gi - 1, 0)); else layout(); return; }
+    if (sideV) { if (dx < -40 || v < -0.4) goTo(gi + 1); else if (dx > 40 || v > 0.4) goTo(gi - 1); else { wrapOff(); layout(); } return; }
     if (axis !== (VERT ? 'y' : 'x')) return;
-    if (VERT && gi === GALLERY.length - 1 && dx < 0) { layout(); return; }
-    if (dx < -60 || v < -0.4) goTo(gi + 1); else if (dx > 60 || v > 0.4) goTo(gi - 1); else layout();
+    if (dx < -60 || v < -0.4) goTo(gi + 1); else if (dx > 60 || v > 0.4) goTo(gi - 1); else { wrapOff(); layout(); }
   };
   const isT = e => TOUCH && e.pointerType === 'touch';
   gallery.addEventListener('pointerdown', e => { if (!isT(e)) onDown(e); });
@@ -2273,7 +2284,10 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     // each piece's sizes centred right under its own name in the line above
     const alignLook = () => { const links = [...tl.querySelectorAll('a, span:not(.pdp-looktitle__and)')], groups = [...box.querySelectorAll('.pdp-looksize .pdp-sizes')];
       groups.forEach(g => { g.style.transform = ''; });
-      groups.forEach((g, i) => { const l = links[i]; if (!l) return; const lb = l.getBoundingClientRect(), gb = g.getBoundingClientRect(); g.style.transform = `translateX(${Math.round((lb.left + lb.right) / 2 - (gb.left + gb.right) / 2)}px)`; }); };
+      groups.forEach((g, i) => { const l = links[i]; if (!l) return; const lb = l.getBoundingClientRect(), gb = g.getBoundingClientRect(); g.style.transform = `translateX(${Math.round((lb.left + lb.right) / 2 - (gb.left + gb.right) / 2)}px)`; });
+      // wide size rows (e.g. 34–42 next to XS-S · M-L) must never run into each other: push the left row left and the right row right until ≥16px apart
+      for (let i = 0; i + 1 < groups.length; i++) { const A = groups[i], B = groups[i + 1], ab = A.getBoundingClientRect(), bb = B.getBoundingClientRect(), need = 16 - (bb.left - ab.right);
+        if (need > 0) { const h = Math.ceil(need / 2), tx = el => parseFloat((/translateX\((-?[\d.]+)px\)/.exec(el.style.transform) || [0, 0])[1]) || 0; A.style.transform = `translateX(${tx(A) - h}px)`; B.style.transform = `translateX(${tx(B) + h}px)`; } } };
     requestAnimationFrame(alignLook); setTimeout(alignLook, 400); window.addEventListener('resize', alignLook); if (document.fonts && document.fonts.ready) document.fonts.ready.then(alignLook);
     // piece name → its S M L → and under all of them "The complete look at a privileged price."
     const lo = document.getElementById('pdpLookOf');
@@ -4540,6 +4554,23 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
     const typeOf = p => { const t = String(p.title || '').toLowerCase(); const m = TYPES.find(([, re]) => re.test(t)); return m ? m[0] : ''; };
     const coll = p => (p.collections || []).filter(c => !['sales', 'looks', 'new'].includes(c));
     const pt = typeOf(P), pc = coll(P), pg = gOf(P);
+    if ((P.collections || []).includes('looks')) {   // a SHOP THE LOOK page: the strip below is every other look (same gender), swiping to the right
+      const looks = Object.entries(C).filter(([k, p]) => k !== key && p && (p.collections || []).includes('looks') && p.lookCover !== undefined && gOf(p).some(g => pg.includes(g)) && p.gallery && p.gallery.length)
+        .sort((x, y) => (x[1].lookNo || 99) - (y[1].lookNo || 99));
+      if (looks.length < 1) return;
+      const t = box.querySelector('.pdp-reco__title'); if (t) t.textContent = 'SHOP THE LOOK';
+      const money0 = (n, c) => (c || 'RON') === 'RON' && window.BYM_FMT ? window.BYM_FMT(n) : `${n} ${c || 'RON'}`;
+      const tr = document.getElementById('recoTrack');
+      looks.forEach(([k, p]) => {
+        const a = document.createElement('a'); a.className = 'pdp-reco__card'; a.href = 'bymarccc-product.html?p=' + k;
+        const src = (p.lookCover && (p.lookCover.src || p.lookCover)) || (p.gallery[0].src || p.gallery[0]);
+        const nm = String(p.title || '').replace(/\s*\u2014.*$/, '').replace(/\s*-.*$/, '') || p.title;
+        a.innerHTML = `<span class="pdp-reco__img"><img class="is-on" src="${src}" alt="${p.title}" loading="lazy" decoding="async"></span>
+          <span class="pdp-reco__meta"><span class="pdp-reco__name">${p.lookNo ? 'LOOK ' + p.lookNo : nm}</span><span class="pdp-reco__price">${typeof p.salePrice === 'number' ? `${money0(p.salePrice, p.currency)}<s>${money0(p.price, p.currency)}</s>` : money0(p.price, p.currency)}</span></span>`;
+        tr.appendChild(a);
+      });
+      box.hidden = false; return;
+    }
     const words = s => String(s || '').toLowerCase().split(/[^a-z]+/).filter(w => w.length > 2 && !['the', 'and', 'jeans', 'pants', 'top'].includes(w));
     const pw = new Set(words(P.title));
     const scored = Object.entries(C).filter(([k, p]) => k !== key && p && p.gallery && p.gallery.length && typeof p.price === 'number' && !p.soldOut && !p.membersOnly && !p.customBag && !p.lookItems && !(p.collections || []).includes('looks') && gOf(p).some(g => pg.includes(g)))
