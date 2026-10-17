@@ -549,6 +549,8 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
 .pdp-designs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .pdp-designs .pdp-size { width: auto; min-width: 0; white-space: nowrap; height: 24px; padding: 0 10px; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; border-radius: 999px; }
 .pdp-designs[hidden] { display: none; }
+.pdp-designs .pdp-size--new { position: relative; }
+.pdp-designs .pdp-size--new::after { content: 'NEW'; position: absolute; left: 50%; top: -10px; transform: translateX(-50%); color: #111; font: 600 7px/1 Arial, sans-serif; letter-spacing: .12em; white-space: nowrap; }
 /* BABY TOP family: the colours as small photos (SSENSE-style strip); each opens that colour, same design kept */
 .pdp-family { margin: -14px -16px 10px; }
 .pdp-family[hidden] { display: none; }
@@ -1026,7 +1028,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=20261016b"></script>
+<script src="/assets/catalog.js?v=38b1e4b1d7"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -1060,7 +1062,8 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     [['w-burgundy-long-sleeve', 'Burgundy'], ['w-white-long-sleeve', 'White'], ['w-black-long-sleeve', 'Black']],
     [['w-sporty-top-ivory', 'Ivory'], ['w-sporty-top', 'Black']],
     [['w-purple-sweatpants', 'Purple'], ['w-red-sweatpants', 'Red']],
-    [['w-black-tee', 'Black'], ['w-white-tee', 'White']]];
+    [['w-black-tee', 'Black'], ['w-white-tee', 'White']],
+    [['w-simple-hoodie-skyblue', 'Sky Blue']]];
   const FAMILY = FAMILIES.find(f => f.some(([k]) => k === KEY)) || [];
   const IN_FAMILY = FAMILY.length > 0;
   const VERT = !matchMedia('(min-width: 900px)').matches;   // phone: every product's photos swipe up/down with the dashes on the right (like the baby tops)
@@ -1436,7 +1439,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   const designsEl = $('designs');
   if (DESIGNS.length) {
     $('designLabel').hidden = false; designsEl.hidden = false;
-    DESIGNS.forEach(dname => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-size'; b.setAttribute('role', 'radio'); b.dataset.d = dname; b.textContent = dname; b.addEventListener('click', () => { state.design = dname; emit(); const explicitIdx = designImageIndex(dname); if (explicitIdx !== null) goTo(explicitIdx); else if (PRODUCT.imageDesigns) goTo(DESIGNS.indexOf(dname)); }); designsEl.appendChild(b); });
+    DESIGNS.forEach(dname => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-size'; if (KEY === 'w-simple-hoodie-skyblue' && slugifyDesign(dname) === 'tiramisu') b.classList.add('pdp-size--new'); b.setAttribute('role', 'radio'); b.dataset.d = dname; b.textContent = dname; b.addEventListener('click', () => { state.design = dname; emit(); const explicitIdx = designImageIndex(dname); if (explicitIdx !== null) goTo(explicitIdx); else if (PRODUCT.imageDesigns) goTo(DESIGNS.indexOf(dname)); }); designsEl.appendChild(b); });
     state.listeners.add(() => { designsEl.querySelectorAll('.pdp-size[data-d]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.d === state.design))); $('designName').textContent = state.design || 'Select a design'; });
   }
   /* BABY TOP family: SSENSE-style colour strip under the photo. Swiping it changes the big photo live (with a light tick),
@@ -1459,7 +1462,16 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     $('family').hidden = false;
     // sizes in the middle of the 2nd design row
     const dBtns = [...designsEl.querySelectorAll('.pdp-size[data-d]')], sBtns = [...sizesEl.querySelectorAll('.pdp-size[data-s]')];
-    if (dBtns.length >= 4 && sBtns.length && sBtns.length <= 3 && !sizesEl.hidden) {
+    if (KEY === 'w-simple-hoodie-skyblue' && dBtns.length === 5 && sBtns.length === 3 && !sizesEl.hidden) {
+      const r1 = document.createElement('div'), r2 = document.createElement('div'); r1.className = r2.className = 'pdp-drow';
+      r1.append(...dBtns.slice(0, 3));
+      const gl = document.createElement('span'), gm = document.createElement('span'), gr = document.createElement('span'); gl.className = 'pdp-drow__l'; gm.className = 'pdp-drow__m'; gr.className = 'pdp-drow__r';
+      gl.append(dBtns[3]); gm.append(...sBtns); gr.append(dBtns[4]); sBtns.forEach(b => b.classList.add('pdp-size--mid'));
+      r2.classList.add('pdp-drow--sizes'); r2.append(gl, gm, gr);
+      const sm = document.createElement('p'); sm.className = 'pdp-sizemsg'; sm.id = 'sizeMsg'; sm.setAttribute('role', 'alert');
+      state.listeners.add(() => { if ((state.size && /size/.test(sm.textContent)) || (state.design && /design/.test(sm.textContent))) sm.textContent = ''; });
+      designsEl.classList.add('pdp-designs--mix'); designsEl.append(r1, r2, sm); sizesEl.hidden = true; if (sizesEl.previousElementSibling) sizesEl.previousElementSibling.hidden = true;
+    } else if (dBtns.length >= 4 && sBtns.length && sBtns.length <= 3 && !sizesEl.hidden) {
       const r1 = document.createElement('div'), r2 = document.createElement('div'); r1.className = r2.className = 'pdp-drow';
       const tail = dBtns.slice(-4); r1.append(...dBtns.slice(0, -4));
       // ART on the far left, LOGO on the far right, the sizes exactly in the middle
