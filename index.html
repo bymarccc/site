@@ -932,9 +932,9 @@
       style="--dx:12%; --dy:8%;  --dw:220px; --dr:-6deg;  --mx:-2.1%;  --my:38.5%; --mw:88px;  --mr:8deg;">
       <img src="/assets/img/home/9431d99c0f.webp" width="900" height="750" alt="" loading="lazy" decoding="async"></button>
 
-    <button class="obj obj--vinyl" type="button" id="vinylDisc" data-obj="vinyl" data-track="vinyl" aria-label="Play WAGWAN by Central Cee (drag to move)"
+    <button class="obj obj--vinyl" type="button" id="vinylDisc" data-obj="vinyl" data-track="vinyl" aria-label="Play Dave - Raindance (ft. Tems) (drag to move)"
       style="--dx:68%; --dy:6%;  --dw:200px; --dr:0deg;   --mx:64.8%; --my:4.5%;  --mw:130px; --mr:0deg;">
-      <img src="/assets/img/home/9320c50606.webp" width="1254" height="1254" alt="" loading="lazy" decoding="async">
+      <img src="/assets/img/home/vinyl-raindance.png" width="1254" height="1254" alt="" loading="lazy" decoding="async">
       <span class="obj__playicon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
     </button>
 
@@ -2413,7 +2413,7 @@
     { id: 'dave-raindance', title: 'Dave - Raindance (ft. Tems)', channel: '', duration: '3:41',
       src:   M + 'raindance.a.mp4',
       video: M + 'raindance.mp4', poster: M + 'raindance.jpg',
-      thumb: 'assets/img/thumb-raindance.jpg' },
+      thumb: 'assets/img/thumb-raindance-cover.jpg' },
     { id: 'mj-chicago', title: 'Michael Jackson - Chicago', channel: '', duration: '4:07',
       src:   M + 'chicago.a.mp4',
       video: M + 'chicago.mp4', poster: M + 'chicago.jpg',
@@ -2450,7 +2450,7 @@
      (mp3, m4a or mp4 all work in <audio>). Only use music you have the rights to. */
   const TRACKS = Object.assign({
     cd: { title: 'Water', artist: 'Tyla', src: 'assets/audio/cd.mp4' },
-    vinyl: { title: 'WAGWAN', artist: 'Central Cee', src: 'assets/audio/vinyl-wagwan.a.mp4' },
+    vinyl: { title: 'Raindance', artist: 'Dave ft. Tems', src: M + 'raindance.a.mp4' },
   }, window.BYMARCCC_TRACKS || {});
 
   const $ = id => document.getElementById(id);
@@ -3082,14 +3082,14 @@
   let stopAtEnd = false;   // true for the "GOOD VIBES ONLY" playlist queue: stop + reset after the last track instead of looping to the first
   const fmt = t => { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
   const OBJECT_ITEMS = Object.entries(TRACKS).map(([key, t]) => ({ key, id: '', title: t.title, channel: t.artist || '', src: t.src }));
-  /* Clicking the vinyl (WAGWAN) chains into the CD (Water) and then the "GOOD VIBES
+  /* Clicking the vinyl (Raindance) chains into the CD (Water) and then the "GOOD VIBES
      ONLY" playlist, in order — unless the visitor picks a different track themselves,
      which simply replaces this queue like any other selection. */
   const vinylChain = () => {
     const vinylItem = OBJECT_ITEMS.find(t => t.key === 'vinyl');
     const cdItem = OBJECT_ITEMS.find(t => t.key === 'cd');
     const own = [vinylItem, cdItem].filter(Boolean);
-    return own.concat(playlist.filter(t => !own.some(o => o.src === t.src)));   // WAGWAN → the CD → the playlist (no repeats)
+    return own.concat(playlist.filter(t => !own.some(o => o.src === t.src)));   // Raindance → the CD → the playlist (no repeats)
   };
 
   /* volume: restored from the last choice, applied to the shared <audio> element */
@@ -3163,7 +3163,7 @@
     const on = !audio.paused && !audio.ended;
     miniIcon.innerHTML = on ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
     miniPlay.setAttribute('aria-label', on ? 'Pause' : 'Play');
-    // spins ONLY the object whose own dedicated track is currently playing (vinyl for WAGWAN, cd for Water) — never for other tracks
+    // spins ONLY the object whose own dedicated track is currently playing (vinyl for Raindance, cd for Water) — never for other tracks
     objs.forEach(o => o.classList.toggle('is-playing', on && !!miniItem && o.dataset.track === miniItem.key));
     // highlight in the card list too
     list.querySelectorAll('.track').forEach(b => {
