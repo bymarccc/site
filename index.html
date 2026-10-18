@@ -1394,7 +1394,7 @@
     .shop .salerail--mini .sales__progress { margin-top: 14px; }
   }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=994c1444a7"></script>
+<script src="/assets/catalog.js?v=0288aaccaa"></script>
 <script>
 (() => {
   'use strict';
@@ -4378,6 +4378,14 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     return mobile ? { x: 12, y: Math.max(0, b.maxY - 12) }                            // bottom-left on phones (like the YouTube mini player)
                   : { x: 16, y: Math.max(0, b.maxY - 16) };                            // bottom-left on desktop, away from the stylist button
   }
+  function placeAudioAtUpperRight() {
+    if (!matchMedia('(max-width: 640px)').matches) return;
+    const b = bounds();
+    const safeTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
+    x = Math.max(b.minX, b.maxX - 12);
+    y = Math.min(Math.max(0, b.maxY - 12), Math.max(safeTop + 12, Math.round(innerHeight * 0.26)));
+    apply();
+  }
   function clampToViewport() {
     if (vp.hidden || docked) return;
     const b = bounds();
@@ -4541,9 +4549,18 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   const aUI = () => { const on = A && !A.paused && !A.ended; aPlayIcon.setAttribute('d', on ? ICON_PAUSE : ICON_PLAY); aPlay.setAttribute('aria-label', on ? 'Pause' : 'Play'); };
   const aTime = () => { if (!A || !A.duration) return; const p = A.currentTime / A.duration; if (!scrubbing) scrubFill.style.width = (p * 100) + '%'; aCur.textContent = fmtT(A.currentTime); aRem.textContent = '-' + fmtT(A.duration - A.currentTime); };
   if (A) {
+    let lastAudioPiPSource = '';
     const saveAudioState = paused => { const src = A.currentSrc || A.src; if (!src) return; const t = (document.getElementById('miniTitle')?.textContent || '').trim() || (aTitle.dataset.txt || aTitle.textContent || '').replace(/^.*? - /, ''), ar = (document.getElementById('miniArtist')?.textContent || '').trim(); saveNow('audio', { src, title: t, artist: ar, time: A.currentTime || 0, paused }); };
     let lastASaveT = 0;
-    A.addEventListener('play', () => { if (!video.paused) video.pause(); aMeta(); setMode('audio'); if (vp.hidden) { vp.hidden = false; tab.hidden = true; restore(); } aUI(); saveAudioState(false); });
+    A.addEventListener('play', () => {
+      if (!video.paused) video.pause(); aMeta(); setMode('audio');
+      const reopening = vp.hidden || docked;
+      if (vp.hidden) { vp.hidden = false; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; restore(); }
+      const src = A.currentSrc || A.src;
+      if (matchMedia('(max-width: 640px)').matches && (reopening || (src && src !== lastAudioPiPSource))) placeAudioAtUpperRight();
+      if (src) lastAudioPiPSource = src;
+      aUI(); saveAudioState(false);
+    });
     A.addEventListener('pause', () => { aUI(); saveAudioState(true); }); A.addEventListener('ended', () => { aUI(); clearNow(); });
     A.addEventListener('loadedmetadata', () => { aMeta(); aTime(); }); A.addEventListener('timeupdate', () => { aTime(); if (!A.paused) { const now = Date.now(); if (now - lastASaveT > 3000) { lastASaveT = now; saveAudioState(false); } } });
     A.addEventListener('emptied', () => { if (vp.dataset.mode === 'audio') { vp.hidden = true; tab.hidden = true; vp.classList.remove('is-docked'); docked = false; } });
@@ -4565,7 +4582,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   /* ---------- lock screen / CarPlay for the music video's audio ---------- */
   if ('mediaSession' in navigator) {
-    const ART = [{ src: new URL('assets/img/lockscreen-alien-sky-v2-512.jpg', location.href).href, sizes: '512x512', type: 'image/jpeg' }, { src: new URL('assets/img/lockscreen-alien-sky-v2.jpg', location.href).href, sizes: '1024x1024', type: 'image/jpeg' }];
+    const ART = [{ src: new URL('assets/img/lockscreen-bymarccc.jpg', location.href).href, sizes: '590x1280', type: 'image/jpeg' }];
     const vMeta = () => { try { navigator.mediaSession.metadata = new MediaMetadata({ title: title.textContent || 'bymarccc', artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
     const vHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
       const M = () => bgPlay ? snd : video;
@@ -4730,8 +4747,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   if (!('mediaSession' in navigator)) return;
   const audio = document.getElementById('miniAudio'); if (!audio) return;
   const ART = [
-    { src: new URL('assets/img/lockscreen-alien-sky-v2-512.jpg', location.href).href,  sizes: '512x512',   type: 'image/jpeg' },
-    { src: new URL('assets/img/lockscreen-alien-sky-v2.jpg', location.href).href,      sizes: '1024x1024', type: 'image/jpeg' },
+    { src: new URL('assets/img/lockscreen-bymarccc.jpg', location.href).href, sizes: '590x1280', type: 'image/jpeg' },
   ];
   const text = id => (document.getElementById(id)?.textContent || '').trim();
   const update = () => {

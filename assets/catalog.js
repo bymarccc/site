@@ -238,7 +238,28 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": "jacket",
       "chart": ["M","L","XL"],
-      "gallery": [{"src":"assets/img/gallery/zebra-jacket-burgundy-fe3f739e.webp","w":1212,"h":1816},{"src":"assets/img/gallery/zebra-jacket-2-66883ac9.webp","w":1212,"h":1816},{"src":"assets/img/gallery/zebra-jacket-1-9c283037.webp","w":1024,"h":1536},{"src":"assets/img/gallery/zebra-jacket-3-589c6d3f.webp","w":1212,"h":1816},{"src":"assets/img/gallery/zebra-jacket-4-fd07b2d6.webp","w":1212,"h":1816},{"src":"assets/img/gallery/zebra-jacket-5-25a6f5fe.webp","w":1212,"h":1816},{"src":"assets/img/gallery/zebra-jacket-6-71166c1f.webp","w":1212,"h":1816},{"src":"assets/img/gallery/zebra-jacket-7-99399e55.webp","w":1212,"h":1816},{"src":"assets/img/gallery/zebra-jacket-8-09030ec0.webp","w":1024,"h":1536},{"src":"assets/img/gallery/zebra-jacket-9-64a893b4.webp","w":1024,"h":1536}]
+      "gallery": [
+        {"src":"assets/img/gallery/zebra-jacket-burgundy-fe3f739e.webp","w":1212,"h":1816},
+        {"src":"assets/img/gallery/zebra-jacket-burgundy-c1.jpg","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-2-66883ac9.webp","w":1212,"h":1816},
+        {"src":"assets/img/gallery/zebra-jacket-pink-c1.jpg","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-1-9c283037.webp","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-blue-c1.jpg","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-3-589c6d3f.webp","w":1212,"h":1816},
+        {"src":"assets/img/gallery/zebra-jacket-red-c1.jpg","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-4-fd07b2d6.webp","w":1212,"h":1816},
+        {"src":"assets/img/gallery/zebra-jacket-white-c1.jpg","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-5-25a6f5fe.webp","w":1212,"h":1816},
+        {"src":"assets/img/gallery/zebra-jacket-brown-c1.jpg","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-6-71166c1f.webp","w":1212,"h":1816},
+        {"src":"assets/img/gallery/zebra-jacket-purple-c1.jpg","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-7-99399e55.webp","w":1212,"h":1816},
+        {"src":"assets/img/gallery/zebra-jacket-orange-c1.jpg","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-8-09030ec0.webp","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-grey-c1.jpg","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-9-64a893b4.webp","w":1024,"h":1536}
+      ],
+      "slideColours": ["burgundy","burgundy","pink","pink","blue","blue","red","red","white","white","brown","brown","purple","purple","orange","orange","grey","grey","green"]
     },
     "sale-embroidered-crosses-jeans": {
       "saleStandalone": true,
