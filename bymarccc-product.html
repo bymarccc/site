@@ -1028,7 +1028,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   <div class="pdp-modal__foot" id="sgFoot"></div>
 </div>
 
-<script src="/assets/catalog.js?v=38b1e4b1d7"></script>
+<script src="/assets/catalog.js?v=994c1444a7"></script>
 <script>
 /* =====================================================================
    bymarccc product page — catalogue template (?p=skinny|relaxed)
@@ -4570,7 +4570,7 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
       const looks = Object.entries(C).filter(([k, p]) => k !== key && p && (p.collections || []).includes('looks') && p.lookCover !== undefined && gOf(p).some(g => pg.includes(g)) && p.gallery && p.gallery.length)
         .sort((x, y) => (x[1].lookNo || 99) - (y[1].lookNo || 99));
       if (looks.length < 1) return;
-      const t = box.querySelector('.pdp-reco__title'); if (t) t.textContent = 'SHOP THE LOOK';
+      const t = box.querySelector('.pdp-reco__title'); if (t) t.textContent = 'LOOKBOOK';
       const money0 = (n, c) => (c || 'RON') === 'RON' && window.BYM_FMT ? window.BYM_FMT(n) : `${n} ${c || 'RON'}`;
       const tr = document.getElementById('recoTrack');
       looks.forEach(([k, p]) => {
