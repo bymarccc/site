@@ -342,9 +342,17 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
         {"src":"assets/img/gallery/zebra-jacket-orange-c1.jpg","w":1024,"h":1536},
         {"src":"assets/img/gallery/zebra-jacket-8-09030ec0.webp","w":1024,"h":1536},
         {"src":"assets/img/gallery/zebra-jacket-grey-c1.jpg","w":1024,"h":1536},
-        {"src":"assets/img/gallery/zebra-jacket-9-64a893b4.webp","w":1024,"h":1536}
+        {"src":"assets/img/gallery/zebra-jacket-9-64a893b4.webp","w":1024,"h":1536},
+        {"src":"assets/img/gallery/zebra-jacket-back-purple.jpg","w":853,"h":1280},
+        {"src":"assets/img/gallery/zebra-jacket-back-white.jpg","w":853,"h":1280},
+        {"src":"assets/img/gallery/zebra-jacket-back-red.jpg","w":853,"h":1280},
+        {"src":"assets/img/gallery/zebra-jacket-back-grey.jpg","w":853,"h":1280},
+        {"src":"assets/img/gallery/zebra-jacket-back-orange.jpg","w":853,"h":1280},
+        {"src":"assets/img/gallery/zebra-jacket-back-pink.jpg","w":853,"h":1280},
+        {"src":"assets/img/gallery/zebra-jacket-back-brown.jpg","w":853,"h":1280},
+        {"src":"assets/img/gallery/zebra-jacket-back-burgundy.jpg","w":853,"h":1280}
       ],
-      "slideColours": ["burgundy","burgundy","pink","pink","blue","blue","red","red","white","white","brown","brown","purple","purple","orange","orange","grey","grey","green"]
+      "slideColours": ["burgundy","burgundy","pink","pink","blue","blue","red","red","white","white","brown","brown","purple","purple","orange","orange","grey","grey","green","purple","white","red","grey","orange","pink","brown","burgundy"]
     },
     "sale-embroidered-crosses-jeans": {
       "saleStandalone": true,
