@@ -1851,7 +1851,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       set('seekbackward', null);
       set('seekforward', null);
       set('seekto', d => { if (typeof d.seekTime === 'number') A.currentTime = d.seekTime; });
-      set('nexttrack', () => $('vpANext')?.click()); set('previoustrack', () => $('vpAPrev')?.click()); };
+      set('nexttrack', () => $('vpANext')?.click()); set('previoustrack', () => document.getElementById('miniPrev')?.click()); };
     if (A) {
       A.addEventListener('play', () => { aMediaMeta(); aHandlers(); navigator.mediaSession.playbackState = 'playing'; });
       A.addEventListener('pause', () => { if (vp.dataset.mode === 'audio') navigator.mediaSession.playbackState = 'paused'; });

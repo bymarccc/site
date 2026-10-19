@@ -4590,7 +4590,10 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 
   /* ---------- lock screen / CarPlay for the music video's audio ---------- */
   if ('mediaSession' in navigator) {
-    const ART = [{ src: new URL('assets/img/lockscreen-bymarccc.jpg', location.href).href, sizes: '590x1280', type: 'image/jpeg' }];
+    const ART = [
+      { src: new URL('/assets/img/lockscreen-alien-sky-v2-512.jpg', location.origin).href, sizes: '512x512', type: 'image/jpeg' },
+      { src: new URL('/assets/img/lockscreen-alien-sky-v2.jpg', location.origin).href, sizes: '1024x1024', type: 'image/jpeg' },
+    ];
     const vMeta = () => { try { navigator.mediaSession.metadata = new MediaMetadata({ title: title.textContent || 'bymarccc', artist: 'bymarccc', album: 'bymarccc', artwork: ART }); } catch {} };
     const vHandlers = () => { const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
       const M = () => bgPlay ? snd : video;
@@ -4618,7 +4621,7 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
       set('seekbackward', null);
       set('seekforward', null);
       set('seekto', d => { if (typeof d.seekTime === 'number') A.currentTime = d.seekTime; });
-      set('nexttrack', () => $('vpANext')?.click()); set('previoustrack', () => $('vpAPrev')?.click()); };
+      set('nexttrack', () => $('vpANext')?.click()); set('previoustrack', () => document.getElementById('miniPrev')?.click()); };
     if (A) {
       A.addEventListener('play', () => { aMediaMeta(); aHandlers(); navigator.mediaSession.playbackState = 'playing'; });
       A.addEventListener('pause', () => { if (vp.dataset.mode === 'audio') navigator.mediaSession.playbackState = 'paused'; });
@@ -4755,7 +4758,8 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
   if (!('mediaSession' in navigator)) return;
   const audio = document.getElementById('miniAudio'); if (!audio) return;
   const ART = [
-    { src: new URL('assets/img/lockscreen-bymarccc.jpg', location.href).href, sizes: '590x1280', type: 'image/jpeg' },
+    { src: new URL('/assets/img/lockscreen-alien-sky-v2-512.jpg', location.origin).href, sizes: '512x512', type: 'image/jpeg' },
+    { src: new URL('/assets/img/lockscreen-alien-sky-v2.jpg', location.origin).href, sizes: '1024x1024', type: 'image/jpeg' },
   ];
   const text = id => (document.getElementById(id)?.textContent || '').trim();
   const update = () => {
