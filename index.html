@@ -1394,7 +1394,7 @@
     .shop .salerail--mini .sales__progress { margin-top: 14px; }
   }   /* a plain (non-sale) price in this rail card must read like an ordinary price, not a discount */
 </style>
-<script src="/assets/catalog.js?v=dae6309cd5"></script>
+<script src="/assets/catalog.js?v=a62550e153"></script>
 <script>
 (() => {
   'use strict';
@@ -1791,8 +1791,12 @@
           if (sub !== 'all') items = items.filter(([, p]) => subOf(p) === sub);
         }
       }
+      if (active === 'bottoms' && gender === 'men') {
+        const BOTTOMS_ORDER = ['m-burgundy-wind-pants'];
+        items = [...BOTTOMS_ORDER.map(k => items.find(([x]) => x === k)).filter(Boolean), ...items.filter(([k]) => !BOTTOMS_ORDER.includes(k))];
+      }
       if (active === 'tops' && gender === 'men' && sub === 'all') {
-        const TOPS_ORDER = ['m-tech-contrast-jacket', 'zebra-jacket', 'm-blue-zip-hoodie', 'm-grey-zip-hoodie'];
+        const TOPS_ORDER = ['m-burgundy-windbreaker', 'm-tech-contrast-jacket', 'zebra-jacket', 'm-blue-zip-hoodie', 'm-grey-zip-hoodie'];
         items = [...TOPS_ORDER.map(k => items.find(([x]) => x === k)).filter(Boolean), ...items.filter(([k]) => !TOPS_ORDER.includes(k))];
       }
       const feat = gender === 'women' && WOMEN_FEATURED[active];
