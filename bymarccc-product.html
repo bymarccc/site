@@ -1065,7 +1065,15 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     [['w-purple-sweatpants', 'Purple'], ['w-red-sweatpants', 'Red']],
     [['w-black-tee', 'Black'], ['w-white-tee', 'White']],
     [['w-simple-hoodie-skyblue', 'Sky Blue']]];
-  const FAMILY = FAMILIES.find(f => f.some(([k]) => k === KEY)) || [];
+  // LOOKBOOK pages (men + women): the same swipeable thumbnail strip, but with every look of the same gender — swipe with the finger to move between looks
+  const LOOK_FAMILY = (() => {
+    if (!(PRODUCT.collections || []).includes('looks')) return [];
+    const gOf = p => p.genders || [p.gender || 'men'], pg = gOf(PRODUCT);
+    return Object.entries(CATALOG).filter(([k, p]) => p && (p.collections || []).includes('looks') && p.lookNo && p.lookCover !== undefined && p.gallery && p.gallery.length && gOf(p).some(g => pg.includes(g)))
+      .sort((x, y) => x[1].lookNo - y[1].lookNo).map(([k, p]) => [k, String(p.lookNo)]);
+  })();
+  const IS_LOOKBOOK = LOOK_FAMILY.length > 1 && LOOK_FAMILY.some(([k]) => k === KEY);
+  const FAMILY = IS_LOOKBOOK ? LOOK_FAMILY : (FAMILIES.find(f => f.some(([k]) => k === KEY)) || []);
   const IN_FAMILY = FAMILY.length > 0;
   const VERT = !matchMedia('(min-width: 900px)').matches;   // phone: every product's photos swipe up/down with the dashes on the right (like the baby tops)
   // "Complete the Look" (hanger icon) is only offered on the Zebra Patch pieces that are
@@ -1449,17 +1457,18 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     if (!IN_FAMILY) return;
     const row = $('familyRow'); if (!row) return;
     const slug = v => String(v || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const photoOf = (fp, design) => { const g = fp.gallery || [], di = fp.designImages || {}, k = slug(design); const it = (k && di[k] != null && g[di[k]]) || g[0]; return it && (it.src || it); };
+    const photoOf = (fp, design) => { if (IS_LOOKBOOK && fp.lookCover) return fp.lookCover.src || fp.lookCover; const g = fp.gallery || [], di = fp.designImages || {}, k = slug(design); const it = (k && di[k] != null && g[di[k]]) || g[0]; return it && (it.src || it); };
     const urlOf = k => 'bymarccc-product.html?p=' + k + (state.design ? '&d=' + encodeURIComponent(state.design) : '');
     FAMILY.forEach(([k, name]) => {
       const fp = CATALOG[k]; if (!fp) return;
-      const g = (fp.gallery || [])[0]; const src = g && (g.src || g); if (!src) return;
+      const g = (IS_LOOKBOOK && fp.lookCover) || (fp.gallery || [])[0]; const src = g && (g.src || g); if (!src) return;
       const a = document.createElement('button'); a.type = 'button'; a.setAttribute('aria-label', name); a.setAttribute('aria-current', String(k === KEY)); a.dataset.k = k; a.dataset.n = name;
       a.innerHTML = `<img src="${src}" alt="" decoding="async">`;
       a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); center(a, true); });
       row.appendChild(a);
       if (k === KEY) $('familyName').textContent = name;
     });
+    if (IS_LOOKBOOK) { const lb = row.parentNode.querySelector('.pdp-family__label span'); if (lb) lb.textContent = 'LOOK'; }
     $('family').hidden = false;
     // sizes in the middle of the 2nd design row
     const dBtns = [...designsEl.querySelectorAll('.pdp-size[data-d]')], sBtns = [...sizesEl.querySelectorAll('.pdp-size[data-s]')];
