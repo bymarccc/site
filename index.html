@@ -3105,6 +3105,7 @@
   };
 
   /* volume: restored from the last choice, applied to the shared <audio> element */
+  audio.crossOrigin = 'anonymous';
   audio.volume = Math.min(1, Math.max(0, store.get('bym.play.vol', 80) / 100));
   if (miniVolume) {
     miniVolume.value = String(Math.round(audio.volume * 100));
@@ -3131,6 +3132,7 @@
     if (t.start > 0) audio.addEventListener('loadedmetadata', () => { if (miniItem === t && audio.currentTime < t.start) { try { audio.currentTime = t.start; } catch {} } }, { once: true });   // `start`: skip the song's first seconds (intro trim)
     miniShow();
     if (autoplay) {
+      mixEnsure();
       if (player && playing) { try { player.pauseVideo(); } catch {} }   // one thing at a time
       audio.play().catch(() => {});
       miniWatch(t);
@@ -3170,7 +3172,7 @@
     miniLoad(false);
   }
   function miniToggle(key) {
-    if (miniItem && miniItem.key === key && !mini.hidden) { audio.paused ? audio.play().catch(() => {}) : audio.pause(); return; }
+    if (miniItem && miniItem.key === key && !mini.hidden) { if (audio.paused) { mixEnsure(); audio.play().catch(() => {}); } else audio.pause(); return; }
     if (key === 'vinyl') { miniPlayList(vinylChain(), 0); return; }
     // any other object (the CD): its own track, then straight into the GOOD VIBES ONLY playlist — never back to WAGWAN
     const it = OBJECT_ITEMS.find(t => t.key === key); if (!it) return;
@@ -3225,6 +3227,15 @@
      element.volume); the incoming track fades in where the browser allows volume changes. */
   let mixCount = 0, mixing = false, mixCtx = null, mixGhost = null, mixIn = null, mixFailSrc = '', mixSwitchAt = 0, mixPrep = null, mixNextIdx = -1;
   const MIX_S = 7, PREP_S = 22;   // last 7 s of a song blend into the first 7 s of the next; everything is prepared 22 s before the end so there is never a gap
+  function mixEnsure() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      if (!mixCtx) mixCtx = new AC();
+      if (mixCtx.state === 'suspended') mixCtx.resume().catch(() => {});
+      return mixCtx.state !== 'closed';
+    } catch { return false; }
+  }
   function mixKill(g) { if (!g) return; try { g.pause(); g.removeAttribute('src'); g.load(); } catch {} }
   function mixStop() {   // end of the blend (or abort): hand the real player back, drop both helpers
     const gi = mixIn; mixKill(mixGhost); mixGhost = null; mixIn = null; mixing = false; mixPrep = null;
@@ -3234,7 +3245,8 @@
   /* 22 s before the end: load a ghost of this song (fade-out) and of the next one (fade-in), both through Web Audio gains (iPhone ignores element.volume) */
   function mixPrepare() {
     if (mixPrep) return;
-    let ctx; try { mixCtx = mixCtx || new (window.AudioContext || window.webkitAudioContext)(); ctx = mixCtx; ctx.resume().catch(() => {}); } catch { mixFailSrc = audio.currentSrc || audio.src; return; }
+    if (!mixEnsure()) { mixFailSrc = audio.currentSrc || audio.src; return; }
+    const ctx = mixCtx;
     mixNextIdx = shuffle ? (() => { let j; do { j = Math.floor(Math.random() * miniQueue.length); } while (j === mi); return j; })() : (mi + 1) % miniQueue.length;
     const nxt = miniQueue[mixNextIdx], cur = miniItem; if (!nxt || !cur || !nxt.src) return;
     const mk = src => { const g = new Audio(); g.crossOrigin = 'anonymous'; g.preload = 'auto'; const n = ctx.createMediaElementSource(g), gn = ctx.createGain(); gn.gain.value = 0; n.connect(gn); gn.connect(ctx.destination); g.src = src; return { g, gn, ready: false }; };
@@ -3286,7 +3298,7 @@
     miniUI();
     if (miniQueue.length > 1 && ++miniFails <= Math.min(3, miniQueue.length - 1) && !(stopAtEnd && mi >= miniQueue.length - 1)) { const bad = miniItem; setTimeout(() => { if (miniItem === bad) miniStep(1); }, 600); }   // skip the broken song, keep going
   });
-  miniPlay.addEventListener('click', () => { if (!miniItem) return; audio.paused ? audio.play().catch(() => {}) : audio.pause(); });
+  miniPlay.addEventListener('click', () => { if (!miniItem) return; if (audio.paused) { mixEnsure(); audio.play().catch(() => {}); } else audio.pause(); });
   $('miniPrev').addEventListener('click', () => { if (audio.currentTime > 3) audio.currentTime = 0; else miniStep(-1); });
   $('miniNext').addEventListener('click', () => miniStep(1));
   $('miniShuffle').addEventListener('click', e => { shuffle = !shuffle; e.currentTarget.setAttribute('aria-pressed', String(shuffle)); });
