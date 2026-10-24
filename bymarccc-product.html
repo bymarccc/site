@@ -1532,9 +1532,9 @@ html.is-qv:not(.qv-ready) body { visibility: hidden; }
     ['touchstart', 'pointerdown', 'wheel'].forEach(ev => row.addEventListener(ev, () => { user = true; }, { passive: true }));
     requestAnimationFrame(init); setTimeout(init, 250); setTimeout(() => { init(); ready = true; }, 600); window.addEventListener('load', init, { once: true });
     // light "tick" under the finger: iOS 18 Safari (switch checkbox) / Android (vibrate)
-    const tickLbl = document.createElement('label'); tickLbl.setAttribute('aria-hidden', 'true'); tickLbl.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+    const tickLbl = document.createElement('label'); tickLbl.setAttribute('aria-hidden', 'true'); tickLbl.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';   // fixed in view: iPhone scrolls to a focused switch, and at the end of the page it jumped down to Recommendations
     tickLbl.innerHTML = '<input type="checkbox" switch tabindex="-1">'; document.body.appendChild(tickLbl);
-    const tick = () => { try { if (navigator.vibrate) navigator.vibrate(6); else tickLbl.click(); } catch (e) {} };
+    const tick = () => { try { if (navigator.vibrate) navigator.vibrate(6); else { const y = scrollY; tickLbl.click(); tickLbl.firstChild.blur(); if (scrollY !== y) scrollTo(0, y); } } catch (e) {} };
     // live preview of the centred colour over the big photo
     let peek = null, shown = KEY, timer = 0, going = false;
     const preview = k => {
