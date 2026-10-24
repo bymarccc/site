@@ -991,7 +991,8 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
     },
     "w-simple-hoodie-skyblue": {
       "designs": ["Happy Hoes","Hot Girls","Tiramisu","Muse","Delulu"],
-      "designImages": {"happy-hoes":1,"hot-girls":3,"tiramisu":4,"muse":2,"delulu":0},
+      "designImages": {"happy-hoes":1,"hot-girls":0,"tiramisu":3,"muse":2,"delulu":5},
+      "designGalleries": {"happy-hoes":[1,10,7,8],"hot-girls":[0,11,7,8],"tiramisu":[3,12,6,4],"muse":[2,9,7,8],"delulu":[5,7,8]},
       "gender": "women",
       "model": {"height":177,"weight":53,"size":"M","modelMedia":[0],"text":"Model is 177 cm and 53 kg and wears size M"},
       "id": "bymarccc:w-simple-hoodie-skyblue",

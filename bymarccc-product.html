@@ -1177,6 +1177,12 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
      design is looked up by its own slug, e.g. "NOT FROM PARIS" -> "not-from-paris". */
   const slugifyDesign = s => String(s).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const designImageIndex = dname => { const m = PRODUCT.designImages; const idx = m && m[slugifyDesign(dname)]; return typeof idx === 'number' ? idx : null; };
+  /* several photos per design (PRODUCT.designGalleries {design slug: [gallery indexes]}): swiping shows one cover per design,
+     tapping a design shows only that design's photos (front zoom, front full body, back zoom, back full body) */
+  const DG = PRODUCT.designGalleries || null;
+  let curDes = null;   // design on each slide of the cover view (null while one design's photos are shown)
+  const designCovers = () => { const L = [], D = []; DESIGNS.forEach(d => { const ix = (DG[slugifyDesign(d)] || [])[0]; if (ALL_G[ix]) { L.push(ALL_G[ix]); D.push(d); } }); return [L, D]; };
+  if (DG) { const [L, D] = designCovers(); if (L.length) { GALLERY.splice(0, GALLERY.length, ...L); curDes = D; } }
   const URL_COLOUR = (new URLSearchParams(location.search).get('c') || '').toLowerCase();
   const state = { colour: (COLOURS.find(c => c.id === URL_COLOUR) || COLOURS[0]).id, size: PRODUCT.noSize ? 'Made to measure' : SIZE_CHART.sizes.length === 1 ? SIZE_CHART.sizes[0].size : null, design: null, listeners: new Set() };
   const emit = () => state.listeners.forEach(f => f(state));
@@ -1292,6 +1298,14 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     if (colourId) ALL_G.forEach((g, i) => { if (SC[i] === colourId) { L.push(g); C.push(SC[i]); } });
     if (!L.length) [L, C] = swipeView();
     GALLERY.splice(0, GALLERY.length, ...L); curCols = C;
+    rebuildGallery();
+  }
+  function showDesignPhotos(dname) {   // only this design's photos
+    const ix = DG && DG[slugifyDesign(dname)]; const L = (ix || []).map(i => ALL_G[i]).filter(Boolean); if (!L.length) return false;
+    GALLERY.splice(0, GALLERY.length, ...L); curDes = null;
+    rebuildGallery(); return true;
+  }
+  function rebuildGallery() {
     track.innerHTML = ''; slides.length = 0; GALLERY.forEach(addSlide); slides.push(...track.children);
     bars.innerHTML = GALLERY.length > 1 ? GALLERY.map(() => '<i></i>').join('') : '';
     thumbs.innerHTML = ''; if (GALLERY.length > 1) GALLERY.forEach(addThumb);
@@ -1314,7 +1328,8 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
        image must never jump back to the first, and vice-versa. */
     gi = Math.max(0, Math.min(GALLERY.length - 1, i)); layout(); resetZoom();
     { const sc = curCols ? curCols[gi] : (COLOURS[gi] || {}).id; if (PRODUCT.imageColours && sc && state.colour !== sc) setColour(sc); }
-    if (PRODUCT.designImages) {
+    if (DG) { const dn = curDes && curDes[gi]; if (dn && state.design !== dn) { state.design = dn; emit(); } }
+    else if (PRODUCT.designImages) {
       const dname = DESIGNS.find(d => designImageIndex(d) === gi);
       if (dname && state.design !== dname) { state.design = dname; emit(); }
     } else if (PRODUCT.imageDesigns && DESIGNS[gi] && state.design !== DESIGNS[gi]) { state.design = DESIGNS[gi]; emit(); }
@@ -1449,7 +1464,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   const designsEl = $('designs');
   if (DESIGNS.length) {
     $('designLabel').hidden = false; designsEl.hidden = false;
-    DESIGNS.forEach(dname => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-size'; if (KEY === 'w-simple-hoodie-skyblue' && slugifyDesign(dname) === 'tiramisu') b.classList.add('pdp-size--new'); b.setAttribute('role', 'radio'); b.dataset.d = dname; b.textContent = dname; b.addEventListener('click', () => { state.design = dname; emit(); const explicitIdx = designImageIndex(dname); if (explicitIdx !== null) goTo(explicitIdx); else if (PRODUCT.imageDesigns) goTo(DESIGNS.indexOf(dname)); }); designsEl.appendChild(b); });
+    DESIGNS.forEach(dname => { const b = document.createElement('button'); b.type = 'button'; b.className = 'pdp-size'; if (KEY === 'w-simple-hoodie-skyblue' && slugifyDesign(dname) === 'tiramisu') b.classList.add('pdp-size--new'); b.setAttribute('role', 'radio'); b.dataset.d = dname; b.textContent = dname; b.addEventListener('click', () => { state.design = dname; emit(); if (showDesignPhotos(dname)) return; const explicitIdx = designImageIndex(dname); if (explicitIdx !== null) goTo(explicitIdx); else if (PRODUCT.imageDesigns) goTo(DESIGNS.indexOf(dname)); }); designsEl.appendChild(b); });
     state.listeners.add(() => { designsEl.querySelectorAll('.pdp-size[data-d]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.d === state.design))); $('designName').textContent = state.design || 'Select a design'; });
   }
   /* BABY TOP family: SSENSE-style colour strip under the photo. Swiping it changes the big photo live (with a light tick),
