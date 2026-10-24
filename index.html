@@ -3132,9 +3132,25 @@
     if (autoplay) {
       if (player && playing) { try { player.pauseVideo(); } catch {} }   // one thing at a time
       audio.play().catch(() => {});
+      miniWatch(t);
     }
     miniUI();
   }
+  /* never stuck: if a song doesn't start within 7 s (slow/failed remote file) the queue moves on to the next one */
+  let miniWd = 0, miniFails = 0;
+  function miniWatch(t) {
+    clearTimeout(miniWd);
+    miniWd = setTimeout(() => {
+      if (miniItem !== t || audio.ended) return;
+      if (audio.currentTime > 0.3 && audio.readyState >= 3) { miniFails = 0; return; }
+      if (audio.paused && audio.readyState >= 3 && !audio.error) { audio.play().catch(() => {}); miniWatch(t); return; }   // browser held the play → retry once more
+      miniFails++;
+      if (miniFails > Math.min(3, miniQueue.length - 1)) return;
+      if (stopAtEnd && mi >= miniQueue.length - 1) return;
+      miniStep(1);
+    }, 7000);
+  }
+  audio.addEventListener('playing', () => { miniFails = 0; });
   /* play item `index` of `items`, queue = every item in `items` that has a local file.
      Queuing the shared "GOOD VIBES ONLY" playlist array arms stopAtEnd so playback
      halts (and the disc resets) after the last track instead of looping back to #1. */
@@ -3234,6 +3250,12 @@
     }, { once: true });
     g.src = src;
   }
+  let warmFor = null;
+  audio.addEventListener('timeupdate', () => {   // warm the next song (remote files) well before the crossfade
+    if (warmFor === miniItem || !audio.duration || audio.currentTime < audio.duration * 0.35 || shuffle || repeat) return;
+    warmFor = miniItem; const n = miniQueue[(mi + 1) % miniQueue.length];
+    if (n && n.src && /^https?:/.test(n.src)) { try { const w = new Audio(); w.preload = 'auto'; w.src = n.src; w.load(); } catch {} }
+  });
   audio.addEventListener('timeupdate', () => {
     if (mixing || repeat || document.hidden || audio.paused || miniQueue.length < 2) return;   // every song that plays to its end mixes into the next (a tap on another song still starts it clean)
     if (stopAtEnd && mi >= miniQueue.length - 1) return;
@@ -3246,6 +3268,7 @@
     if (!miniItem) return;
     miniNote.textContent = 'This track couldn’t be loaded.';
     miniUI();
+    if (miniQueue.length > 1 && ++miniFails <= Math.min(3, miniQueue.length - 1) && !(stopAtEnd && mi >= miniQueue.length - 1)) { const bad = miniItem; setTimeout(() => { if (miniItem === bad) miniStep(1); }, 600); }   // skip the broken song, keep going
   });
   miniPlay.addEventListener('click', () => { if (!miniItem) return; audio.paused ? audio.play().catch(() => {}) : audio.pause(); });
   $('miniPrev').addEventListener('click', () => { if (audio.currentTime > 3) audio.currentTime = 0; else miniStep(-1); });
