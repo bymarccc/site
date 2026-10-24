@@ -3241,7 +3241,7 @@
       if (!mixCtx) mixCtx = new AC();
       if (mixCtx.state === 'suspended' || mixCtx.state === 'interrupted') mixCtx.resume().catch(() => {});
       if (!mixDecks) mixDecks = [0, 1].map(() => { const g = new Audio(); g.crossOrigin = 'anonymous'; g.preload = 'auto'; g.playsInline = true; const n = mixCtx.createMediaElementSource(g), gn = mixCtx.createGain(), an = mixCtx.createAnalyser(); an.fftSize = 2048; gn.gain.value = 0; n.connect(gn); n.connect(an); gn.connect(mixCtx.destination); return { g, gn, an, unlocked: false, busy: false }; });
-      mixDecks.forEach(d => { if (d.unlocked || d.busy || mixing) return; d.busy = true; d.g.src = MIX_SILENT; const pr = d.g.play(); (pr && pr.then ? pr : Promise.resolve()).then(() => { d.unlocked = true; d.g.pause(); }).catch(() => {}).finally(() => { d.busy = false; }); });
+      mixDecks.forEach(d => { if (d.unlocked || d.busy || mixing) return; d.busy = true; d.g.src = MIX_SILENT; const pr = d.g.play(); (pr && pr.then ? pr : Promise.resolve()).then(() => { d.unlocked = true; d.g.pause(); window.__bymNowPlaying?.(); }).catch(() => {}).finally(() => { d.busy = false; }); });
       return mixCtx.state !== 'closed';
     } catch { return false; }
   }
@@ -3255,6 +3255,7 @@
     if (P && mixing) { try { const gi = P.inn.g; if (!gi.paused && audio.duration && gi.currentTime - audio.currentTime > 0.3 && gi.currentTime < audio.duration - 1) audio.currentTime = gi.currentTime; } catch {} }   // real player lagging behind the deck → catch it up (never jump back)
     audio.muted = false;
     mixing = false; mixAbortPrep();
+    window.__bymNowPlaying?.();   // the decks played → iPhone dropped the lock-screen info; put the title + alien artwork back
   }
   /* ≤25 s before the end: load this song (near its end) on deck A and the next song on deck B, silently, so both are buffered */
   function mixPrepare() {
@@ -3292,17 +3293,18 @@
       out.gn.gain.value = 1; audio.muted = true;           // seamless: deck A now carries the old song
       inn.gn.gain.value = 0; inn.g.play().catch(() => {});
       forcedNext = mixNextIdx; miniStep(1); audio.muted = true;   // real player → next song, muted until the blend ends
-      const t0 = performance.now(); let innDead = false;
-      const tick = () => {
-        if (mixPrep !== P || !mixing) return;
-        const k = Math.min(1, (performance.now() - t0) / (rest * 1000));
-        out.gn.gain.value = Math.cos(k * Math.PI / 2);                         // old song: loud → quiet
-        if (k > 0.12 && !innDead && mixDead(inn)) { innDead = true; inn.gn.gain.value = 0; }   // deck B silent (blocked file) → real player instead
-        if (!innDead && !inn.g.paused && inn.g.readyState >= 2) inn.gn.gain.value = Math.sin(k * Math.PI / 2);   // new song: quiet → loud
-        else if (innDead || k > 0.35) { audio.muted = false; }                 // deck B never started → let the real player be heard
-        if (k < 1 && !out.g.ended) requestAnimationFrame(tick); else mixStop();
-      };
-      requestAnimationFrame(tick);
+      /* the fades run on the audio clock (not requestAnimationFrame), so they also happen with the phone locked */
+      const N = 64, fOut = new Float32Array(N), fIn = new Float32Array(N);
+      for (let i = 0; i < N; i++) { const k = i / (N - 1); fOut[i] = Math.cos(k * Math.PI / 2); fIn[i] = Math.sin(k * Math.PI / 2); }   // old song: loud → quiet, new song: quiet → loud
+      const c0 = mixCtx.currentTime + 0.02, w0 = performance.now(); let innDead = false;
+      try { out.gn.gain.cancelScheduledValues(0); out.gn.gain.value = 1; out.gn.gain.setValueCurveAtTime(fOut, c0, rest);
+            inn.gn.gain.cancelScheduledValues(0); inn.gn.gain.value = 0; inn.gn.gain.setValueCurveAtTime(fIn, c0, rest); } catch { mixStop(); return; }
+      const iv = setInterval(() => {
+        if (mixPrep !== P || !mixing) { clearInterval(iv); return; }
+        const k = (mixCtx.currentTime - c0) / rest;
+        if (!innDead && (k > 0.12 && mixDead(inn) || k > 0.35 && (inn.g.paused || inn.g.readyState < 2))) { innDead = true; mixQuiet(inn); audio.muted = false; }   // deck B silent / never started → let the real player be heard
+        if (k >= 1 || out.g.ended || mixCtx.state !== 'running' || performance.now() - w0 > rest * 1000 + 4000) { clearInterval(iv); mixStop(); }
+      }, 100);
       }, 200);
     }, { once: true });
     out.g.play().catch(() => { clearTimeout(abort); if (mixPrep === P) { mixFailSrc = audio.currentSrc || audio.src; mixStop(); } });
@@ -3315,13 +3317,12 @@
     if (n && n.src && /^https?:/.test(n.src)) { try { const w = new Audio(); w.preload = 'auto'; w.src = n.src; w.load(); } catch {} }
   });
   audio.addEventListener('timeupdate', () => {
-    if (mixing || repeat || document.hidden || audio.paused || miniQueue.length < 2) return;   // every song that plays to its end mixes into the next (a tap on another song still starts it clean)
+    if (mixing || repeat || audio.paused || miniQueue.length < 2) return;   // every song that plays to its end mixes into the next, also with the phone locked (a tap on another song still starts it clean)
     if (stopAtEnd && mi >= miniQueue.length - 1) return;
     const d = audio.duration, left = d - audio.currentTime;
     if (d > 45 && left <= PREP_S && left > 2 && (audio.currentSrc || audio.src) !== mixFailSrc) { mixPrepare(); if (left <= MIX_S) mixGo(); }
   });
   audio.addEventListener('pause', () => { if (mixGhost && performance.now() - mixSwitchAt > 1500) mixStop(); });   // ignore the pause fired by the track switch itself
-  document.addEventListener('visibilitychange', () => { if (document.hidden && mixGhost) mixStop(); });
   audio.addEventListener('error', () => {
     if (!miniItem) return;
     miniNote.textContent = 'This track couldn’t be loaded.';
@@ -4851,9 +4852,16 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
     const title = text('miniTitle'), artist = text('miniArtist');
     navigator.mediaSession.metadata = new MediaMetadata({ title: title && title !== '—' ? title : 'bymarccc', artist: artist || 'bymarccc', album: 'bymarccc', artwork: ART });
   };
+  /* iPhone drops the lock-screen info whenever another <audio> plays (the DJ-mix decks) or the source changes,
+     so it is re-asserted on every start, when the phone locks, after each mix and every 15 s while playing */
+  const assert = () => { if (audio.paused) return; update(); navigator.mediaSession.playbackState = 'playing'; };
+  window.__bymNowPlaying = assert;
   audio.addEventListener('play', () => { update(); navigator.mediaSession.playbackState = 'playing'; });
+  audio.addEventListener('playing', assert);
   audio.addEventListener('pause', () => { navigator.mediaSession.playbackState = 'paused'; });
   audio.addEventListener('loadedmetadata', update);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) assert(); });
+  setInterval(assert, 15000);
   const set = (a, fn) => { try { navigator.mediaSession.setActionHandler(a, fn); } catch {} };
   set('play', () => audio.play().catch(() => {}));
   set('pause', () => audio.pause());
