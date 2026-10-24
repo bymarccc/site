@@ -3122,6 +3122,7 @@
   function miniLoad(autoplay = true) {
     const t = miniQueue[mi]; if (!t) return;
     mixCount++;
+    if (mixPrep && !mixing) { mixKill(mixPrep.out.g); mixKill(mixPrep.inn.g); mixPrep = null; }   // user picked another song → drop the prepared blend
     miniItem = t;
     miniTitle.textContent = t.title; miniArtist.textContent = t.channel || '';
     miniNote.textContent = '';
@@ -3181,9 +3182,11 @@
     mini.hidden = true;
     miniUI();
   }
+  let forcedNext = -1;
   function miniStep(dir) {
     if (miniQueue.length < 2) { audio.currentTime = 0; audio.play().catch(() => {}); return; }
-    if (shuffle) { let j; do { j = Math.floor(Math.random() * miniQueue.length); } while (j === mi); mi = j; }
+    if (forcedNext >= 0) { mi = forcedNext; forcedNext = -1; }
+    else if (shuffle) { let j; do { j = Math.floor(Math.random() * miniQueue.length); } while (j === mi); mi = j; }
     else mi = (mi + dir + miniQueue.length) % miniQueue.length;
     miniLoad(true);
   }
@@ -3220,47 +3223,48 @@
      while the next track starts underneath and fades in. Only while the page is on screen (when the phone is
      locked the normal track change is used). The outgoing tail fades through Web Audio (iPhone ignores
      element.volume); the incoming track fades in where the browser allows volume changes. */
-  let mixCount = 0, mixing = false, mixCtx = null, mixGhost = null, mixIn = null, mixFailSrc = '', mixSwitchAt = 0;
-  const MIX_S = 7;   // last 7 s of a song blend into the first 7 s of the next
-  function mixStop() { if (mixGhost) { try { mixGhost.pause(); mixGhost.removeAttribute('src'); mixGhost.load(); } catch {} } mixGhost = null; mixing = false; if (mixIn) { const gi = mixIn; mixIn = null; try { if (!gi.paused && gi.currentTime > audio.currentTime + 0.3 && audio.duration) audio.currentTime = gi.currentTime; } catch {} try { gi.pause(); gi.removeAttribute('src'); gi.load(); } catch {} } audio.muted = false; try { audio.volume = 1; } catch {} }
-  function mixStart() {
-    mixing = true;
-    const src = audio.currentSrc || audio.src, g = new Audio(); g.crossOrigin = 'anonymous'; g.preload = 'auto';
-    let gain = null;
-    try { mixCtx = mixCtx || new (window.AudioContext || window.webkitAudioContext)(); const n = mixCtx.createMediaElementSource(g); gain = mixCtx.createGain(); n.connect(gain); gain.connect(mixCtx.destination); mixCtx.resume().catch(() => {}); } catch { gain = null; }
-    mixGhost = g;
-    const fail = () => { if (mixGhost !== g) return; mixFailSrc = src; mixStop(); };
-    g.addEventListener('error', fail, { once: true });
-    g.addEventListener('loadedmetadata', () => { try { g.currentTime = audio.currentTime + 0.25; } catch {} g.play().catch(fail); }, { once: true });
-    g.addEventListener('playing', () => {
-      if (mixGhost !== g) return;
-      try { g.currentTime = audio.currentTime; } catch {}
-      const left = Math.max(3, (g.duration || audio.duration) - g.currentTime), t0 = performance.now();
-      try { audio.volume = 0.05; } catch {}
-      let gIn = null, gInGain = null;
-      if (gain) {   // iPhone ignores element.volume → the incoming song's fade-in also goes through Web Audio; the real player stays muted underneath until the fade is done
-        try { gIn = new Audio(); gIn.crossOrigin = 'anonymous'; gIn.preload = 'auto'; const n2 = mixCtx.createMediaElementSource(gIn); gInGain = mixCtx.createGain(); gInGain.gain.value = 0; n2.connect(gInGain); gInGain.connect(mixCtx.destination); } catch { gIn = null; gInGain = null; }
-      }
-      mixSwitchAt = performance.now(); if (gIn) audio.muted = true; miniStep(1);   // the real player (lock screen, UI, playlist) moves on to the next song
-      if (gIn) {
-        const it = miniItem; mixIn = gIn;
-        gIn.addEventListener('loadedmetadata', () => { try { gIn.currentTime = (it && it.start > 0 ? it.start : 0) + Math.max(0, audio.currentTime); } catch {} gIn.play().catch(() => {}); }, { once: true });
-        gIn.addEventListener('error', () => { if (mixIn === gIn) { mixIn = null; gIn = null; gInGain = null; audio.muted = false; } }, { once: true });
-        gIn.src = audio.src;
-      }
-      const tick = () => {
-        if (mixGhost !== g) return;
-        const k = Math.min(1, (performance.now() - t0) / (left * 1000));
-        const out = Math.cos(k * Math.PI / 2), inn = Math.sin(k * Math.PI / 2);   // equal-power crossfade
-        if (gain) gain.gain.value = out; else { try { g.volume = out; } catch {} }
-        if (gIn && mixIn === gIn && !gIn.paused && gIn.readyState >= 3) { gInGain.gain.value = inn; }
-        else if (gIn && k > 0.3) { if (mixIn === gIn) mixIn = null; try { gIn.pause(); } catch {} gIn = null; audio.muted = false; }   // second player didn't start in time → fall back to the normal player
-        if (!gIn) { try { audio.volume = Math.max(0.05, inn); } catch {} }
-        if (k < 1 && !g.ended) requestAnimationFrame(tick); else mixStop();
-      };
-      requestAnimationFrame(tick);
-    }, { once: true });
-    g.src = src;
+  let mixCount = 0, mixing = false, mixCtx = null, mixGhost = null, mixIn = null, mixFailSrc = '', mixSwitchAt = 0, mixPrep = null, mixNextIdx = -1;
+  const MIX_S = 7, PREP_S = 22;   // last 7 s of a song blend into the first 7 s of the next; everything is prepared 22 s before the end so there is never a gap
+  function mixKill(g) { if (!g) return; try { g.pause(); g.removeAttribute('src'); g.load(); } catch {} }
+  function mixStop() {   // end of the blend (or abort): hand the real player back, drop both helpers
+    const gi = mixIn; mixKill(mixGhost); mixGhost = null; mixIn = null; mixing = false; mixPrep = null;
+    if (gi) mixKill(gi);   // the real player (same position, ±0.2 s) simply takes over — never seek it, so there is no jump
+    audio.muted = false; try { audio.volume = 1; } catch {}
+  }
+  /* 22 s before the end: load a ghost of this song (fade-out) and of the next one (fade-in), both through Web Audio gains (iPhone ignores element.volume) */
+  function mixPrepare() {
+    if (mixPrep) return;
+    let ctx; try { mixCtx = mixCtx || new (window.AudioContext || window.webkitAudioContext)(); ctx = mixCtx; ctx.resume().catch(() => {}); } catch { mixFailSrc = audio.currentSrc || audio.src; return; }
+    mixNextIdx = shuffle ? (() => { let j; do { j = Math.floor(Math.random() * miniQueue.length); } while (j === mi); return j; })() : (mi + 1) % miniQueue.length;
+    const nxt = miniQueue[mixNextIdx], cur = miniItem; if (!nxt || !cur || !nxt.src) return;
+    const mk = src => { const g = new Audio(); g.crossOrigin = 'anonymous'; g.preload = 'auto'; const n = ctx.createMediaElementSource(g), gn = ctx.createGain(); gn.gain.value = 0; n.connect(gn); gn.connect(ctx.destination); g.src = src; return { g, gn, ready: false }; };
+    let out, inn; try { out = mk(audio.currentSrc || audio.src); inn = mk(nxt.src); } catch { mixFailSrc = audio.currentSrc || audio.src; return; }
+    const P = mixPrep = { out, inn, cur, nxt, bad: false };
+    const ok = o => o.g.addEventListener('canplaythrough', () => { o.ready = true; }, { once: true });
+    const bad = () => { P.bad = true; mixFailSrc = audio.currentSrc || audio.src; };
+    ok(out); ok(inn); out.g.addEventListener('error', bad, { once: true }); inn.g.addEventListener('error', bad, { once: true });
+    inn.g.addEventListener('loadedmetadata', () => { try { inn.g.currentTime = nxt.start > 0 ? nxt.start : 0; } catch {} }, { once: true });
+    out.g.load(); inn.g.load();
+  }
+  function mixGo() {   // ≤7 s left and both helpers are ready: crossfade starts now
+    const P = mixPrep; if (!P || P.bad || !P.out.ready || !P.inn.ready) return false;
+    const left = audio.duration - audio.currentTime; if (!(left > 1.5)) return false;
+    mixing = true; mixGhost = P.out.g; mixIn = P.inn.g;
+    try { P.out.g.currentTime = audio.currentTime + 0.05; } catch {}
+    P.out.gn.gain.value = 1;
+    audio.muted = true;                       // the real player carries the lock screen / UI, silently
+    mixSwitchAt = performance.now();
+    Promise.all([P.out.g.play(), P.inn.g.play()]).catch(() => { mixStop(); });
+    const t0 = performance.now(), dur = Math.min(MIX_S, left) * 1000;
+    forcedNext = mixNextIdx; miniStep(1); audio.muted = true;   // real player moves on to the next song (still muted); handoff happens when the blend ends
+    const tick = () => {
+      if (mixIn !== P.inn.g) return;
+      const k = Math.min(1, (performance.now() - t0) / dur);
+      P.out.gn.gain.value = Math.cos(k * Math.PI / 2); P.inn.gn.gain.value = Math.sin(k * Math.PI / 2);   // equal-power: old song gets quieter, new one louder
+      if (k < 1 && !P.out.g.ended) requestAnimationFrame(tick); else mixStop();
+    };
+    requestAnimationFrame(tick);
+    return true;
   }
   let warmFor = null;
   audio.addEventListener('timeupdate', () => {   // warm the next song (remote files) well before the crossfade
@@ -3272,7 +3276,7 @@
     if (mixing || repeat || document.hidden || audio.paused || miniQueue.length < 2) return;   // every song that plays to its end mixes into the next (a tap on another song still starts it clean)
     if (stopAtEnd && mi >= miniQueue.length - 1) return;
     const d = audio.duration, left = d - audio.currentTime;
-    if (d > 45 && left <= MIX_S && left > 2 && (audio.currentSrc || audio.src) !== mixFailSrc) mixStart();
+    if (d > 45 && left <= PREP_S && left > 1.5 && (audio.currentSrc || audio.src) !== mixFailSrc) { mixPrepare(); if (left <= MIX_S) mixGo(); }
   });
   audio.addEventListener('pause', () => { if (mixGhost && performance.now() - mixSwitchAt > 1500) mixStop(); });   // ignore the pause fired by the track switch itself
   document.addEventListener('visibilitychange', () => { if (document.hidden && mixGhost) mixStop(); });
