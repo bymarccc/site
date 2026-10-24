@@ -356,9 +356,9 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
         {"src":"assets/img/gallery/zebra-jacket-back-red.jpg","w":853,"h":1280},
         {"src":"assets/img/gallery/zebra-jacket-back-grey.jpg","w":853,"h":1280},
         {"src":"assets/img/gallery/zebra-jacket-back-orange.jpg","w":853,"h":1280},
-        {"src":"assets/img/gallery/zebra-jacket-back-pink.jpg","w":853,"h":1280},
+        {"src":"assets/img/gallery/zebra-jacket-back-burgundy.jpg","w":853,"h":1280},
         {"src":"assets/img/gallery/zebra-jacket-back-brown.jpg","w":853,"h":1280},
-        {"src":"assets/img/gallery/zebra-jacket-back-burgundy.jpg","w":853,"h":1280}
+        {"src":"assets/img/gallery/zebra-jacket-back-pink.jpg","w":853,"h":1280}
       ],
       "slideColours": ["burgundy","burgundy","pink","pink","blue","blue","red","red","white","white","brown","brown","purple","purple","orange","orange","grey","grey","green","purple","white","red","grey","orange","pink","brown","burgundy"]
     },
