@@ -3225,13 +3225,13 @@
     miniFill.style.width = p + '%'; miniCur.textContent = fmt(audio.currentTime);
     miniBar.setAttribute('aria-valuenow', Math.round(p));
   });
-  /* DJ mix: in the last 7 s of a song it fades out (loud → quiet) while the next song fades in (quiet → loud).
+  /* DJ mix: in the last 10 s of a song it fades out (loud → quiet) while the next song fades in (quiet → loud).
      iPhone ignores element.volume and only lets an <audio> play programmatically after it was started once from a tap,
      so two persistent "decks" are routed through Web Audio gains and unlocked on the first tap anywhere on the page.
      The real player (#miniAudio: UI, lock screen, playlist) stays the source of truth; during the blend it is muted and
      the decks are what you hear. Anything not ready in time → the normal song change (never silence). */
   let mixCount = 0, mixing = false, mixCtx = null, mixFailSrc = '', mixSwitchAt = 0, mixPrep = null, mixNextIdx = -1, mixDecks = null, mixGhost = null;
-  const MIX_S = 7, PREP_S = 25;
+  const MIX_S = 10, PREP_S = 25;
   const MIX_SILENT = (() => { const n = 400, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, t) => [...t].forEach((c, i) => b[o + i] = c.charCodeAt(0));
     w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
     let s = ''; b.forEach(x => s += String.fromCharCode(x)); return 'data:audio/wav;base64,' + btoa(s); })();
@@ -3281,7 +3281,7 @@
     prime(out, audio.currentSrc || audio.src, () => Math.max(0, (audio.duration || 0) - MIX_S - 0.5), 'outOk');
     prime(inn, nxt.src, () => (nxt.start > 0 ? nxt.start : 0), 'innOk');
   }
-  /* ≤7 s left: start deck A at the real player's position; the moment it is audible, mute the real player and switch it to the next song */
+  /* ≤10 s left: start deck A at the real player's position; the moment it is audible, mute the real player and switch it to the next song */
   function mixGo() {
     const P = mixPrep; if (!P || P.bad || !P.outOk || !P.innOk || mixing || mixCtx.state !== 'running') return;
     const left = audio.duration - audio.currentTime; if (!(left > 2)) return;
