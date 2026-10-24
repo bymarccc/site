@@ -3131,26 +3131,31 @@
     if (t.start > 0) audio.addEventListener('loadedmetadata', () => { if (miniItem === t && audio.currentTime < t.start) { try { audio.currentTime = t.start; } catch {} } }, { once: true });   // `start`: skip the song's first seconds (intro trim)
     miniShow();
     if (autoplay) {
-      mixEnsure();
       if (player && playing) { try { player.pauseVideo(); } catch {} }   // one thing at a time
       audio.play().catch(() => {});
+      setTimeout(mixEnsure, 0);
       miniWatch(t);
     }
     miniUI();
   }
-  /* never stuck: if a song doesn't start within 7 s (slow/failed remote file) the queue moves on to the next one */
+  /* never stuck: a song that really fails (error / no source) is skipped; a slow one is waited for (Safari can take a while) */
   let miniWd = 0, miniFails = 0;
-  function miniWatch(t) {
+  function miniWatch(t, round = 0) {
     clearTimeout(miniWd);
     miniWd = setTimeout(() => {
       if (miniItem !== t || audio.ended) return;
-      if (audio.currentTime > 0.3 && audio.readyState >= 3) { miniFails = 0; return; }
-      if (audio.paused && audio.readyState >= 3 && !audio.error) { audio.play().catch(() => {}); miniWatch(t); return; }   // browser held the play → retry once more
+      if (!audio.paused && audio.currentTime > 0.3) { miniFails = 0; return; }   // playing
+      const broken = !!audio.error || audio.networkState === 3;
+      if (!broken) {
+        if (audio.paused && audio.readyState >= 2) audio.play().catch(() => {});   // browser held the play → ask again
+        if (round < 5) miniWatch(t, round + 1);   // keep waiting (up to ~40 s), never skip a song that is only loading
+        return;
+      }
       miniFails++;
       if (miniFails > Math.min(3, miniQueue.length - 1)) return;
       if (stopAtEnd && mi >= miniQueue.length - 1) return;
       miniStep(1);
-    }, 7000);
+    }, round ? 6000 : 8000);
   }
   audio.addEventListener('playing', () => { miniFails = 0; });
   /* play item `index` of `items`, queue = every item in `items` that has a local file.
@@ -3171,7 +3176,7 @@
     miniLoad(false);
   }
   function miniToggle(key) {
-    if (miniItem && miniItem.key === key && !mini.hidden) { if (audio.paused) { mixEnsure(); audio.play().catch(() => {}); } else audio.pause(); return; }
+    if (miniItem && miniItem.key === key && !mini.hidden) { if (audio.paused) { audio.play().catch(() => {}); setTimeout(mixEnsure, 0); } else audio.pause(); return; }
     if (key === 'vinyl') { miniPlayList(vinylChain(), 0); return; }
     // any other object (the CD): its own track, then straight into the GOOD VIBES ONLY playlist — never back to WAGWAN
     const it = OBJECT_ITEMS.find(t => t.key === key); if (!it) return;
@@ -3240,7 +3245,7 @@
       return mixCtx.state !== 'closed';
     } catch { return false; }
   }
-  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (!mixDecks || !mixDecks.every(d => d.unlocked) || (mixCtx && mixCtx.state !== 'running')) mixEnsure(); }, { capture: true, passive: true }));
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (!mixDecks || !mixDecks.every(d => d.unlocked) || (mixCtx && mixCtx.state !== 'running')) setTimeout(mixEnsure, 0); }, { passive: true }));
   const mixDead = d => { try { const b = new Float32Array(d.an.fftSize); d.an.getFloatTimeDomainData(b); for (let i = 0; i < b.length; i++) if (b[i] !== 0) return false; return true; } catch { return false; } };   // exact digital zero = file blocked for Web Audio (no CORS) → don't use this deck
   const mixReady = () => !!(mixCtx && mixCtx.state === 'running' && mixDecks && mixDecks.every(d => d.unlocked && !d.busy));
   function mixQuiet(d) { if (!d) return; d.gn.gain.cancelScheduledValues?.(0); d.gn.gain.value = 0; try { d.g.pause(); } catch {} }
@@ -3323,7 +3328,7 @@
     miniUI();
     if (miniQueue.length > 1 && ++miniFails <= Math.min(3, miniQueue.length - 1) && !(stopAtEnd && mi >= miniQueue.length - 1)) { const bad = miniItem; setTimeout(() => { if (miniItem === bad) miniStep(1); }, 600); }   // skip the broken song, keep going
   });
-  miniPlay.addEventListener('click', () => { if (!miniItem) return; if (audio.paused) { mixEnsure(); audio.play().catch(() => {}); } else audio.pause(); });
+  miniPlay.addEventListener('click', () => { if (!miniItem) return; if (audio.paused) { audio.play().catch(() => {}); setTimeout(mixEnsure, 0); } else audio.pause(); });
   $('miniPrev').addEventListener('click', () => { if (audio.currentTime > 3) audio.currentTime = 0; else miniStep(-1); });
   $('miniNext').addEventListener('click', () => miniStep(1));
   $('miniShuffle').addEventListener('click', e => { shuffle = !shuffle; e.currentTarget.setAttribute('aria-pressed', String(shuffle)); });
