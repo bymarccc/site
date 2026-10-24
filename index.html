@@ -3239,17 +3239,23 @@
     try {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
       if (!mixCtx) mixCtx = new AC();
-      if (mixCtx.state === 'suspended' || mixCtx.state === 'interrupted') mixCtx.resume().catch(() => {});
+      if ((mixCtx.state === 'suspended' || mixCtx.state === 'interrupted') && !(mixDecks && mixDecks.every(d => d.unlocked))) mixCtx.resume().catch(() => {});   // awake only to unlock the decks
       if (!mixDecks) mixDecks = [0, 1].map(() => { const g = new Audio(); g.crossOrigin = 'anonymous'; g.preload = 'auto'; g.playsInline = true; const n = mixCtx.createMediaElementSource(g), gn = mixCtx.createGain(), an = mixCtx.createAnalyser(); an.fftSize = 2048; gn.gain.value = 0; n.connect(gn); n.connect(an); gn.connect(mixCtx.destination); return { g, gn, an, unlocked: false, busy: false }; });
-      mixDecks.forEach(d => { if (d.unlocked || d.busy || mixing) return; d.busy = true; d.g.src = MIX_SILENT; const pr = d.g.play(); (pr && pr.then ? pr : Promise.resolve()).then(() => { d.unlocked = true; d.g.pause(); window.__bymNowPlaying?.(); }).catch(() => {}).finally(() => { d.busy = false; }); });
+      mixDecks.forEach(d => { if (d.unlocked || d.busy || mixing) return; d.busy = true; d.g.src = MIX_SILENT; const pr = d.g.play(); (pr && pr.then ? pr : Promise.resolve()).then(() => { d.unlocked = true; d.g.pause(); }).catch(() => {}).finally(() => { d.busy = false; mixSleep(); }); });
       return mixCtx.state !== 'closed';
     } catch { return false; }
   }
-  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (!mixDecks || !mixDecks.every(d => d.unlocked) || (mixCtx && mixCtx.state !== 'running')) setTimeout(mixEnsure, 0); }, { passive: true }));
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (!mixDecks || !mixDecks.every(d => d.unlocked)) setTimeout(mixEnsure, 0); }, { passive: true }));
   const mixDead = d => { try { const b = new Float32Array(d.an.fftSize); d.an.getFloatTimeDomainData(b); for (let i = 0; i < b.length; i++) if (b[i] !== 0) return false; return true; } catch { return false; } };   // exact digital zero = file blocked for Web Audio (no CORS) → don't use this deck
-  const mixReady = () => !!(mixCtx && mixCtx.state === 'running' && mixDecks && mixDecks.every(d => d.unlocked && !d.busy));
+  const mixReady = () => !!(mixCtx && mixCtx.state !== 'closed' && mixDecks && mixDecks.every(d => d.unlocked && !d.busy));
+  /* iPhone shows no title / artwork on the lock screen while an AudioContext is running, so it sleeps
+     except for the last ~25 s of a song (prepare + blend) and wakes up again right before the next mix */
+  function mixSleep() {
+    if (mixCtx && mixCtx.state === 'running' && !mixPrep && !mixing && mixDecks && mixDecks.every(d => d.unlocked && !d.busy))
+      mixCtx.suspend().then(() => window.__bymNowPlaying?.()).catch(() => {});
+  }
   function mixQuiet(d) { if (!d) return; d.gn.gain.cancelScheduledValues?.(0); d.gn.gain.value = 0; try { d.g.pause(); } catch {} }
-  function mixAbortPrep() { if (mixPrep) { mixQuiet(mixPrep.out); mixQuiet(mixPrep.inn); } mixPrep = null; }
+  function mixAbortPrep() { if (mixPrep) { mixQuiet(mixPrep.out); mixQuiet(mixPrep.inn); } mixPrep = null; if (!mixing) setTimeout(mixSleep, 0); }
   function mixStop() {   // end of the blend (or abort): the real player takes over
     const P = mixPrep; mixGhost = null;
     if (P && mixing) { try { const gi = P.inn.g; if (!gi.paused && audio.duration && gi.currentTime - audio.currentTime > 0.3 && gi.currentTime < audio.duration - 1) audio.currentTime = gi.currentTime; } catch {} }   // real player lagging behind the deck → catch it up (never jump back)
@@ -3260,6 +3266,7 @@
   /* ≤25 s before the end: load this song (near its end) on deck A and the next song on deck B, silently, so both are buffered */
   function mixPrepare() {
     if (mixPrep || !mixReady()) return;
+    if (mixCtx.state !== 'running') mixCtx.resume().catch(() => {});   // wake up for this blend
     mixNextIdx = shuffle ? (() => { let j; do { j = Math.floor(Math.random() * miniQueue.length); } while (j === mi); return j; })() : (mi + 1) % miniQueue.length;
     const nxt = miniQueue[mixNextIdx], cur = miniItem; if (!nxt || !cur || !nxt.src) return;
     const [out, inn] = mixDecks; const P = mixPrep = { out, inn, cur, nxt, bad: false, outOk: false, innOk: false };
@@ -3276,7 +3283,7 @@
   }
   /* ≤7 s left: start deck A at the real player's position; the moment it is audible, mute the real player and switch it to the next song */
   function mixGo() {
-    const P = mixPrep; if (!P || P.bad || !P.outOk || !P.innOk || mixing) return;
+    const P = mixPrep; if (!P || P.bad || !P.outOk || !P.innOk || mixing || mixCtx.state !== 'running') return;
     const left = audio.duration - audio.currentTime; if (!(left > 2)) return;
     mixing = true; mixGhost = P.out.g; mixSwitchAt = performance.now();
     const { out, inn } = P;
