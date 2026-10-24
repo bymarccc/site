@@ -3220,9 +3220,9 @@
      while the next track starts underneath and fades in. Only while the page is on screen (when the phone is
      locked the normal track change is used). The outgoing tail fades through Web Audio (iPhone ignores
      element.volume); the incoming track fades in where the browser allows volume changes. */
-  let mixCount = 0, mixing = false, mixCtx = null, mixGhost = null, mixFailSrc = '', mixSwitchAt = 0;
+  let mixCount = 0, mixing = false, mixCtx = null, mixGhost = null, mixIn = null, mixFailSrc = '', mixSwitchAt = 0;
   const MIX_S = 7;   // last 7 s of a song blend into the first 7 s of the next
-  function mixStop() { if (mixGhost) { try { mixGhost.pause(); mixGhost.removeAttribute('src'); mixGhost.load(); } catch {} } mixGhost = null; mixing = false; try { audio.volume = 1; } catch {} }
+  function mixStop() { if (mixGhost) { try { mixGhost.pause(); mixGhost.removeAttribute('src'); mixGhost.load(); } catch {} } mixGhost = null; mixing = false; if (mixIn) { const gi = mixIn; mixIn = null; try { if (!gi.paused && gi.currentTime > audio.currentTime + 0.3 && audio.duration) audio.currentTime = gi.currentTime; } catch {} try { gi.pause(); gi.removeAttribute('src'); gi.load(); } catch {} } audio.muted = false; try { audio.volume = 1; } catch {} }
   function mixStart() {
     mixing = true;
     const src = audio.currentSrc || audio.src, g = new Audio(); g.crossOrigin = 'anonymous'; g.preload = 'auto';
@@ -3237,13 +3237,25 @@
       try { g.currentTime = audio.currentTime; } catch {}
       const left = Math.max(3, (g.duration || audio.duration) - g.currentTime), t0 = performance.now();
       try { audio.volume = 0.05; } catch {}
-      mixSwitchAt = performance.now(); miniStep(1);   // the real player (lock screen, UI, playlist) moves on to the next song
+      let gIn = null, gInGain = null;
+      if (gain) {   // iPhone ignores element.volume → the incoming song's fade-in also goes through Web Audio; the real player stays muted underneath until the fade is done
+        try { gIn = new Audio(); gIn.crossOrigin = 'anonymous'; gIn.preload = 'auto'; const n2 = mixCtx.createMediaElementSource(gIn); gInGain = mixCtx.createGain(); gInGain.gain.value = 0; n2.connect(gInGain); gInGain.connect(mixCtx.destination); } catch { gIn = null; gInGain = null; }
+      }
+      mixSwitchAt = performance.now(); if (gIn) audio.muted = true; miniStep(1);   // the real player (lock screen, UI, playlist) moves on to the next song
+      if (gIn) {
+        const it = miniItem; mixIn = gIn;
+        gIn.addEventListener('loadedmetadata', () => { try { gIn.currentTime = (it && it.start > 0 ? it.start : 0) + Math.max(0, audio.currentTime); } catch {} gIn.play().catch(() => {}); }, { once: true });
+        gIn.addEventListener('error', () => { if (mixIn === gIn) { mixIn = null; gIn = null; gInGain = null; audio.muted = false; } }, { once: true });
+        gIn.src = audio.src;
+      }
       const tick = () => {
         if (mixGhost !== g) return;
         const k = Math.min(1, (performance.now() - t0) / (left * 1000));
         const out = Math.cos(k * Math.PI / 2), inn = Math.sin(k * Math.PI / 2);   // equal-power crossfade
         if (gain) gain.gain.value = out; else { try { g.volume = out; } catch {} }
-        try { audio.volume = Math.max(0.05, inn); } catch {}
+        if (gIn && mixIn === gIn && !gIn.paused && gIn.readyState >= 3) { gInGain.gain.value = inn; }
+        else if (gIn && k > 0.3) { if (mixIn === gIn) mixIn = null; try { gIn.pause(); } catch {} gIn = null; audio.muted = false; }   // second player didn't start in time → fall back to the normal player
+        if (!gIn) { try { audio.volume = Math.max(0.05, inn); } catch {} }
         if (k < 1 && !g.ended) requestAnimationFrame(tick); else mixStop();
       };
       requestAnimationFrame(tick);
