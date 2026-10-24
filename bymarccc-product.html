@@ -762,12 +762,15 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   document.documentElement.classList.add('is-qv');
   HTMLMediaElement.prototype.play = function () { return Promise.resolve(); };
   const post = m => { try { parent.postMessage(m, location.origin); } catch (e) {} };
-  const go = u => {
+  let realNav = null;   // the site's in-page router: a colour change swaps the page in place, like on the full product page (no reload, no flash)
+  const go = (u, o) => {
     let d; try { d = new URL(u, location.href); } catch (e) { return; }
     if (d.origin === location.origin && /bymarccc-product(\.html)?$/.test(d.pathname) && d.searchParams.get('p')) {
+      d.searchParams.set('qv', '1');
+      if (realNav) return Promise.resolve(realNav(d.href, { push: false })).then(() => { if (!o) scrollTo(0, 0); });   // no history entries inside the sheet
       const im = document.querySelector('.pdp-gallery__peek:not([hidden]) img') || document.querySelector('.pdp-gallery img');   // the sheet shows this photo while the next page loads
       post({ bymQv: 'loading', img: im ? (im.currentSrc || im.src) : '' });
-      d.searchParams.set('qv', '1'); location.replace(d.pathname + d.search + d.hash); return;
+      location.replace(d.pathname + d.search + d.hash); return;
     }
     post({ bymQv: 'nav', url: d.href });
   };
@@ -787,7 +790,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
       const im = document.querySelector('.pdp-gallery img');
       if (!im || im.complete) ready(); else { im.addEventListener('load', ready, { once: true }); im.addEventListener('error', ready, { once: true }); setTimeout(ready, 1500); }
     }));
-    if (window.BYM_NAV) window.BYM_NAV.navigate = go;
+    if (window.BYM_NAV) { realNav = window.BYM_NAV.navigate; window.BYM_NAV.navigate = go; }
     const b = window.BYMARCCC && window.BYMARCCC.bag;
     if (b && b.listeners) b.listeners.add(() => post({ bymQv: 'bag' }));
   });
