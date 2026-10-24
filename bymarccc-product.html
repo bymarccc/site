@@ -764,7 +764,11 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
   const post = m => { try { parent.postMessage(m, location.origin); } catch (e) {} };
   const go = u => {
     let d; try { d = new URL(u, location.href); } catch (e) { return; }
-    if (d.origin === location.origin && /bymarccc-product(\.html)?$/.test(d.pathname) && d.searchParams.get('p')) { d.searchParams.set('qv', '1'); location.href = d.pathname + d.search + d.hash; return; }
+    if (d.origin === location.origin && /bymarccc-product(\.html)?$/.test(d.pathname) && d.searchParams.get('p')) {
+      const im = document.querySelector('.pdp-gallery__peek:not([hidden]) img') || document.querySelector('.pdp-gallery img');   // the sheet shows this photo while the next page loads
+      post({ bymQv: 'loading', img: im ? (im.currentSrc || im.src) : '' });
+      d.searchParams.set('qv', '1'); location.replace(d.pathname + d.search + d.hash); return;
+    }
     post({ bymQv: 'nav', url: d.href });
   };
   document.addEventListener('click', e => {
@@ -773,7 +777,16 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
     if (!h || h[0] === '#' || /^(mailto|tel|javascript):/i.test(h) || a.target === '_blank' || a.hasAttribute('download')) return;
     e.preventDefault(); e.stopImmediatePropagation(); go(a.href);
   }, true);
+  /* the page stays hidden until its photo is ready, so a half-built page (recommendations first, header out of place) never flashes in the sheet */
+  try { history.scrollRestoration = 'manual'; } catch (e) {}
+  let shown = false;
+  const ready = () => { if (shown) return; shown = true; scrollTo(0, 0); document.documentElement.classList.add('qv-ready'); post({ bymQv: 'ready' }); };
+  setTimeout(ready, 3000);
   addEventListener('DOMContentLoaded', () => {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const im = document.querySelector('.pdp-gallery img');
+      if (!im || im.complete) ready(); else { im.addEventListener('load', ready, { once: true }); im.addEventListener('error', ready, { once: true }); setTimeout(ready, 1500); }
+    }));
     if (window.BYM_NAV) window.BYM_NAV.navigate = go;
     const b = window.BYMARCCC && window.BYMARCCC.bag;
     if (b && b.listeners) b.listeners.add(() => post({ bymQv: 'bag' }));
@@ -782,6 +795,7 @@ html.bym-memlock #pPrice, html.bym-memlock #barPrice { display: none !important;
 </script>
 <style>
 .is-qv .vp-layer, .is-qv .vp, .is-qv .ai, .is-qv .ai-launch { display: none !important; }
+html.is-qv:not(.qv-ready) body { visibility: hidden; }
 </style>
 </head>
 <body class="pdp">

@@ -5318,7 +5318,7 @@ html.qv-lock, html.qv-lock body { overflow: hidden; }
       + '<div class="qv__acts"><button type="button" class="qv__btn qv__btn--close">Close</button><button type="button" class="qv__btn qv__btn--open">Open product</button></div>';
     document.body.appendChild(ov);
     frame = ov.querySelector('iframe');
-    frame.addEventListener('load', () => ov.classList.add('is-ready'));
+    frame.addEventListener('load', () => setTimeout(() => ov.classList.add('is-ready'), 1500));   // fallback; the page itself says 'ready' once its photo is in
     ov.addEventListener('click', e => { if (e.target === ov) close(); });
     ov.querySelector('.qv__btn--close').addEventListener('click', () => close());
     ov.querySelector('.qv__btn--open').addEventListener('click', () => { let u = url; try { u = frame.contentWindow.location.href.replace(/([?&])qv=1&?/, '$1').replace(/[?&]$/, ''); } catch (e) {} go(u); });
@@ -5347,6 +5347,8 @@ html.qv-lock, html.qv-lock body { overflow: hidden; }
   addEventListener('message', e => {
     if (e.origin !== location.origin || !e.data || !e.data.bymQv) return;
     if (e.data.bymQv === 'bag') syncBag();
+    else if (e.data.bymQv === 'loading') { if (e.data.img) ov.querySelector('.qv__load img').src = e.data.img; ov.classList.remove('is-ready'); }   // colour change inside the sheet: photo cover until the new page is ready
+    else if (e.data.bymQv === 'ready') ov.classList.add('is-ready');
     else if (e.data.bymQv === 'nav' && e.data.url) go(e.data.url);
   });
   const cancel = () => { clearTimeout(timer); timer = 0; start = null; };
