@@ -6,6 +6,7 @@
    - lock-screen title + alien artwork, re-asserted because iPhone drops them. */
 (() => {
   if (window.__bymMixLite) return; window.__bymMixLite = true;
+  if (window.top !== window) return;   // the homepage quick-view sheet (iframe) must never start its own audio engine
   const audio = document.getElementById('miniAudio'); if (!audio) return;
   const idle = () => !!window.__bymMix;   // homepage engine in charge
   const $ = id => document.getElementById(id);

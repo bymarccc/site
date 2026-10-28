@@ -2144,6 +2144,9 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
     ['miniTitle', 'miniArtist'].forEach(id => { if (!$(id)) { const s = document.createElement('span'); s.id = id; s.hidden = true; document.body.appendChild(s); } });
     $('miniTitle').textContent = title; $('miniArtist').textContent = artist;
     if (window.BYMARCCC_VP && window.BYMARCCC_VP.pause) try { window.BYMARCCC_VP.pause(); } catch {}
+    /* DJ MIX — DO NOT REMOVE: when the homepage music engine is running, a song picked from here must go through it,
+       otherwise its queue / 10 s DJ mix / auto-next do not know about the song and the mix never happens. */
+    try { if (window.BYMARCCC && window.BYMARCCC.audioTrack && window.BYMARCCC.audioTrack.play(t)) { paint(); return; } } catch {}
     a.src = abs(t.src); a.play().catch(() => {}); paint();
   }
   function next() {
