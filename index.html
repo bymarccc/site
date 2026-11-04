@@ -607,6 +607,7 @@
 .track__artist { display: block; font-size: 11px; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .track__dur { font-size: 10.5px; color: rgba(255,255,255,.55); flex: 0 0 auto; font-variant-numeric: tabular-nums; }
 .track[aria-current="true"] .track__dur { color: var(--play-blue); }
+.track__dur.is-elapsed { font-size: 13px; font-weight: 600; letter-spacing: .02em; min-width: 3.4em; text-align: right; }   /* the playing song shows the elapsed time, to the second */
 .track__eq { display: none; width: 12px; height: 12px; flex: 0 0 auto; gap: 2px; align-items: flex-end; }
 .track[aria-current="true"] .track__eq { display: flex; }
 .track__eq i { display: block; width: 2px; background: var(--play-blue); height: 40%; animation: eq 1s ease-in-out infinite; }
@@ -2374,11 +2375,11 @@
       video: M + 'killin-em.mp4', poster: M + 'killin-em.jpg',
       thumb: 'assets/img/thumb-killin-em.jpg' },
     { id: 'nemzzz-dilemma', title: 'Nemzzz - Dilemma ft. Central Cee', channel: '', duration: '2:16',
-      src:   M + 'dilemma.m4a',
+      src:   M + 'dilemma.a.mp4',
       video: M + 'dilemma.mp4', poster: M + 'dilemma.jpg',
       thumb: 'assets/img/thumb-dilemma.jpg' },
     { id: 'nemzzz-cold', title: 'Nemzzz - Cold', channel: '', duration: '2:07',
-      src:   M + 'cold.m4a',
+      src:   M + 'cold.a.mp4',
       video: M + 'cold.mp4', poster: M + 'cold.jpg',
       thumb: 'assets/img/thumb-cold.jpg' },
     { id: 'chanel',    title: 'Tyla - CHANEL',                  channel: '', duration: '3:09',
@@ -2598,7 +2599,7 @@
     const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect();
     const w = Math.min(300, sr.width - 24); infoCard.style.width = w + 'px';
     let x, y;
-    if (el.dataset.obj === 'money') {
+    if (el.dataset.obj === 'money' && !matchMedia('(min-width: 1025px)').matches) {   // phones / tablets only
       // this card's text is long ("30% of profits go to the homeless") and the
       // money bag sits low on mobile — centre it in the stage instead of
       // anchoring it to the object, so it never runs low/off to one side.
@@ -2609,6 +2610,7 @@
       x = r.left - sr.left + r.width / 2 - w / 2; y = r.top - sr.top + r.height + 8;
       x = Math.max(12, Math.min(sr.width - w - 12, x)); if (y + 96 > sr.height) y = r.top - sr.top - 96 - 8;
       if (el.dataset.obj === 'artjeans') y = r.top - sr.top + r.height * 0.5;   // tall jeans: card sits over the middle of the jeans, not below them
+      if (el.dataset.obj === 'money') y = Math.max(8, r.top - sr.top - (infoCard.offsetHeight || 46) - 10);   // desktop: the note sits right above the money bag (never over the music card)
     }
     infoCard.style.left = x + 'px'; infoCard.style.top = y + 'px';
     requestAnimationFrame(() => infoCard.classList.add('is-in'));
@@ -4900,6 +4902,28 @@ html.is-vp-drag, html.is-vp-drag * { -webkit-user-select: none !important; user-
 })();
 </script>
 
+<!-- Playlist: the row of the playing song shows the ELAPSED time (m:ss, to the second) instead of the song length, to read cut points off the screen.
+     Display only: it reads the players and never changes them (nothing to do with the DJ mix). -->
+<script>
+(() => {
+  const audio = document.getElementById('miniAudio'), list = document.getElementById('musicList');
+  if (!audio || !list) return;
+  const fmt = s => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  const media = () => { const t = document.querySelector('.music__tab[aria-selected="true"]'); return t && t.dataset.tab === 'video' ? document.getElementById('vpVideo') : audio; };
+  let shown = null;
+  const paint = () => {
+    const row = list.querySelector('.track[aria-current="true"]'), el = row && row.querySelector('.track__dur');
+    if (shown && shown !== el && shown.dataset.len != null) { shown.textContent = shown.dataset.len; delete shown.dataset.len; shown.classList.remove('is-elapsed'); }   // another song: this one shows its length again
+    shown = null;
+    if (!el) return;
+    const m = media(); if (!m) return;
+    if (el.dataset.len == null) el.dataset.len = el.textContent;
+    el.textContent = fmt(m.currentTime); el.classList.add('is-elapsed'); shown = el;
+  };
+  ['timeupdate', 'seeking', 'seeked', 'play', 'pause', 'loadedmetadata', 'emptied'].forEach(ev => audio.addEventListener(ev, paint));
+  setInterval(paint, 250);
+})();
+</script>
 <!-- Lock-screen "Now playing" (iPhone / Android): title, bymarccc and the alien artwork -->
 <script>
 (() => {
@@ -5499,6 +5523,11 @@ body.pdp .bmp__now[hidden] ~ .bmp__sbtn { display: none; }   /* product pages: s
 .vp[data-mode="audio"] .vp__aart { display: block; grid-column: 1; grid-row: 1; width: 30px; height: 30px; border-radius: 6px; object-fit: cover; background: rgba(0,0,0,.06); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 .vp[data-mode="audio"] .vp__atitle { grid-column: 2; grid-row: 1; font-size: 11px; font-weight: 500; letter-spacing: .01em; line-height: 1.25; padding-right: 22px; }
 .vp[data-mode="audio"] .vp__atitle b { font-weight: 600; }
+/* desktop view only: the floating now-playing pill is 20% bigger (phones unchanged) */
+@media (min-width: 1025px) and (hover: hover) {
+  .vp[data-mode="audio"] { width: 248px !important; }
+  .vp[data-mode="audio"] .vp__audio { zoom: 1.2; }
+}
 .vp[data-mode="audio"] .vp__aartist { display: none; }
 .vp[data-mode="audio"] .vp__atimes { grid-column: 1 / -1; grid-row: 2; margin: 2px 0 0; padding: 0; }
 .vp[data-mode="audio"] .vp__abtn { width: 32px; height: 32px; }

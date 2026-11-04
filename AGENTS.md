@@ -9,7 +9,8 @@ It is the most fragile part of the site. It was rebuilt several times and every 
 - `assets/mix-lite.js`: the same mix, auto-next and lock-screen artwork for product / checkout / members when they are opened directly (loaded at the end of those 3 pages).
 - The bottom dock in all 4 pages (`index.html`, `bymarccc-product.html`, `checkout.html`, `members.html`): `playTrack()` must call `window.BYMARCCC.audioTrack.play(t)` first. Without it a song picked from search is not in the queue and never mixes.
 - Playlist, player script and the page router `BYM_NAV` are duplicated in the 4 pages: keep the copies identical.
-- Adding songs = only add objects to `const SEED = [ ... ]` in `index.html` (same format as the others). Never guess media URLs.
+- The playlist exists in ALL 4 pages (`const SEED = [` in index.html, `var SEED = [` in bymarccc-product.html, checkout.html, members.html). Adding a song = add the SAME object to the list in all 4 pages (same id, title, src, thumb). The guard test fails if the 4 lists differ.
+- A new song only mixes if: audio-only AAC file named `name.a.mp4` in `assets/media/` (not .m4a: Cloudflare ignores Range on .m4a), or a Cloudinary URL copied exactly from the Media Library; real `duration`; unique `id`; longer than 45 s (shorter songs are never mixed, by design). Never guess media URLs.
 
 ## Before EVERY push (mandatory)
 1. `node tests/music-guard.mjs` → must print `music guard OK`. If it fails, you broke the music: restore what you removed.

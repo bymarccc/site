@@ -25,5 +25,33 @@ for (const t of ['const MIX_S = 10, PREP_S = 25;', 'window.top !== window', 'fun
 const count = (s, re) => (s.match(re) || []).length;
 if (count(read('index.html'), /function mixGo\(\)/g) !== 1) fails.push('index.html: function mixGo() must appear exactly once');
 
+
+// 5) the playlist is duplicated in the 4 pages: every page must list exactly the same songs, and every local song file must exist
+import { execFileSync } from 'node:child_process';
+const pages = ['index.html', 'bymarccc-product.html', 'checkout.html', 'members.html'];
+const songBlock = f => { const m = read(f).match(/(?:const|var) SEED = \[([\s\S]*?)\n\s*\];/); return m ? m[1] : ''; };
+const idsOf = f => [...songBlock(f).matchAll(/\{\s*id:\s*'([^']+)'/g)].map(x => x[1]);
+const base = idsOf('index.html');
+if (!base.length) fails.push('index.html: could not read the song list (const SEED = [ ... ])');
+for (const f of pages.slice(1)) {
+  const ids = idsOf(f), miss = base.filter(x => !ids.includes(x)), extra = ids.filter(x => !base.includes(x));
+  if (miss.length || extra.length) fails.push(`${f}: song list differs from index.html — missing: ${miss.join(', ') || '-'} | extra: ${extra.join(', ') || '-'} (a new song must be added to ALL 4 pages)`);
+}
+const srcMap = f => Object.fromEntries([...songBlock(f).matchAll(/id:\s*'([^']+)'[\s\S]*?src:\s*((?:M|CLD)\s*\+\s*'[^']+')/g)].map(x => [x[1], x[2].replace(/\s+/g, '')]));
+const baseSrc = srcMap('index.html');
+for (const f of pages.slice(1)) { const m = srcMap(f); for (const id of Object.keys(baseSrc)) if (m[id] && m[id] !== baseSrc[id]) fails.push(`${f}: song "${id}" has a different src than index.html (${m[id]} vs ${baseSrc[id]})`); }
+if (new Set(base).size !== base.length) fails.push('index.html: duplicate song id in SEED');
+const probe = file => { try { return parseFloat(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], { encoding: 'utf8' })); } catch { return NaN; } };
+for (const m of songBlock('index.html').matchAll(/id:\s*'([^']+)'[\s\S]*?src:\s*(M|CLD)\s*\+\s*'([^']+)'/g)) {
+  const [, id, kind, name] = m;
+  if (kind === 'M') {
+    const file = 'assets/media/' + name;
+    if (!fs.existsSync(file)) { fails.push(`song "${id}": file ${file} does not exist`); continue; }
+    if (!/\.a\.mp4$|\.mp3$/.test(name)) fails.push(`song "${id}": ${name} should be an audio-only .a.mp4 (or .mp3): .m4a does not support seeking on Cloudflare, so the mix cannot jump to the end of the song`);
+    const d = probe(file);
+    if (!Number.isNaN(d) && d <= 45) console.warn(`note: "${id}" is only ${Math.round(d)} s: songs of 45 s or less are never mixed (by design)`);
+  } else if (!/^v\d+\/|^[^/]+\/v\d+\//.test(name)) fails.push(`song "${id}": Cloudinary path "${name}" looks wrong (expected v123456789/File_name.mp3)`);
+}
+
 if (fails.length) { console.error('MUSIC GUARD FAILED:\n- ' + fails.join('\n- ')); process.exit(1); }
-console.log('music guard OK — DJ mix (10 s), dock → engine, lite engine and lock-screen artwork are all in place');
+console.log(`music guard OK — DJ mix (10 s), dock → engine, lite engine, lock-screen artwork in place; ${base.length} songs identical on all 4 pages`);
