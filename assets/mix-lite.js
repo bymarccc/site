@@ -66,9 +66,10 @@
   const mixReady = () => !!(mixCtx && mixCtx.state !== 'closed' && mixDecks && mixDecks.every(d => d.unlocked && !d.busy));
   /* iPhone shows no lock-screen title / artwork while an AudioContext runs: it sleeps outside the ~25 s blend window */
   function mixSleep() {
-    if (mixCtx && mixCtx.state === 'running' && !mixPrep && !mixing && mixDecks && mixDecks.every(d => d.unlocked && !d.busy))
+    if (mixCtx && mixCtx.state === 'running' && !mixPrep && !mixing && mixDecks && mixDecks.every(d => !d.busy))
       mixCtx.suspend().then(assert).catch(() => {});
   }
+  setInterval(mixSleep, 4000);   // safety net: never leave the context running outside a blend (it hides the lock-screen title + artwork)
   function mixQuiet(d) { if (!d) return; d.gn.gain.cancelScheduledValues?.(0); d.gn.gain.value = 0; try { d.g.pause(); } catch (e) {} }
   function mixAbortPrep() { if (mixPrep) { mixQuiet(mixPrep.out); mixQuiet(mixPrep.inn); } mixPrep = null; if (!mixing) setTimeout(mixSleep, 0); }
   function mixStop() {

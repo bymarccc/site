@@ -3308,9 +3308,10 @@
   /* iPhone shows no title / artwork on the lock screen while an AudioContext is running, so it sleeps
      except for the last ~25 s of a song (prepare + blend) and wakes up again right before the next mix */
   function mixSleep() {
-    if (mixCtx && mixCtx.state === 'running' && !mixPrep && !mixing && mixDecks && mixDecks.every(d => d.unlocked && !d.busy))
+    if (mixCtx && mixCtx.state === 'running' && !mixPrep && !mixing && mixDecks && mixDecks.every(d => !d.busy))
       mixCtx.suspend().then(() => window.__bymNowPlaying?.()).catch(() => {});
   }
+  setInterval(mixSleep, 4000);   // safety net: never leave the context running outside a blend (it hides the lock-screen title + artwork)
   function mixQuiet(d) { if (!d) return; d.gn.gain.cancelScheduledValues?.(0); d.gn.gain.value = 0; try { d.g.pause(); } catch {} }
   function mixAbortPrep() { if (mixPrep) { mixQuiet(mixPrep.out); mixQuiet(mixPrep.inn); } mixPrep = null; if (!mixing) setTimeout(mixSleep, 0); }
   function mixStop() {   // end of the blend (or abort): the real player takes over
