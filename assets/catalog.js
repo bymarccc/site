@@ -1439,7 +1439,7 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"black","name":"Black","hex":"#111111"}],
       "chart": ["S","M","L"],
-      "gallery": [{"src":"assets/img/gallery/w-logo-flare-leggings-1-707c8a6e.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-2-7f0f75cf.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-5-27957478.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-3-0ff5febb.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-4-877ec7bd.webp","w":1025,"h":1535}]
+      "gallery": [{"src":"assets/img/gallery/w-logo-flare-leggings-1-707c8a6e.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-2-v2.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-5-27957478.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-3-0ff5febb.webp","w":1025,"h":1535},{"src":"assets/img/gallery/w-logo-flare-leggings-4-877ec7bd.webp","w":1025,"h":1535}]
     },
     "w-white-logo-windbreaker": {
       "gender": "women",
