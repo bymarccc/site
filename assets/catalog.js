@@ -1007,8 +1007,10 @@ window.BYMARCCC_PRODUCT_DATA = /*BEGIN-JSON*/{
       "unavailable": [],
       "colours": [{"id":"skyblue","name":"Sky Blue","hex":"#dceaf0"}],
       "chart": ["S","M","L"],
-      "gallery": [],
-      "cardGallery": []
+      "gallery": [{"src":"assets/img/gallery/simple-hoodie-skyblue-tiramisu-front-v1.webp","w":1024,"h":1536},{"src":"assets/img/gallery/simple-hoodie-skyblue-tiramisu-back-detail-v1.webp","w":1024,"h":1536},{"src":"assets/img/gallery/simple-hoodie-skyblue-tiramisu-back-full-v1.webp","w":1024,"h":1536},{"src":"assets/img/gallery/simple-hoodie-skyblue-tiramisu-flat-front-v1.webp","w":1024,"h":1524},{"src":"assets/img/gallery/simple-hoodie-skyblue-tiramisu-flat-back-v1.webp","w":1024,"h":1524}],
+      "cardGallery": [{"src":"assets/img/gallery/simple-hoodie-skyblue-tiramisu-front-v1.webp","w":1024,"h":1536},{"src":"assets/img/gallery/simple-hoodie-skyblue-tiramisu-back-detail-v1.webp","w":1024,"h":1536},{"src":"assets/img/gallery/simple-hoodie-skyblue-tiramisu-back-full-v1.webp","w":1024,"h":1536},{"src":"assets/img/gallery/simple-hoodie-skyblue-tiramisu-flat-front-v1.webp","w":1024,"h":1524},{"src":"assets/img/gallery/simple-hoodie-skyblue-tiramisu-flat-back-v1.webp","w":1024,"h":1524}],
+      "mockup": "assets/img/gallery/simple-hoodie-skyblue-tiramisu-flat-front-v1.webp",
+      "fullBody": 2
     },
     "w-white-tee": {
       "designs": ["Blank","Logo","Lady on the street","Hot Girls","Muse","Delulu","PARIS","Barbie","Happy Hoes","Boys Lie","Art"],
