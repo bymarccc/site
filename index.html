@@ -3375,6 +3375,55 @@
     out.g.play().catch(() => { clearTimeout(abort); if (mixPrep === P) { mixFailSrc = audio.currentSrc || audio.src; mixStop(); } });
   }
   window.__bymMix = () => ({ ctx: mixCtx && mixCtx.state, ready: mixReady(), prep: !!mixPrep, mixing, out: mixPrep && +mixPrep.out.gn.gain.value.toFixed(2), inn: mixPrep && +mixPrep.inn.gn.gain.value.toFixed(2), muted: audio.muted, oT: mixPrep && +mixPrep.out.g.currentTime.toFixed(1), oP: mixPrep && mixPrep.out.g.paused, iT: mixPrep && +mixPrep.inn.g.currentTime.toFixed(1), iP: mixPrep && mixPrep.inn.g.paused });
+  /* ?mixdebug=1 → READ-ONLY on-screen diagnostics for the mix (changes nothing: only reads state and listens to events) */
+  if (/[?&]mixdebug=1(&|$)/.test(location.search)) (() => {
+    const box = document.createElement('pre');
+    box.style.cssText = 'position:fixed;left:4px;right:4px;top:calc(env(safe-area-inset-top,0px) + 4px);z-index:2147483647;margin:0;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.86);color:#7CFC00;font:10px/1.25 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-all;pointer-events:none;max-height:75vh;overflow:hidden';
+    document.body.appendChild(box);
+    const log = [], t0 = performance.now(), stamp = () => ((performance.now() - t0) / 1000).toFixed(1);
+    const push = s => { log.push(stamp() + 's ' + s); if (log.length > 14) log.shift(); };
+    addEventListener('error', e => push('JS error: ' + (e.message || '').slice(0, 80)));
+    addEventListener('unhandledrejection', e => push('rejected: ' + String(e.reason && (e.reason.name + ' ' + e.reason.message) || e.reason).slice(0, 80)));
+    const hooked = new Set();
+    const hook = () => { (mixDecks || []).forEach((d, i) => { if (hooked.has(d)) return; hooked.add(d);
+      ['error', 'playing', 'pause', 'waiting', 'stalled', 'ended', 'seeked', 'canplay', 'emptied'].forEach(ev => d.g.addEventListener(ev, () => push('deck' + 'AB'[i] + ' ' + ev + (ev === 'error' && d.g.error ? ' code=' + d.g.error.code + ' ' + (d.g.error.message || '') : '') + ' t=' + d.g.currentTime.toFixed(1))));
+    }); };
+    ['playing', 'pause', 'ended', 'error', 'waiting', 'seeked'].forEach(ev => audio.addEventListener(ev, () => push('REAL ' + ev + ' t=' + audio.currentTime.toFixed(1) + (audio.muted ? ' muted' : ''))));
+    let lastCtx = ''; const f1 = n => (typeof n === 'number' && isFinite(n) ? n.toFixed(1) : String(n));
+    const why = () => {   // the same conditions mixPrepare / mixGo / the timeupdate trigger check, written out as text (read-only)
+      const d = audio.duration, left = d - audio.currentTime, r = [];
+      if (repeat) r.push('repeat is ON'); if (audio.paused) r.push('real player paused'); if (miniQueue.length < 2) r.push('queue < 2 songs');
+      if (stopAtEnd && mi >= miniQueue.length - 1) r.push('last song + stopAtEnd');
+      if (!(d > 45)) r.push('duration ' + f1(d) + ' <= 45 s (never mixed)');
+      if (left > PREP_S) r.push('waiting: left ' + f1(left) + ' > PREP_S ' + PREP_S);
+      if (left <= 2) r.push('left <= 2 s (too late)');
+      if ((audio.currentSrc || audio.src) === mixFailSrc) r.push('mixFailSrc == this song → mix skipped');
+      if (mixing) r.push('MIXING now');
+      if (!mixPrep) {
+        if (!mixCtx) r.push('prepare: no AudioContext yet (no tap?)'); else if (mixCtx.state === 'closed') r.push('prepare: ctx closed');
+        if (!mixDecks) r.push('prepare: decks not created'); else mixDecks.forEach((x, i) => { if (!x.unlocked) r.push('prepare: deck' + 'AB'[i] + ' NOT unlocked'); if (x.busy) r.push('prepare: deck' + 'AB'[i] + ' busy'); });
+        const nxt = miniQueue[shuffle ? mi : (mi + 1) % Math.max(1, miniQueue.length)]; if (!shuffle && (!nxt || !nxt.src)) r.push('prepare: next song has no src');
+      } else {
+        const P = mixPrep; if (P.bad) r.push('go: prep BAD (deck error / play() rejected)'); if (!P.outOk) r.push('go: deckA (old song) not primed yet'); if (!P.innOk) r.push('go: deckB (next song) not primed yet');
+        if (mixCtx && mixCtx.state !== 'running') r.push('go: ctx is ' + mixCtx.state + ', not running');
+      }
+      return r.length ? r.join('\n   ') : 'no blocker found';
+    };
+    const deckTxt = (d, n) => d ? n + ' unlocked=' + d.unlocked + ' busy=' + d.busy + ' t=' + f1(d.g.currentTime) + ' paused=' + d.g.paused + ' rs=' + d.g.readyState + ' ns=' + d.g.networkState + ' err=' + (d.g.error ? d.g.error.code + ':' + (d.g.error.message || '') : '-') + ' vol=' + d.gn.gain.value.toFixed(2) + ' dead=' + mixDead(d) + '\n     src=' + (d.g.currentSrc || d.g.src || '').slice(-44) : n + ' (not created)';
+    setInterval(() => {
+      try {
+        hook(); if (mixCtx && mixCtx.state !== lastCtx) { lastCtx = mixCtx.state; push('ctx → ' + lastCtx); }
+        const d = audio.duration, left = d - audio.currentTime;
+        box.textContent = 'MIXDEBUG  ' + (/iPhone|iPad/.test(navigator.userAgent) ? 'iOS' : 'not-iOS') + '  AC=' + !!(window.AudioContext || window.webkitAudioContext) + '  hidden=' + document.hidden + '\n' +
+          'ctx=' + (mixCtx ? mixCtx.state : 'none') + ' ready=' + mixReady() + ' prep=' + !!mixPrep + ' mixing=' + mixing + ' muted=' + audio.muted + '\n' +
+          'REAL t=' + f1(audio.currentTime) + '/' + f1(d) + ' LEFT=' + f1(left) + ' paused=' + audio.paused + ' rs=' + audio.readyState + ' err=' + (audio.error ? audio.error.code : '-') + '\n' +
+          (mixPrep ? 'P: bad=' + mixPrep.bad + ' outOk=' + mixPrep.outOk + ' innOk=' + mixPrep.innOk + ' next=' + (mixPrep.nxt && mixPrep.nxt.title || '?') + '\n' : '') +
+          deckTxt(mixDecks && mixDecks[0], 'A') + '\n' + deckTxt(mixDecks && mixDecks[1], 'B') + '\n' +
+          'mixFailSrc=' + (mixFailSrc ? mixFailSrc.slice(-40) : '-') + '\n' +
+          'BLOCKERS: ' + why() + '\n--- events ---\n' + log.join('\n');
+      } catch (e) { box.textContent = 'mixdebug panel error: ' + e.message; }
+    }, 250);
+  })();
   let warmFor = null;
   audio.addEventListener('timeupdate', () => {   // warm the next song (remote files) well before the crossfade
     if (warmFor === miniItem || !audio.duration || audio.currentTime < audio.duration * 0.35 || shuffle || repeat) return;
