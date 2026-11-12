@@ -3414,7 +3414,11 @@
       try {
         hook(); if (mixCtx && mixCtx.state !== lastCtx) { lastCtx = mixCtx.state; push('ctx → ' + lastCtx); }
         const d = audio.duration, left = d - audio.currentTime;
-        box.textContent = 'MIXDEBUG  ' + (/iPhone|iPad/.test(navigator.userAgent) ? 'iOS' : 'not-iOS') + '  AC=' + !!(window.AudioContext || window.webkitAudioContext) + '  hidden=' + document.hidden + '\n' +
+        const ms = navigator.mediaSession, md = ms && ms.metadata, ua = navigator.userAgent;
+        const media = [...document.querySelectorAll('audio,video')].map(m => (m.id || m.tagName) + ':' + (m.paused ? 'P' : 'PLAY') + ' ' + f1(m.currentTime) + '/' + f1(m.duration) + (m.muted ? ' m' : '')).join(' | ');
+        box.textContent = 'MIXDEBUG  ' + (/CriOS/.test(ua) ? 'Chrome-iOS' : /iPhone|iPad/.test(ua) ? 'Safari-iOS' : 'not-iOS') + '  AC=' + !!(window.AudioContext || window.webkitAudioContext) + '  hidden=' + document.hidden + '  queue=' + miniQueue.length + ' mi=' + mi + ' shuffle=' + shuffle + ' stopAtEnd=' + stopAtEnd + '\n' +
+          'MEDIASESSION: ' + (ms ? 'state=' + ms.playbackState + ' title=' + (md ? JSON.stringify(md.title) : 'NO METADATA') + ' art=' + (md ? md.artwork.length : 0) : 'unsupported') + '\n' +
+          'MEDIA: ' + media + '\n' +
           'ctx=' + (mixCtx ? mixCtx.state : 'none') + ' ready=' + mixReady() + ' prep=' + !!mixPrep + ' mixing=' + mixing + ' muted=' + audio.muted + '\n' +
           'REAL t=' + f1(audio.currentTime) + '/' + f1(d) + ' LEFT=' + f1(left) + ' paused=' + audio.paused + ' rs=' + audio.readyState + ' err=' + (audio.error ? audio.error.code : '-') + '\n' +
           (mixPrep ? 'P: bad=' + mixPrep.bad + ' outOk=' + mixPrep.outOk + ' innOk=' + mixPrep.innOk + ' next=' + (mixPrep.nxt && mixPrep.nxt.title || '?') + '\n' : '') +
