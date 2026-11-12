@@ -1012,9 +1012,9 @@
 <!-- =====================================================================
      SECTION 3 — Collections (Acne-style tabs + product grid), data from catalog.js
      ===================================================================== -->
-<section class="shop" id="shop" aria-label="bymarccc menswear collections" data-gender="men">
-  <h2 class="shop__title shop__title--bold shop__title--hidden">MEN</h2>
-  <nav class="shop__tabs" role="tablist" aria-label="Menswear collections"></nav>
+<section class="shop shop--women" id="shopWomen" aria-label="bymarccc womenswear collections" data-gender="women">
+  <h2 class="shop__title shop__title--bold shop__title--hidden">WOMEN</h2>
+  <nav class="shop__tabs" role="tablist" aria-label="Womenswear collections"></nav>
   <div class="shop__grid" role="tabpanel"></div>
 </section>
 
@@ -1031,8 +1031,8 @@
   .crumble { position: relative; background: #fff; }
   .crumble__sticky { position: relative; height: var(--ch, auto); overflow: hidden; display: grid; place-items: center; background: #fff; }
   .crumble__img { width: auto; height: auto; max-width: min(100%, 1100px); max-height: 100vh; max-height: 100svh; display: block; }   /* keeps its own shape: the particle canvas copies this exact box (no stretching sideways) */
-  #shop { padding-bottom: 28px; }
-  #shopWomen { padding-top: 12px; border-top: 0; }
+  #shopWomen { padding-bottom: 28px; border-top: 0; }
+  #shop { padding-top: 12px; }
   .crumble__img.is-hidden { visibility: hidden; }
   .crumble__canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .crumble { height: auto; } .crumble__sticky { position: static; height: auto; } .crumble__canvas { display: none; } .crumble__img.is-hidden { visibility: visible; } }
@@ -1106,9 +1106,9 @@
   if (img.complete && img.naturalWidth) build(); else img.addEventListener('load', build, { once: true });
 })();
 </script>
-<section class="shop shop--women" id="shopWomen" aria-label="bymarccc womenswear collections" data-gender="women">
-  <h2 class="shop__title shop__title--bold shop__title--hidden">WOMEN</h2>
-  <nav class="shop__tabs" role="tablist" aria-label="Womenswear collections"></nav>
+<section class="shop" id="shop" aria-label="bymarccc menswear collections" data-gender="men">
+  <h2 class="shop__title shop__title--bold shop__title--hidden">MEN</h2>
+  <nav class="shop__tabs" role="tablist" aria-label="Menswear collections"></nav>
   <div class="shop__grid" role="tabpanel"></div>
 </section>
 
