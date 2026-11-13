@@ -11,10 +11,11 @@ for (const t of ['const MIX_S = 10, PREP_S = 25;', 'function mixEnsure()', 'func
   need('index.html', t, 'DJ mix / lock screen engine');
 
 // 1b) iPhone fix: deck A is judged only once it REALLY plays (position moving) — a fixed 200 ms wait made iPhone abort every mix
-for (const f of ['index.html', 'assets/mix-lite.js']) for (const t of ['const deckWait = cb =>', 'out.g.seeking', 'out.g.readyState >= 3'])
+for (const f of ['index.html', 'assets/mix-lite.js']) for (const t of ['const deckWait = cb =>', 'out.g.seeking', 'out.g.readyState >= 3', 'innMoved', 'zeroSince'])
   need(f, t, 'mixGo must wait until deck A really plays before the dead-deck check');
 if (/setTimeout\(\(\) => \{\s*if \(mixPrep !== P\) return;\s*if \(mixDead\(out\)\)/.test(read('index.html')) || /setTimeout\(\(\) => \{\s*if \(mixPrep !== P\) return;\s*if \(mixDead\(out\)\)/.test(read('assets/mix-lite.js')))
   fails.push('mixGo: the fixed 200 ms wait before mixDead(out) is back — iPhone aborts every mix with it');
+for (const f of ['index.html', 'assets/mix-lite.js']) if (read(f).includes('k > 0.12 && mixDead(inn) ||')) fails.push(f + ': deck B judged dead at the first check again — iPhone then plays the next song at full volume instead of fading it in');
 
 // 2) every page: songs picked from the bottom dock must go through the homepage engine
 for (const f of ['index.html', 'bymarccc-product.html', 'checkout.html', 'members.html']) {

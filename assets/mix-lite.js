@@ -132,18 +132,21 @@
         if (mixDead(out)) { L('deck A DEAD (digital zero)'); mixFailSrc = audio.currentSrc || audio.src; mixStop(); return; }
         const rest = Math.max(2, Math.min(MIX_S, (out.g.duration || audio.duration) - out.g.currentTime));
         out.gn.gain.value = 1; audio.muted = true;
-        inn.gn.gain.value = 0; inn.g.play().catch(() => {});
+        inn.gn.gain.value = 0; const inn0 = inn.g.currentTime; inn.g.play().catch(() => {});
         play(P.nxt); audio.muted = true;
         /* fades on the audio clock, so they also happen with the phone locked */
         const N = 64, fOut = new Float32Array(N), fIn = new Float32Array(N);
         for (let i = 0; i < N; i++) { const k = i / (N - 1); fOut[i] = Math.cos(k * Math.PI / 2); fIn[i] = Math.sin(k * Math.PI / 2); }
-        const c0 = mixCtx.currentTime + 0.02, w0 = performance.now(); let innDead = false;
+        const c0 = mixCtx.currentTime + 0.02, w0 = performance.now(); let innDead = false, zeroSince = 0;
         try { out.gn.gain.cancelScheduledValues(0); out.gn.gain.value = 1; out.gn.gain.setValueCurveAtTime(fOut, c0, rest);
               inn.gn.gain.cancelScheduledValues(0); inn.gn.gain.value = 0; inn.gn.gain.setValueCurveAtTime(fIn, c0, rest); } catch (e) { mixStop(); return; }
         const iv = setInterval(() => {
           if (mixPrep !== P || !mixing) { clearInterval(iv); return; }
           const k = (mixCtx.currentTime - c0) / rest;
-          if (!innDead && (k > 0.12 && mixDead(inn) || k > 0.35 && (inn.g.paused || inn.g.readyState < 2))) { innDead = true; mixQuiet(inn); audio.muted = false; }
+          /* deck B only counts as dead if it REALLY played (position moved) and stayed digitally silent for 2 s in a row: on iPhone it needs a moment to start, and a stalled/slow start is not a blocked file */
+          const innMoved = inn.g.currentTime - inn0, zero = k > 0.12 && innMoved > 0.3 && !inn.g.paused && mixDead(inn);
+          if (zero) { if (!zeroSince) zeroSince = performance.now(); } else zeroSince = 0;
+          if (!innDead && (zero && performance.now() - zeroSince > 2000 || k > 0.35 && (inn.g.paused || inn.g.readyState < 2) || k > 0.5 && innMoved < 0.3)) { L('deck B DEAD moved=' + innMoved.toFixed(2) + ' zero=' + zero + ' paused=' + inn.g.paused + ' rs=' + inn.g.readyState + ' → real player unmuted'); innDead = true; mixQuiet(inn); audio.muted = false; }
           if (k >= 1 || out.g.ended || mixCtx.state !== 'running' || performance.now() - w0 > rest * 1000 + 4000) { clearInterval(iv); mixStop(); }
         }, 100);
       });
