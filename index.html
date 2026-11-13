@@ -3347,13 +3347,34 @@
     const { out, inn } = P;
     out.g.onplaying = null; inn.g.onplaying = null;
     try { out.g.currentTime = audio.currentTime + 0.12; } catch {}
+    const L = m => { try { window.__bymMixLog && window.__bymMixLog('go ' + m); } catch {} };   // diagnostics only (?mixdebug=1)
+    L('start real=' + audio.currentTime.toFixed(2) + ' deck=' + out.g.currentTime.toFixed(2) + ' buf=' + (out.g.buffered.length ? out.g.buffered.end(out.g.buffered.length - 1).toFixed(1) : '-'));
+    /* iPhone fires 'playing' BEFORE the seek has finished and delivers the first audio later (LTE): wait until deck A is really playing
+       (position moving, not seeking), jump it to the real player's position if it fell behind (inside buffered data = instant), only then judge it */
+    let startT = 0; try { startT = out.g.currentTime; } catch {}
+    const deckWait = cb => {
+      const w0 = performance.now(); let fixes = 0;
+      const inBuf = tt => { try { const b = out.g.buffered; for (let i = 0; i < b.length; i++) if (tt >= b.start(i) && tt <= b.end(i) - 0.3) return true; } catch {} return false; };
+      const step = () => {
+        if (mixPrep !== P || !mixing) return;
+        const el = performance.now() - w0;
+        if (!out.g.seeking && out.g.readyState >= 3 && out.g.currentTime > startT + 0.15) {
+          const lag = audio.currentTime - out.g.currentTime;
+          if (lag > 0.3 && fixes < 2 && el < 2500 && inBuf(audio.currentTime + 0.3)) { fixes++; L('deck behind by ' + lag.toFixed(2) + ' s → jump to real'); try { out.g.currentTime = audio.currentTime + 0.25; startT = out.g.currentTime; } catch {} setTimeout(step, 80); return; }
+          L('deck moving after ' + Math.round(el) + ' ms, lag=' + lag.toFixed(2)); setTimeout(cb, 100); return;
+        }
+        if (el > 3500 || !(audio.duration - audio.currentTime > 1.5)) { L('FAIL deck never moved: seeking=' + out.g.seeking + ' rs=' + out.g.readyState + ' t=' + out.g.currentTime.toFixed(2)); mixFailSrc = audio.currentSrc || audio.src; mixStop(); return; }
+        setTimeout(step, 50);
+      };
+      step();
+    };
     let started = false;
-    const abort = setTimeout(() => { if (!started && mixPrep === P) { mixFailSrc = audio.currentSrc || audio.src; mixStop(); } }, 1500);   // deck didn't start → normal change
+    const abort = setTimeout(() => { if (!started && mixPrep === P) { mixFailSrc = audio.currentSrc || audio.src; mixStop(); } }, 3000);   // deck didn't start → normal change
     out.g.addEventListener('playing', () => {
       if (started || mixPrep !== P) return; started = true; clearTimeout(abort);
-      setTimeout(() => {
+      deckWait(() => {
       if (mixPrep !== P) return;
-      if (mixDead(out)) { mixFailSrc = audio.currentSrc || audio.src; mixStop(); return; }   // deck A would be silent → keep the normal change
+      if (mixDead(out)) { L('deck A DEAD (digital zero)'); mixFailSrc = audio.currentSrc || audio.src; mixStop(); return; }   // deck A would be silent → keep the normal change
       const rest = Math.max(2, Math.min(MIX_S, (out.g.duration || audio.duration) - out.g.currentTime));
       out.gn.gain.value = 1; audio.muted = true;           // seamless: deck A now carries the old song
       inn.gn.gain.value = 0; inn.g.play().catch(() => {});
@@ -3370,7 +3391,7 @@
         if (!innDead && (k > 0.12 && mixDead(inn) || k > 0.35 && (inn.g.paused || inn.g.readyState < 2))) { innDead = true; mixQuiet(inn); audio.muted = false; }   // deck B silent / never started → let the real player be heard
         if (k >= 1 || out.g.ended || mixCtx.state !== 'running' || performance.now() - w0 > rest * 1000 + 4000) { clearInterval(iv); mixStop(); }
       }, 100);
-      }, 200);
+      });
     }, { once: true });
     out.g.play().catch(() => { clearTimeout(abort); if (mixPrep === P) { mixFailSrc = audio.currentSrc || audio.src; mixStop(); } });
   }
@@ -3382,6 +3403,7 @@
     document.body.appendChild(box);
     const log = [], t0 = performance.now(), stamp = () => ((performance.now() - t0) / 1000).toFixed(1);
     const push = s => { log.push(stamp() + 's ' + s); if (log.length > 14) log.shift(); };
+    window.__bymMixLog = push;
     addEventListener('error', e => push('JS error: ' + (e.message || '').slice(0, 80)));
     addEventListener('unhandledrejection', e => push('rejected: ' + String(e.reason && (e.reason.name + ' ' + e.reason.message) || e.reason).slice(0, 80)));
     const hooked = new Set();
